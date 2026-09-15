@@ -70,6 +70,26 @@ These are demo-only credentials for a demo dataset. Rotate them before any produ
 
 ## Deploy
 
-Repository: https://github.com/VIAayush/robust-gifting-crm
+Production: https://robust-gifting-crm-corporate-gifting.vercel.app
 
-Vercel project: **Robust Gifting CRM**
+Repository: https://github.com/VIAayush/robust-gifting-crm
+Vercel project: `robust-gifting-crm` (Vercel project names must be lowercase)
+Supabase project: `zrfetfibatcuvwogyvjn` (ap-south-1)
+
+### Environment variables
+
+Set on Vercel for Production, Preview and Development:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_APP_NAME`
+- `SUPABASE_SERVICE_ROLE_KEY` — **still to be added.** Server-only. Until it is set,
+  the public "Request a quote" form returns "Unable to send this enquiry just now"
+  and admin-created client portal logins are unavailable. Everything else works.
+  Copy it from Supabase → Project Settings → API → service_role.
+
+### Supabase auth URLs
+
+For password recovery, set Authentication → URL Configuration in the Supabase
+dashboard to the production origin above (Site URL, plus `/auth/confirm` and
+`/reset-password` redirect URLs).
