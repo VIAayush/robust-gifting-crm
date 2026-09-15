@@ -83,10 +83,10 @@ Set on Vercel for Production, Preview and Development:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_APP_NAME`
-- `SUPABASE_SERVICE_ROLE_KEY` — **still to be added.** Server-only. Until it is set,
-  the public "Request a quote" form returns "Unable to send this enquiry just now"
-  and admin-created client portal logins are unavailable. Everything else works.
-  Copy it from Supabase → Project Settings → API → service_role.
+- `SUPABASE_SERVICE_ROLE_KEY` — **set (Production).** Server-only; never prefix it
+  with `NEXT_PUBLIC_`. It powers the public "Request a quote" form and
+  admin-created client portal logins. It is not set for Preview/Development, so
+  those two features only work on Production deployments.
 
 ### Supabase auth URLs
 
