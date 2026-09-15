@@ -65,7 +65,7 @@ export default async function AuditLogPage({
                   <tr key={log.id} className="hover:bg-[#FAF7F2]">
                     <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{formatDateTime(log.created_at)}</td>
                     <td className="px-5 py-3 text-[#1C1917]">{(log.profile as any)?.full_name || (log.profile as any)?.email || 'System'}</td>
-                    <td className="px-5 py-3 font-semibold text-[#1C1917] capitalize">{log.action?.replace('_', ' ')}</td>
+                    <td className="px-5 py-3 font-semibold text-[#1C1917] capitalize">{log.action?.replace(/_/g, ' ')}</td>
                     <td className="px-5 py-3">
                       {href ? (
                         <Link href={href} className="text-[#1A3022] hover:underline font-medium">{label}</Link>

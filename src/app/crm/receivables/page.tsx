@@ -56,7 +56,7 @@ export default async function ReceivablesPage() {
                 <span className={`shrink-0 rounded px-2 py-1 text-[10px] font-medium ${
                   invoice.status === 'partially_paid' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
                 }`}>
-                  {String(invoice.status || '').replace('_', ' ')}
+                  {String(invoice.status || '').replace(/_/g, ' ')}
                 </span>
               </div>
               <p className="text-base font-semibold text-gray-900">{formatCurrency(invoice.amount)}</p>
@@ -107,7 +107,7 @@ export default async function ReceivablesPage() {
                   <span className={`rounded px-2 py-1 text-xs font-medium ${
                     invoice.status === 'partially_paid' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
                   }`}>
-                    {String(invoice.status || '').replace('_', ' ')}
+                    {String(invoice.status || '').replace(/_/g, ' ')}
                   </span>
                 </td>
               </tr>

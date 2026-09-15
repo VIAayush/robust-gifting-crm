@@ -223,7 +223,7 @@ export default async function GstReportsPage({
                 <td className="p-3 text-right">—</td>
                 <td className="p-3 text-right">{row.gst != null ? formatCurrency(row.gst) : '—'}</td>
                 <td className="p-3 text-right font-medium">{row.invoiceTotal != null ? formatCurrency(row.invoiceTotal) : '—'}</td>
-                <td className="p-3 capitalize">{row.status.replace('_', ' ')}</td>
+                <td className="p-3 capitalize">{row.status.replace(/_/g, ' ')}</td>
               </tr>
             ))}
             {mapped.length === 0 && (

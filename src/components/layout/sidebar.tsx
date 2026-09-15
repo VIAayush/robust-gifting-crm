@@ -122,7 +122,7 @@ export function Sidebar({ role, user, onNavigate, showClose, onClose, mobileOpen
   const activeRef = useRef<HTMLAnchorElement | null>(null)
 
   const displayName = user?.name?.trim() || 'User';
-  const roleName = role === 'admin' ? 'Admin' : role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const roleName = role === 'admin' ? 'Admin' : role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   const seenHrefs = new Set<string>()
   const visibleGroups = navGroups.flatMap((group) => {
     if (!group.roles.includes(role)) return []

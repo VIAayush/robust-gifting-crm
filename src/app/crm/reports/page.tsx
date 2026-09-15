@@ -159,7 +159,7 @@ export default async function ReportsPage({
             <div className="w-full max-w-md">
               {Object.entries(leadsByStage).map(([stage, count]) => (
                 <div key={stage} className="flex items-center mb-2">
-                  <div className="w-32 text-sm capitalize text-gray-600">{stage.replace('_', ' ')}</div>
+                  <div className="w-32 text-sm capitalize text-gray-600">{stage.replace(/_/g, ' ')}</div>
                   <div className="flex-1 bg-gray-100 rounded h-4 overflow-hidden">
                     <div
                       className="bg-[var(--color-primary)] h-full"

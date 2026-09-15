@@ -189,7 +189,7 @@ export default async function AdminTrackingPage() {
                     )}
                     </>
                     ) : (
-                      <span className="capitalize">{String(task.status || 'open').replace('_', ' ')}</span>
+                      <span className="capitalize">{String(task.status || 'open').replace(/_/g, ' ')}</span>
                     )}
                   </td>
                 </tr>

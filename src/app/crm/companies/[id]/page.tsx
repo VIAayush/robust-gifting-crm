@@ -424,7 +424,7 @@ export default async function CompanyDetailPage({
                   <tr key={client.id}>
                     <td className="px-4 py-2.5 font-medium">{client.full_name}</td>
                     <td className="px-4 py-2.5 text-gray-600 font-mono">{client.email}</td>
-                    <td className="px-4 py-2.5 capitalize">{String(client.role).replace('_', ' ')}</td>
+                    <td className="px-4 py-2.5 capitalize">{String(client.role).replace(/_/g, ' ')}</td>
                     <td className="px-4 py-2.5">{client.is_active ? 'Active' : 'Inactive'}</td>
                     {profile.role === 'admin' && (
                       <td className="px-4 py-2.5">
@@ -678,7 +678,7 @@ export default async function CompanyDetailPage({
                     <tr key={task.id}>
                       <td className="px-4 py-2.5 font-medium">{task.title}</td>
                       <td className="px-4 py-2.5">{assignee?.full_name || 'Unassigned'}</td>
-                      <td className="px-4 py-2.5 capitalize">{String(task.status || 'open').replace('_', ' ')}</td>
+                      <td className="px-4 py-2.5 capitalize">{String(task.status || 'open').replace(/_/g, ' ')}</td>
                       <td className="px-4 py-2.5">{formatDate(task.due_at)}</td>
                     </tr>
                   )

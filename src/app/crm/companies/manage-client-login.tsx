@@ -48,7 +48,7 @@ export function ManageClientLogin({
             <h3 className="text-sm font-bold text-[#1C1917]">Manage Login</h3>
             <p><span className="text-[#7A7267]">Name:</span> {client.full_name || '—'}</p>
             <p><span className="text-[#7A7267]">Client ID / Login email:</span> <span className="font-mono">{client.email}</span></p>
-            <p><span className="text-[#7A7267]">Role:</span> {client.role.replace('_', ' ')}</p>
+            <p><span className="text-[#7A7267]">Role:</span> {client.role.replace(/_/g, ' ')}</p>
             <p><span className="text-[#7A7267]">Status:</span> {client.is_active ? 'Active' : 'Inactive'}</p>
             <p className="text-[#7A7267]">Existing passwords cannot be viewed. Set a new temporary password to share with the client.</p>
             {issued ? (

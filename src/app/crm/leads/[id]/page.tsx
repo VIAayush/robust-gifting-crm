@@ -98,7 +98,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
                 <p className={`mt-2 text-[11px] font-semibold capitalize ${
                   isCompleted ? 'text-[#4A235A]' : 'text-gray-400'
                 }`}>
-                  {stage.replace('_', ' ')}
+                  {stage.replace(/_/g, ' ')}
                 </p>
               </div>
             )
@@ -112,7 +112,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
               name="stage"
               label="Stage"
               defaultValue={lead.stage}
-              options={stages.map((s) => ({ value: s, label: s.replace('_', ' ').toUpperCase() }))}
+              options={stages.map((s) => ({ value: s, label: s.replace(/_/g, ' ').toUpperCase() }))}
             />
             <button
               type="submit"

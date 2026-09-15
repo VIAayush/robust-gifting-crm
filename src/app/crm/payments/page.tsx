@@ -34,7 +34,7 @@ export default async function PaymentsPage() {
                   <p className="mt-1 text-xs text-gray-500">{formatDate(payment.payment_date)}</p>
                 </div>
                 <span className="rounded bg-gray-100 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-gray-600">
-                  {String(payment.method || '').replace('_', ' ')}
+                  {String(payment.method || '').replace(/_/g, ' ')}
                 </span>
               </div>
               <p className="text-xs text-gray-600">{company?.name || '—'} · Ref {payment.reference || '—'}</p>
@@ -76,7 +76,7 @@ export default async function PaymentsPage() {
                 <td className="p-3 text-sm font-medium text-green-600">{formatCurrency(payment.amount)}</td>
                 <td className="p-3 text-sm">
                   <span className="rounded bg-gray-100 px-2 py-1 text-xs font-medium uppercase tracking-wider text-gray-600">
-                    {String(payment.method || '').replace('_', ' ')}
+                    {String(payment.method || '').replace(/_/g, ' ')}
                   </span>
                 </td>
                 <td className="p-3 text-sm text-[var(--color-text-secondary)]">{payment.reference || '-'}</td>

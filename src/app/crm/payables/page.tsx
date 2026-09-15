@@ -49,7 +49,7 @@ export default async function PayablesPage() {
                       payable.status === 'partially_paid' ? 'bg-blue-100 text-blue-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
-                      {String(payable.status || '').replace('_', ' ')}
+                      {String(payable.status || '').replace(/_/g, ' ')}
                     </span>
                   </td>
                 </tr>

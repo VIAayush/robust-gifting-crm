@@ -51,7 +51,7 @@ export default async function PortalRequirementsPage() {
                     <p className="mt-0.5 text-xs text-gray-500">{req.purpose}</p>
                   </div>
                   <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium ${statusClass(req.status)}`}>
-                    {String(req.status || '').replace('_', ' ').toUpperCase() || '—'}
+                    {String(req.status || '').replace(/_/g, ' ').toUpperCase() || '—'}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
@@ -106,7 +106,7 @@ export default async function PortalRequirementsPage() {
                       </td>
                       <td className="px-6 py-4">
                         <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusClass(req.status)}`}>
-                          {String(req.status || '').replace('_', ' ').toUpperCase() || '—'}
+                          {String(req.status || '').replace(/_/g, ' ').toUpperCase() || '—'}
                         </span>
                       </td>
                       <td className="px-6 py-4">{formatCurrency(req.budget_per_unit)}</td>

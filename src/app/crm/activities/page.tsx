@@ -127,7 +127,7 @@ export default async function ActivitiesPage({
                 <div className="bg-gray-50 rounded-lg p-4 border">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <span className="font-semibold capitalize">{String(activity.type || '').replace('_', ' ')}</span>
+                      <span className="font-semibold capitalize">{String(activity.type || '').replace(/_/g, ' ')}</span>
                       <span className="text-gray-500 text-sm mx-2">by</span>
                       <span className="font-medium">{creator?.full_name || 'System'}</span>
                     </div>

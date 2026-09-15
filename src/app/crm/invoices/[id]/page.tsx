@@ -47,7 +47,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               invoice.status === 'partially_paid' ? 'bg-blue-100 text-blue-800' :
               invoice.status === 'overdue' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-700'
             }`}>
-              {invoice.status?.replace('_', ' ')}
+              {invoice.status?.replace(/_/g, ' ')}
             </span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -84,7 +84,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         <div className="bg-white p-5 rounded-xl border border-gray-200 text-xs space-y-2.5">
           <h3 className="font-bold text-gray-900 pb-2 border-b">Payment Summary</h3>
           <div><span className="text-gray-500 w-24 inline-block">Amount Paid:</span> <span className="font-semibold text-green-700">{formatCurrency(totalPaid)}</span></div>
-          <div><span className="text-gray-500 w-24 inline-block">Status:</span> <span className="capitalize">{invoice.status?.replace('_', ' ')}</span></div>
+          <div><span className="text-gray-500 w-24 inline-block">Status:</span> <span className="capitalize">{invoice.status?.replace(/_/g, ' ')}</span></div>
         </div>
       </div>
 
@@ -109,7 +109,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                 <tr key={payment.id} className="hover:bg-gray-50/50">
                   <td className="p-3 font-medium">{formatDate(payment.payment_date)}</td>
                   <td className="p-3 text-right font-bold text-green-700">{formatCurrency(payment.amount)}</td>
-                  <td className="p-3 capitalize text-gray-600">{payment.method?.replace('_', ' ')}</td>
+                  <td className="p-3 capitalize text-gray-600">{payment.method?.replace(/_/g, ' ')}</td>
                   <td className="p-3 font-mono text-gray-500">{payment.reference || '?'}</td>
                 </tr>
               ))}
