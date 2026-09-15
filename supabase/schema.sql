@@ -68,9 +68,9 @@ exception when duplicate_object then null; end $$;
 -- ---------------------------------------------------------------------------
 -- Sequences
 -- ---------------------------------------------------------------------------
-create sequence if not exists public.invoice_seq;
-create sequence if not exists public.order_seq;
-create sequence if not exists public.quotation_seq;
+create sequence if not exists public.invoice_seq start with 3001;
+create sequence if not exists public.order_seq start with 2001;
+create sequence if not exists public.quotation_seq start with 1001;
 
 -- ---------------------------------------------------------------------------
 -- Tables
@@ -1547,7 +1547,7 @@ CREATE OR REPLACE FUNCTION public.assign_order(p_order_id uuid, p_assigned_to uu
 AS $function$
 DECLARE v_role public.app_role; v_company uuid; v_ord text;
 BEGIN
-  v_role := public."current_role"();
+  v_role := public.current_role();
   IF v_role NOT IN ('admin','operations','management') THEN
     RAISE EXCEPTION 'Not allowed to assign orders';
   END IF;
@@ -1574,7 +1574,7 @@ DECLARE
   v_new public.order_status;
   v_dept uuid;
 BEGIN
-  v_role := public."current_role"();
+  v_role := public.current_role();
   IF v_role IS NULL OR v_role IN ('client_admin','client_user','sales','management') THEN
     RAISE EXCEPTION 'Not permitted to change order stages';
   END IF;
@@ -1989,6 +1989,130 @@ create policy product_images_internal_delete on storage.objects as PERMISSIVE fo
 create policy product_images_internal_update on storage.objects as PERMISSIVE for UPDATE to public using (((bucket_id = 'product-images'::text) AND is_internal()));
 create policy product_images_internal_write on storage.objects as PERMISSIVE for INSERT to public with check (((bucket_id = 'product-images'::text) AND is_internal()));
 create policy product_images_public_read on storage.objects as PERMISSIVE for SELECT to public using ((bucket_id = 'product-images'::text));
+
+
+-- ---------------------------------------------------------------------------
+-- Portal views
+--
+-- These are security-definer views: they resolve the caller's company through
+-- client_company_id() inside the view body, so a client can only ever read its
+-- own rows through them. The client portal reads its catalogue, campaigns,
+-- offerings, orders and invoices exclusively through these.
+-- ---------------------------------------------------------------------------
+create or replace view public.client_products as
+ SELECT p.id,
+    p.name,
+    p.sku,
+    p.description,
+    p.image_url,
+    p.price,
+    p.moq,
+    p.category_id,
+    cat.name AS category_name,
+    p.subcategory_id,
+    sub.name AS subcategory_name,
+    p.brand_id,
+    b.name AS brand_name
+   FROM products p
+     LEFT JOIN categories cat ON cat.id = p.category_id
+     LEFT JOIN subcategories sub ON sub.id = p.subcategory_id
+     LEFT JOIN brands b ON b.id = p.brand_id
+  WHERE p.status = 'active'::product_status AND p.catalogue_access <> 'none'::text AND (p.catalogue_access = 'all'::text OR (EXISTS ( SELECT 1
+           FROM company_product_access cpa
+          WHERE cpa.product_id = p.id AND cpa.company_id = client_company_id())));
+
+create or replace view public.portal_campaigns as
+ SELECT id,
+    name,
+    company_id,
+    occasion,
+    description,
+    employee_quantity,
+    budget_per_employee,
+    total_budget,
+    required_delivery_date,
+    delivery_locations,
+    preferred_categories,
+    branding_requirements,
+    packaging_requirements,
+    custom_requirements,
+    status,
+    published_to_client_at
+   FROM campaigns c
+  WHERE published_to_client_at IS NOT NULL AND company_id = client_company_id();
+
+create or replace view public.portal_catalogue with (security_invoker=false) as
+ SELECT p.id,
+    p.name,
+    p.description,
+    p.price,
+    p.moq,
+    p.image_url,
+    p.status,
+    p.category_id,
+    p.brand_id,
+    c.name AS category_name,
+    b.name AS brand_name
+   FROM products p
+     LEFT JOIN categories c ON c.id = p.category_id
+     LEFT JOIN brands b ON b.id = p.brand_id
+  WHERE p.status = 'active'::product_status AND client_company_id() IS NOT NULL AND (p.catalogue_access = 'all'::text OR p.catalogue_access = 'selected'::text AND (EXISTS ( SELECT 1
+           FROM company_product_access a
+          WHERE a.product_id = p.id AND a.company_id = client_company_id())));
+
+create or replace view public.portal_invoices with (security_invoker=false) as
+ SELECT i.id,
+    i.invoice_number,
+    i.company_id,
+    i.amount,
+    i.status,
+    i.due_date,
+    i.invoice_date,
+    o.order_number
+   FROM invoices i
+     LEFT JOIN orders o ON o.id = i.order_id
+  WHERE i.company_id = client_company_id() OR is_internal();
+
+create or replace view public.portal_offerings as
+ SELECT cp.id,
+    cp.campaign_id,
+    cp.display_name,
+    cp.client_description,
+    cp.client_image_url,
+    cp.selling_price,
+    cp.discount_percent,
+    cp.quantity_limit,
+    cp.moq,
+    cp.personalization_options,
+    cp.variant_availability,
+    cp.estimated_delivery,
+    cp.client_specs,
+    cp.display_order,
+    cp.published_at,
+    c.company_id,
+    c.name AS campaign_name,
+    c.employee_quantity,
+    c.budget_per_employee,
+    c.total_budget
+   FROM campaign_products cp
+     JOIN campaigns c ON c.id = cp.campaign_id
+  WHERE cp.visibility = 'published'::offering_visibility AND c.published_to_client_at IS NOT NULL AND c.company_id = client_company_id();
+
+create or replace view public.portal_orders with (security_invoker=false) as
+ SELECT id,
+    order_number,
+    company_id,
+    status,
+    order_value,
+    expected_delivery_date,
+    actual_delivery_date,
+    created_at,
+    tracking_number,
+    dispatch_date
+   FROM orders
+  WHERE company_id = client_company_id() OR is_internal();
+
+grant all on all tables in schema public to anon, authenticated, service_role;
 
 -- ---------------------------------------------------------------------------
 -- Organisation settings row
