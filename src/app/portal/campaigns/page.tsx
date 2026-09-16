@@ -25,13 +25,13 @@ export default async function PortalCampaignsPage() {
             <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <Link
                 href={`/portal/catalogue?campaign=${c.id}`}
-                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#1A3022] px-3 text-xs font-semibold text-white hover:bg-[#274433]"
+                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#C9A84C] px-3 text-xs font-semibold text-white hover:bg-[#A87C2A]"
               >
                 View published products
               </Link>
               <Link
                 href="/portal/orders"
-                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E5DFD5] bg-white px-3 text-xs font-semibold text-[#1A3022] hover:bg-[#FAF7F2]"
+                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white px-3 text-xs font-semibold text-[#C9A84C] hover:bg-[#F5F7FA]"
               >
                 View related orders
               </Link>

@@ -37,7 +37,7 @@ export default async function SearchPage({
     return (
       <div className="p-8 max-w-3xl mx-auto">
         <h1 className="font-serif text-2xl">Search</h1>
-        <p className="text-sm text-[#7A7267] mt-2">Search only records you are authorized to see.</p>
+        <p className="text-sm text-[#4A5568] mt-2">Search only records you are authorized to see.</p>
       </div>
     )
   }
@@ -86,7 +86,7 @@ export default async function SearchPage({
 
   const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <section className="bg-white border rounded-2xl p-4 space-y-2">
-      <h2 className="text-xs uppercase tracking-wider text-[#7A7267] font-semibold">{title}</h2>
+      <h2 className="text-xs uppercase tracking-wider text-[#4A5568] font-semibold">{title}</h2>
       {children}
     </section>
   )

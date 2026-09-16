@@ -1,21 +1,21 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #1A3022;
-  --color-primary-light: #274433;
+  --color-primary: #C9A84C;
+  --color-primary-light: #A87C2A;
   --color-primary-fg: #FFFFFF;
-  --color-accent: #1A3022;
-  --color-accent-hover: #122018;
+  --color-accent: #C9A84C;
+  --color-accent-hover: #A87C2A;
   --color-accent-fg: #FFFFFF;
-  --color-sidebar: #16281E;
-  --color-sidebar-active: #274433;
-  --color-sidebar-text: #A3B5AA;
+  --color-sidebar: #0D1B2A;
+  --color-sidebar-active: #A87C2A;
+  --color-sidebar-text: #94A3B8;
   --color-background: #FFFFFF;
   --color-surface: #FFFFFF;
-  --color-surface-subtle: #F6F4F1;
-  --color-border: #E8E4DE;
-  --color-border-subtle: #F0EDE8;
-  --color-muted: #F0EDE8;
+  --color-surface-subtle: #F1F4F9;
+  --color-border: #E2E8F0;
+  --color-border-subtle: #EEF1F6;
+  --color-muted: #EEF1F6;
   --color-muted-fg: #5C6570;
   --color-text: #1B2430;
   --color-text-secondary: #5C6570;
@@ -104,11 +104,11 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #cfc8be;
+    background: #CBD5E1;
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #b7afa3;
+    background: #94A3B8;
   }
 
   button,
@@ -138,7 +138,7 @@
 
 @layer components {
   .card {
-    @apply rounded-lg border border-[#E8E4DE] bg-white shadow-[0_1px_2px_rgba(27,36,48,0.04)];
+    @apply rounded-lg border border-[#E2E8F0] bg-white shadow-[0_1px_2px_rgba(27,36,48,0.04)];
   }
 
   .store-section-title {
@@ -158,7 +158,7 @@
   }
 
   .catalogue-studio-field {
-    background-color: #ebe4d8;
+    background-color: #EEF1F6;
   }
 
   .catalogue-product-img {
@@ -187,14 +187,14 @@
     }
   }
 
-  button.bg-\[\#1A3022\]:hover,
-  a.bg-\[\#1A3022\]:hover,
-  button.bg-\[\#274433\]:hover,
-  a.bg-\[\#274433\]:hover,
-  button.bg-\[\#4A235A\]:hover,
-  a.bg-\[\#4A235A\]:hover,
-  button.bg-\[\#3d1c4a\]:hover,
-  a.bg-\[\#3d1c4a\]:hover,
+  button.bg-\[\#C9A84C\]:hover,
+  a.bg-\[\#C9A84C\]:hover,
+  button.bg-\[\#A87C2A\]:hover,
+  a.bg-\[\#A87C2A\]:hover,
+  button.bg-\[\#C9A84C\]:hover,
+  a.bg-\[\#C9A84C\]:hover,
+  button.bg-\[\#A87C2A\]:hover,
+  a.bg-\[\#A87C2A\]:hover,
   button.bg-primary:hover,
   a.bg-primary:hover,
   button.bg-accent:hover,

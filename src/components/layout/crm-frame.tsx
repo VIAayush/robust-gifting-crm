@@ -42,7 +42,7 @@ export function CrmFrame({
   }, [open])
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-[#F4EFE6]">
+    <div className="flex h-[100dvh] overflow-hidden bg-[#F1F4F9]">
       <div className="hidden h-full min-h-0 lg:flex">
         <Sidebar role={role} user={user} />
       </div>
@@ -55,7 +55,7 @@ export function CrmFrame({
         <button
           type="button"
           tabIndex={open ? 0 : -1}
-          className={`absolute inset-0 bg-[#122018]/50 backdrop-blur-[1px] transition-opacity duration-200 ${
+          className={`absolute inset-0 bg-[#0A141F]/50 backdrop-blur-[1px] transition-opacity duration-200 ${
             open ? 'opacity-100' : 'opacity-0'
           }`}
           aria-label="Close menu"
@@ -79,7 +79,7 @@ export function CrmFrame({
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Topbar user={user} notifications={notifications} onMenuClick={() => setOpen(true)} />
-        <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-[#F4EFE6] overscroll-y-contain">
+        <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-[#F1F4F9] overscroll-y-contain">
           <div className="mx-auto w-full max-w-[1600px] px-3 py-3 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
             {children}
           </div>

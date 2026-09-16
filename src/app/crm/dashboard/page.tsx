@@ -9,12 +9,12 @@ import { MobileDateRangeFilter } from '@/components/ui/mobile-filter-sheet'
 
 function Card({ label, value, href, warn }: { label: string; value: string | number; href?: string; warn?: boolean }) {
   const inner = (
-    <div className={`rounded-xl border p-3 sm:p-4 ${warn ? 'bg-red-50 border-red-100' : 'bg-white border-[#E5DFD5]'}`}>
-      <span className="text-[10px] font-semibold tracking-wider text-[#7A7267] uppercase">{label}</span>
-      <p className="font-serif text-lg text-[#1C1917] mt-1.5 sm:mt-2 sm:text-xl break-words">{value}</p>
+    <div className={`rounded-xl border p-3 sm:p-4 ${warn ? 'bg-red-50 border-red-100' : 'bg-white border-[#E2E8F0]'}`}>
+      <span className="text-[10px] font-semibold tracking-wider text-[#4A5568] uppercase">{label}</span>
+      <p className="font-serif text-lg text-[#0D1B2A] mt-1.5 sm:mt-2 sm:text-xl break-words">{value}</p>
     </div>
   )
-  return href ? <Link href={href} className="block hover:border-[#1A3022]">{inner}</Link> : inner
+  return href ? <Link href={href} className="block hover:border-[#C9A84C]">{inner}</Link> : inner
 }
 
 type DashOrder = {
@@ -246,11 +246,11 @@ export default async function DashboardPage({
     profile.role === 'accounts' ? 'Invoices, collections and payables' : 'What do I need to do?'
 
   const ActivityFeed = () => (
-    <div className="bg-white rounded-xl border border-[#E5DFD5] p-5">
+    <div className="bg-white rounded-xl border border-[#E2E8F0] p-5">
       <div className="flex justify-between items-center mb-3">
         <h2 className="font-serif text-lg">Activity</h2>
         {(profile.role === 'admin' || profile.role === 'management') && (
-          <Link href="/crm/audit-log" className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#1A3022] px-3 text-xs font-semibold text-[#1A3022] hover:bg-[#F4EFE6]">Full audit log</Link>
+          <Link href="/crm/audit-log" className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#C9A84C] px-3 text-xs font-semibold text-[#C9A84C] hover:bg-[#F1F4F9]">Full audit log</Link>
         )}
       </div>
       <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -259,16 +259,16 @@ export default async function DashboardPage({
           const href = entityHref(row.entity, row.entity_id)
           const inner = (
             <>
-              <p className="text-sm text-[#1C1917]">
+              <p className="text-sm text-[#0D1B2A]">
                 <span className="font-semibold">{actor?.full_name || 'System'}</span>{' '}
                 {describeAudit(row.action, row.entity || 'record')}
-                {row.entity_id ? <span className="font-mono text-[11px] text-[#7A7267]"> #{String(row.entity_id).slice(0, 8)}</span> : null}
+                {row.entity_id ? <span className="font-mono text-[11px] text-[#4A5568]"> #{String(row.entity_id).slice(0, 8)}</span> : null}
               </p>
-              <p className="text-[11px] text-[#7A7267]">{formatDateTime(row.created_at)}</p>
+              <p className="text-[11px] text-[#4A5568]">{formatDateTime(row.created_at)}</p>
             </>
           )
           return href ? (
-            <Link key={row.id} href={href} className="block p-2 rounded-lg hover:bg-[#FAF7F2]">{inner}</Link>
+            <Link key={row.id} href={href} className="block p-2 rounded-lg hover:bg-[#F5F7FA]">{inner}</Link>
           ) : (
             <div key={row.id} className="p-2">{inner}</div>
           )
@@ -282,14 +282,14 @@ export default async function DashboardPage({
     <div className="space-y-6 sm:space-y-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-serif text-2xl text-[#1C1917] sm:text-3xl">Good day, {greeting}</h1>
-          <p className="mt-1 text-xs text-[#7A7267]">{roleTitle}</p>
+          <h1 className="font-serif text-2xl text-[#0D1B2A] sm:text-3xl">Good day, {greeting}</h1>
+          <p className="mt-1 text-xs text-[#4A5568]">{roleTitle}</p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           {(profile.role === 'admin' || profile.role === 'sales') && (
             <Link
               href="/crm/products/add"
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#1A3022] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#274433] sm:w-auto"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#C9A84C] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#A87C2A] sm:w-auto"
             >
               <Plus size={16} />
               Add Product
@@ -304,7 +304,7 @@ export default async function DashboardPage({
       {(profile.role === 'admin' || profile.role === 'management') && (
         <>
           <section>
-            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[#7A7267] mb-3">Business overview</h2>
+            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[#4A5568] mb-3">Business overview</h2>
             <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-4 lg:grid-cols-6">
               <Card label="Total leads" value={leadRows.length} href="/crm/leads" />
               <Card label="New leads" value={newLeads.length} href="/crm/leads" />
@@ -338,28 +338,28 @@ export default async function DashboardPage({
             <div className="bg-white rounded-xl border p-5">
               <h2 className="font-serif text-lg mb-3">Exceptions</h2>
               <p className="text-sm">Delayed: {delayed.length} · At risk: {atRisk.length} · Unassigned: {unassigned.length} · Lost requirements: {lost}</p>
-              <Link href="/crm/order-management?health=delayed" className="mt-2 inline-flex min-h-9 items-center justify-center rounded-lg bg-[#1A3022] px-3 text-xs font-semibold text-white hover:bg-[#274433] hover:text-white">Open delayed orders</Link>
+              <Link href="/crm/order-management?health=delayed" className="mt-2 inline-flex min-h-9 items-center justify-center rounded-lg bg-[#C9A84C] px-3 text-xs font-semibold text-white hover:bg-[#A87C2A] hover:text-white">Open delayed orders</Link>
             </div>
           )}
 
           <div className="rounded-xl border bg-white p-4 sm:p-6">
             <div className="mb-4 flex justify-between">
               <h2 className="font-serif text-lg">Order pipeline</h2>
-              <Link href="/crm/order-management?view=kanban" className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#1A3022] px-3 text-xs font-semibold text-[#1A3022] hover:bg-[#F4EFE6]">Kanban</Link>
+              <Link href="/crm/order-management?view=kanban" className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#C9A84C] px-3 text-xs font-semibold text-[#C9A84C] hover:bg-[#F1F4F9]">Kanban</Link>
             </div>
             <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-4 lg:grid-cols-6">
               {byStage.map((s) => (
-                <Link key={s.st} href={`/crm/order-management?stage=${s.st}`} className="rounded-xl border bg-[#FAF7F2] p-2.5 hover:border-[#1A3022] sm:p-3">
-                  <p className="text-[11px] text-[#7A7267]">{ORDER_STATUS_LABELS[s.st]}</p>
+                <Link key={s.st} href={`/crm/order-management?stage=${s.st}`} className="rounded-xl border bg-[#F5F7FA] p-2.5 hover:border-[#C9A84C] sm:p-3">
+                  <p className="text-[11px] text-[#4A5568]">{ORDER_STATUS_LABELS[s.st]}</p>
                   <p className="mt-1 text-lg font-semibold sm:text-xl">{s.n}</p>
-                  <p className="text-[10px] text-[#7A7267] sm:text-[11px]">{formatCurrency(s.value)} · {s.overdue} overdue</p>
+                  <p className="text-[10px] text-[#4A5568] sm:text-[11px]">{formatCurrency(s.value)} · {s.overdue} overdue</p>
                 </Link>
               ))}
               {canSeeFinance(profile.role) && financeStages.map((s) => (
-                <Link key={s.key} href={s.href} className="rounded-xl border bg-[#FAF7F2] p-2.5 hover:border-[#1A3022] sm:p-3">
-                  <p className="text-[11px] text-[#7A7267]">{s.label}</p>
+                <Link key={s.key} href={s.href} className="rounded-xl border bg-[#F5F7FA] p-2.5 hover:border-[#C9A84C] sm:p-3">
+                  <p className="text-[11px] text-[#4A5568]">{s.label}</p>
                   <p className="mt-1 text-lg font-semibold sm:text-xl">{s.n}</p>
-                  <p className="text-[10px] text-[#7A7267] sm:text-[11px]">{formatCurrency(s.value)}</p>
+                  <p className="text-[10px] text-[#4A5568] sm:text-[11px]">{formatCurrency(s.value)}</p>
                 </Link>
               ))}
             </div>
@@ -374,10 +374,10 @@ export default async function DashboardPage({
                     <Link
                       key={d.id}
                       href={`/crm/order-management?department=${d.id}`}
-                      className="rounded-xl border border-[#E8E4DE] bg-[#FAF7F2] p-3 transition-colors hover:border-[#1A3022] hover:bg-white"
+                      className="rounded-xl border border-[#E2E8F0] bg-[#F5F7FA] p-3 transition-colors hover:border-[#C9A84C] hover:bg-white"
                     >
                       <p className="text-sm font-semibold">{d.name}</p>
-                      <p className="text-[11px] text-[#7A7267] mt-1">Active {d.active} · Overdue {d.overdue} · Unassigned {d.unassigned} · Done {d.completed}</p>
+                      <p className="text-[11px] text-[#4A5568] mt-1">Active {d.active} · Overdue {d.overdue} · Unassigned {d.unassigned} · Done {d.completed}</p>
                     </Link>
                   ))}
                 </div>
@@ -387,7 +387,7 @@ export default async function DashboardPage({
                   <h2 className="mb-4 font-serif text-lg">Team performance</h2>
                   <table className="w-full min-w-[920px] border-collapse text-left text-xs">
                     <thead>
-                      <tr className="border-b border-[#E8E4DE] text-[#7A7267]">
+                      <tr className="border-b border-[#E2E8F0] text-[#4A5568]">
                         <th className="whitespace-nowrap py-3 pr-4 font-medium">Employee</th>
                         <th className="whitespace-nowrap px-3 py-3 font-medium">Role</th>
                         <th className="whitespace-nowrap px-3 py-3 font-medium">Leads</th>
@@ -403,8 +403,8 @@ export default async function DashboardPage({
                     </thead>
                     <tbody>
                       {people.map((p) => (
-                        <tr key={p.id} className="border-t border-[#EFE9E0]">
-                          <td className="whitespace-nowrap py-3 pr-4 font-medium text-[#1C1917]">{p.full_name}</td>
+                        <tr key={p.id} className="border-t border-[#E7ECF3]">
+                          <td className="whitespace-nowrap py-3 pr-4 font-medium text-[#0D1B2A]">{p.full_name}</td>
                           <td className="whitespace-nowrap px-3 py-3 capitalize">{p.role}</td>
                           <td className="whitespace-nowrap px-3 py-3">{p.leads}</td>
                           <td className="whitespace-nowrap px-3 py-3">{p.converted}</td>
@@ -451,7 +451,7 @@ export default async function DashboardPage({
                 <p key={a.id} className="text-sm py-1">{a.type} · {a.title}</p>
               ))}
               {(!followUps.data || followUps.data.length === 0) && <p className="text-sm text-gray-500">No follow-ups due.</p>}
-              <Link href="/crm/activities" className="mt-2 inline-flex min-h-9 items-center justify-center rounded-lg border border-[#1A3022] px-3 text-xs font-semibold text-[#1A3022] hover:bg-[#F4EFE6]">Activity feed</Link>
+              <Link href="/crm/activities" className="mt-2 inline-flex min-h-9 items-center justify-center rounded-lg border border-[#C9A84C] px-3 text-xs font-semibold text-[#C9A84C] hover:bg-[#F1F4F9]">Activity feed</Link>
             </div>
             <ActivityFeed />
           </div>

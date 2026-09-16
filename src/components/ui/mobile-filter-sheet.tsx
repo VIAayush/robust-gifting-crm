@@ -34,13 +34,13 @@ export function MobileFilterSheetOption({
       type="button"
       onClick={onSelect}
       className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-3.5 text-left transition-colors ${
-        active ? 'bg-[#1A3022] text-white' : 'text-[#1B2430] hover:bg-[#F6F4F1]'
+        active ? 'bg-[#C9A84C] text-white' : 'text-[#1B2430] hover:bg-[#F1F4F9]'
       }`}
     >
       <span className="min-w-0 truncate text-[15px]">{label}</span>
       <span className="flex shrink-0 items-center gap-2">
         {meta ? (
-          <span className={`text-xs ${active ? 'text-white/70' : 'text-[#8A929C]'}`}>{meta}</span>
+          <span className={`text-xs ${active ? 'text-white/70' : 'text-[#94A3B8]'}`}>{meta}</span>
         ) : null}
         {active ? <Check size={16} className="text-white" /> : null}
       </span>
@@ -86,7 +86,7 @@ export function MobileFilterSheetShell({
       <button
         type="button"
         aria-label="Close filters"
-        className="absolute inset-0 bg-[#1A3022]/45"
+        className="absolute inset-0 bg-[#0D1B2A]/45"
         onClick={onClose}
       />
       <div
@@ -95,11 +95,11 @@ export function MobileFilterSheetShell({
         aria-labelledby={titleId}
         className="relative z-10 max-h-[85vh] overflow-hidden rounded-t-2xl bg-white shadow-[0_-12px_40px_rgba(27,36,48,0.18)]"
       >
-        <div className="border-b border-[#E8E4DE] px-4 pb-3 pt-3">
-          <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[#D6CEBE]" />
+        <div className="border-b border-[#E2E8F0] px-4 pb-3 pt-3">
+          <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[#D7E1EC]" />
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8A929C]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#94A3B8]">
                 {eyebrow}
               </p>
               <h2 id={titleId} className="mt-1 font-serif text-2xl text-[#1B2430]">
@@ -110,7 +110,7 @@ export function MobileFilterSheetShell({
               type="button"
               aria-label="Close"
               onClick={onClose}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F6F4F1] text-[#1A3022]"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F1F4F9] text-[#C9A84C]"
             >
               <X size={18} />
             </button>
@@ -119,7 +119,7 @@ export function MobileFilterSheetShell({
         <div className="max-h-[min(58vh,28rem)] overflow-y-auto overscroll-contain px-2 py-2 [scrollbar-width:thin]">
           {children}
         </div>
-        {footer ? <div className="border-t border-[#E8E4DE] px-4 py-3">{footer}</div> : null}
+        {footer ? <div className="border-t border-[#E2E8F0] px-4 py-3">{footer}</div> : null}
       </div>
     </div>
   )
@@ -141,16 +141,16 @@ export function MobileFilterTrigger({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`w-full rounded-md border border-[#E8E4DE] bg-[#F6F4F1] px-3.5 py-3 text-left ${
+      className={`w-full rounded-md border border-[#E2E8F0] bg-[#F1F4F9] px-3.5 py-3 text-left ${
         disabled ? 'cursor-not-allowed opacity-60' : ''
       }`}
     >
-      <span className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8A929C]">
+      <span className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-[#94A3B8]">
         {label}
       </span>
       <span className="mt-1.5 flex items-center justify-between gap-2 text-[15px] text-[#1B2430]">
         <span className="min-w-0 truncate">{value}</span>
-        <ChevronDown size={16} className="shrink-0 text-[#1A3022]" />
+        <ChevronDown size={16} className="shrink-0 text-[#C9A84C]" />
       </span>
     </button>
   )
@@ -239,13 +239,13 @@ export function MobileFilterBar({
       <div className={`hidden w-full gap-3 md:grid ${gridClass}`}>
         {fields.map((field) => (
           <label key={field.key} className="block min-w-0 space-y-1">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#7A7267]">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#4A5568]">
               {field.label}
             </span>
             <select
               value={field.value}
               onChange={(event) => select(field.key, event.target.value)}
-              className="min-h-11 w-full rounded-lg border border-[#E8E4DE] bg-white px-3 py-2 text-sm text-[#1B2430]"
+              className="min-h-11 w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#1B2430]"
             >
               {field.options.map((option) => (
                 <option key={`${field.key}-${option.value || 'empty'}`} value={option.value}>
@@ -306,7 +306,7 @@ export function MobileDateRangeFilter({
               {clearHref ? (
                 <a
                   href={clearHref}
-                  className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg border border-[#E8E4DE] bg-white px-3 text-sm font-semibold text-[#1B2430]"
+                  className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white px-3 text-sm font-semibold text-[#1B2430]"
                   onClick={() => setOpen(false)}
                 >
                   Clear
@@ -315,7 +315,7 @@ export function MobileDateRangeFilter({
               <button
                 type="submit"
                 form={`mobile-date-range-${formId}`}
-                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-[#1A3022] px-3 text-sm font-semibold text-white"
+                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-[#C9A84C] px-3 text-sm font-semibold text-white"
               >
                 {submitLabel}
               </button>
@@ -327,21 +327,21 @@ export function MobileDateRangeFilter({
               <input key={key} type="hidden" name={key} value={value} />
             ))}
             <label className="block space-y-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8A929C]">From</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#94A3B8]">From</span>
               <input
                 type="date"
                 name="from"
                 defaultValue={from}
-                className="min-h-11 w-full rounded-lg border border-[#E8E4DE] bg-[#F6F4F1] px-3 text-base text-[#1B2430]"
+                className="min-h-11 w-full rounded-lg border border-[#E2E8F0] bg-[#F1F4F9] px-3 text-base text-[#1B2430]"
               />
             </label>
             <label className="block space-y-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8A929C]">To</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#94A3B8]">To</span>
               <input
                 type="date"
                 name="to"
                 defaultValue={to}
-                className="min-h-11 w-full rounded-lg border border-[#E8E4DE] bg-[#F6F4F1] px-3 text-base text-[#1B2430]"
+                className="min-h-11 w-full rounded-lg border border-[#E2E8F0] bg-[#F1F4F9] px-3 text-base text-[#1B2430]"
               />
             </label>
           </form>
@@ -357,7 +357,7 @@ export function MobileDateRangeFilter({
             <input key={key} type="hidden" name={key} value={value} />
           ))}
           <label className="space-y-1">
-            <span className="text-[#7A7267]">From</span>
+            <span className="text-[#4A5568]">From</span>
             <input
               type="date"
               name="from"
@@ -366,7 +366,7 @@ export function MobileDateRangeFilter({
             />
           </label>
           <label className="space-y-1">
-            <span className="text-[#7A7267]">To</span>
+            <span className="text-[#4A5568]">To</span>
             <input
               type="date"
               name="to"
@@ -376,7 +376,7 @@ export function MobileDateRangeFilter({
           </label>
           <button
             type="submit"
-            className="min-h-10 rounded-lg bg-[#1A3022] px-3 py-1.5 font-semibold text-white hover:text-white"
+            className="min-h-10 rounded-lg bg-[#C9A84C] px-3 py-1.5 font-semibold text-white hover:text-white"
           >
             {submitLabel}
           </button>
@@ -455,7 +455,7 @@ export function MobileSheetSelect({
         </MobileFilterSheetShell>
       </div>
       <label className="hidden w-full space-y-1 md:block">
-        <span className={showDesktopLabel ? 'text-[10px] font-semibold uppercase tracking-[0.14em] text-[#7A7267]' : 'sr-only'}>
+        <span className={showDesktopLabel ? 'text-[10px] font-semibold uppercase tracking-[0.14em] text-[#4A5568]' : 'sr-only'}>
           {label}
         </span>
         <select
@@ -463,7 +463,7 @@ export function MobileSheetSelect({
           required={required}
           disabled={disabled}
           onChange={(event) => setValue(event.target.value)}
-          className="min-h-11 w-full rounded-lg border border-[#E8E4DE] bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500"
+          className="min-h-11 w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500"
         >
           {options.map((option) => (
             <option key={`${name || label}-opt-${option.value || 'empty'}`} value={option.value}>
@@ -591,7 +591,7 @@ export function SheetDateField({
             <div className="flex gap-2">
               <button
                 type="button"
-                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg border border-[#E8E4DE] bg-white px-3 text-sm font-semibold text-[#1B2430]"
+                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white px-3 text-sm font-semibold text-[#1B2430]"
                 onClick={() => {
                   setValue('')
                   setOpen(false)
@@ -601,7 +601,7 @@ export function SheetDateField({
               </button>
               <button
                 type="button"
-                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-[#1A3022] px-3 text-sm font-semibold text-white"
+                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-[#C9A84C] px-3 text-sm font-semibold text-white"
                 onClick={() => {
                   const today = new Date()
                   const next = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
@@ -618,7 +618,7 @@ export function SheetDateField({
             <div className="flex items-center justify-between gap-2">
               <button
                 type="button"
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F6F4F1] text-[#1A3022]"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1F4F9] text-[#C9A84C]"
                 onClick={() => {
                   const next = shiftMonth(viewYear, viewMonth, -1)
                   setViewYear(next.year)
@@ -633,7 +633,7 @@ export function SheetDateField({
                   value={viewMonth}
                   onChange={(event) => setViewMonth(Number(event.target.value))}
                   aria-label="Select month"
-                  className="min-w-0 rounded-lg border border-[#E8E4DE] bg-white px-2 py-1.5 text-sm font-semibold text-[#1B2430]"
+                  className="min-w-0 rounded-lg border border-[#E2E8F0] bg-white px-2 py-1.5 text-sm font-semibold text-[#1B2430]"
                 >
                   {MONTH_NAMES.map((name, index) => (
                     <option key={name} value={index + 1}>
@@ -645,7 +645,7 @@ export function SheetDateField({
                   value={viewYear}
                   onChange={(event) => setViewYear(Number(event.target.value))}
                   aria-label="Select year"
-                  className="min-w-0 rounded-lg border border-[#E8E4DE] bg-white px-2 py-1.5 text-sm font-semibold text-[#1B2430]"
+                  className="min-w-0 rounded-lg border border-[#E2E8F0] bg-white px-2 py-1.5 text-sm font-semibold text-[#1B2430]"
                 >
                   {yearOptions.map((year) => (
                     <option key={year} value={year}>
@@ -656,7 +656,7 @@ export function SheetDateField({
               </div>
               <button
                 type="button"
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F6F4F1] text-[#1A3022]"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1F4F9] text-[#C9A84C]"
                 onClick={() => {
                   const next = shiftMonth(viewYear, viewMonth, 1)
                   setViewYear(next.year)
@@ -667,7 +667,7 @@ export function SheetDateField({
                 ›
               </button>
             </div>
-            <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase tracking-wide text-[#8A929C]">
+            <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
               {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
                 <span key={day} className="py-1">
                   {day}
@@ -693,10 +693,10 @@ export function SheetDateField({
                     onClick={() => pickDay(day)}
                     className={`inline-flex min-h-11 items-center justify-center rounded-lg text-sm font-medium transition-colors ${
                       active
-                        ? 'bg-[#1A3022] text-white'
+                        ? 'bg-[#C9A84C] text-white'
                         : disabled
-                          ? 'cursor-not-allowed text-[#C4BDB3]'
-                          : 'text-[#1B2430] hover:bg-[#F6F4F1]'
+                          ? 'cursor-not-allowed text-[#C9D3E0]'
+                          : 'text-[#1B2430] hover:bg-[#F1F4F9]'
                     }`}
                   >
                     {day}
@@ -709,7 +709,7 @@ export function SheetDateField({
       </div>
 
       <label className="hidden w-full space-y-1 md:block">
-        <span className={showDesktopLabel ? 'text-[10px] font-semibold uppercase tracking-[0.14em] text-[#7A7267]' : 'sr-only'}>{label}</span>
+        <span className={showDesktopLabel ? 'text-[10px] font-semibold uppercase tracking-[0.14em] text-[#4A5568]' : 'sr-only'}>{label}</span>
         <input
           type="date"
           value={value}
@@ -718,7 +718,7 @@ export function SheetDateField({
           min={min}
           max={max}
           onChange={(event) => setValue(event.target.value)}
-          className="min-h-11 w-full rounded-lg border border-[#E8E4DE] bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500"
+          className="min-h-11 w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500"
         />
       </label>
     </div>

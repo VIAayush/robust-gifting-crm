@@ -38,13 +38,13 @@ export function CatalogueBrowser({ products }: { products: PublicProduct[] }) {
   return (
     <div className="space-y-8">
       <div className="flex justify-end">
-        <div className="inline-flex overflow-hidden rounded-md border border-[#E8E4DE]">
+        <div className="inline-flex overflow-hidden rounded-md border border-[#E2E8F0]">
           <button
             type="button"
             onClick={() => choose('grid')}
             aria-pressed={view === 'grid'}
             className={`inline-flex items-center gap-2 px-3 py-2 text-[11px] uppercase tracking-[0.14em] ${
-              view === 'grid' ? 'bg-[#1A3022] text-white' : 'bg-white text-[#5C6570]'
+              view === 'grid' ? 'bg-[#C9A84C] text-white' : 'bg-white text-[#5C6570]'
             }`}
           >
             <LayoutGrid size={13} /> Grid
@@ -54,7 +54,7 @@ export function CatalogueBrowser({ products }: { products: PublicProduct[] }) {
             onClick={() => choose('list')}
             aria-pressed={view === 'list'}
             className={`inline-flex items-center gap-2 px-3 py-2 text-[11px] uppercase tracking-[0.14em] ${
-              view === 'list' ? 'bg-[#1A3022] text-white' : 'bg-white text-[#5C6570]'
+              view === 'list' ? 'bg-[#C9A84C] text-white' : 'bg-white text-[#5C6570]'
             }`}
           >
             <List size={13} /> List
@@ -69,7 +69,7 @@ export function CatalogueBrowser({ products }: { products: PublicProduct[] }) {
           ))}
         </div>
       ) : (
-        <div className="divide-y divide-[#E8E4DE] border-y border-[#E8E4DE]">
+        <div className="divide-y divide-[#E2E8F0] border-y border-[#E2E8F0]">
           {products.map((product) => (
             <Link
               key={product.id}
@@ -93,7 +93,7 @@ export function CatalogueBrowser({ products }: { products: PublicProduct[] }) {
                 <p className="mt-1 font-mono text-[10px] text-[#5C6570]">{product.sku}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm font-semibold text-[#1A3022]">{formatCurrency(product.price)}</p>
+                <p className="text-sm font-semibold text-[#C9A84C]">{formatCurrency(product.price)}</p>
                 <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-[#5C6570]">View</p>
               </div>
             </Link>

@@ -39,7 +39,7 @@ export function ProductImageField() {
     <div className="space-y-2">
       <label className="block text-xs font-semibold text-gray-700">Product photo</label>
       <div className="flex flex-col sm:flex-row gap-4 items-start">
-        <div className="w-36 h-36 rounded-xl overflow-hidden border border-gray-200 bg-[#FAF7F2] flex-shrink-0">
+        <div className="w-36 h-36 rounded-xl overflow-hidden border border-gray-200 bg-[#F5F7FA] flex-shrink-0">
           <ProductImage src={preview} alt={fileName || 'Product photo preview'} size="lg" className="w-full h-full rounded-xl" />
         </div>
         <div className="space-y-2">

@@ -89,7 +89,7 @@ export default async function ProductsPage({
           </Link>
           <Link
             href="/crm/products/new"
-            className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#4A235A] px-3 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#3d1c4a] hover:text-white sm:flex-none"
+            className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#C9A84C] px-3 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#A87C2A] hover:text-white sm:flex-none"
           >
             <Plus size={14} /> Add Product
           </Link>
@@ -115,7 +115,7 @@ export default async function ProductsPage({
               name="q"
               defaultValue={search}
               placeholder="Search by name or SKU..."
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#4A235A] sm:py-1.5 sm:text-xs"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A84C] sm:py-1.5 sm:text-xs"
             />
           </div>
           <button

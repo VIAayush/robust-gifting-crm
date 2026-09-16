@@ -46,7 +46,7 @@ export default async function MockupsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-[var(--color-primary)]">Design Mockups</h1>
-        <p className="text-xs text-[#7A7267] mt-1">Attach mockup files to a requirement or order. Shared mockups are visible in the client portal.</p>
+        <p className="text-xs text-[#4A5568] mt-1">Attach mockup files to a requirement or order. Shared mockups are visible in the client portal.</p>
       </div>
 
       <form action={asFormAction(registerMockup)} className="grid gap-3 rounded-2xl border bg-white p-4 text-xs md:grid-cols-3">
@@ -92,7 +92,7 @@ export default async function MockupsPage() {
             { value: 'client', label: 'Share with client' },
           ]}
         />
-        <button className="rounded-lg bg-[#1A3022] py-2.5 font-semibold text-white md:col-span-3">Register mockup</button>
+        <button className="rounded-lg bg-[#C9A84C] py-2.5 font-semibold text-white md:col-span-3">Register mockup</button>
       </form>
 
       <div className="bg-white rounded-lg border overflow-hidden">
@@ -154,7 +154,7 @@ export default async function MockupsPage() {
                             { value: 'rejected', label: 'Rejected' },
                           ]}
                         />
-                        <button className="inline-flex min-h-9 items-center justify-center rounded-lg bg-[#1A3022] px-3 text-xs font-semibold text-white hover:bg-[#274433] hover:text-white">Save</button>
+                        <button className="inline-flex min-h-9 items-center justify-center rounded-lg bg-[#C9A84C] px-3 text-xs font-semibold text-white hover:bg-[#A87C2A] hover:text-white">Save</button>
                       </form>
                       <ConfirmAction
                         title="Delete mockup?"

@@ -129,17 +129,17 @@ export function ResetPasswordForm({
       <form onSubmit={onSubmit} className="space-y-5">
         {error && <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200">{error}</div>}
         {!ready && (
-          <div className="flex items-center justify-center gap-2 text-xs text-[#7A7267]">
+          <div className="flex items-center justify-center gap-2 text-xs text-[#4A5568]">
             <Loader2 className="h-4 w-4 animate-spin" />
             Restoring password recovery session…
           </div>
         )}
         <div>
-          <label className="block text-xs font-semibold text-[#5A5248] mb-1.5 uppercase tracking-wider">New password</label>
+          <label className="block text-xs font-semibold text-[#64748B] mb-1.5 uppercase tracking-wider">New password</label>
           <PasswordField value={password} onChange={setPassword} autoComplete="new-password" minLength={8} placeholder="At least 8 characters" />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-[#5A5248] mb-1.5 uppercase tracking-wider">Confirm new password</label>
+          <label className="block text-xs font-semibold text-[#64748B] mb-1.5 uppercase tracking-wider">Confirm new password</label>
           <PasswordField name="confirm_password" value={confirm} onChange={setConfirm} autoComplete="new-password" minLength={8} placeholder="Re-enter password" />
         </div>
         {passwordError && (
@@ -148,19 +148,19 @@ export function ResetPasswordForm({
         <button
           type="submit"
           disabled={!canSubmit}
-          className="w-full flex justify-center items-center py-3 px-4 rounded-xl text-xs font-semibold text-white bg-[#1A3022] hover:bg-[#274433] disabled:opacity-50"
+          className="w-full flex justify-center items-center py-3 px-4 rounded-xl text-xs font-semibold text-white bg-[#C9A84C] hover:bg-[#A87C2A] disabled:opacity-50"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reset password'}
         </button>
       </form>
-      <p className="text-xs text-center text-[#7A7267] mt-5 space-y-2">
+      <p className="text-xs text-center text-[#4A5568] mt-5 space-y-2">
         {!hasSession && ready ? (
           <span className="block">
-            <Link href="/forgot-password" className="font-semibold text-[#4A235A] hover:underline">Request a new reset link</Link>
+            <Link href="/forgot-password" className="font-semibold text-[#C9A84C] hover:underline">Request a new reset link</Link>
           </span>
         ) : null}
         <span className="block">
-          <Link href="/login" className="font-semibold text-[#4A235A] hover:underline">Back to sign in</Link>
+          <Link href="/login" className="font-semibold text-[#C9A84C] hover:underline">Back to sign in</Link>
         </span>
       </p>
     </AuthShell>

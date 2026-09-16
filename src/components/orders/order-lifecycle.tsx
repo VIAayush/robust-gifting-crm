@@ -56,10 +56,10 @@ export function OrderLifecycleBar({
                 cancelled
                   ? 'bg-gray-200'
                   : done
-                    ? 'bg-[#1A3022]'
+                    ? 'bg-[#C9A84C]'
                     : isCurrent
-                      ? 'bg-[#4A235A]'
-                      : 'bg-[#E5DFD5]'
+                      ? 'bg-[#C9A84C]'
+                      : 'bg-[#E2E8F0]'
               }`}
             />
           )
@@ -85,25 +85,25 @@ export function OrderLifecycleBar({
               key={step}
               className={`flex-1 min-w-[92px] rounded-xl border px-2.5 py-2 ${
                 isCurrent
-                  ? 'border-[#4A235A] bg-[#4A235A]/5'
+                  ? 'border-[#C9A84C] bg-[#C9A84C]/5'
                   : done
-                    ? 'border-[#1A3022]/20 bg-[#FAF7F2]'
-                    : 'border-[#E5DFD5] bg-white'
+                    ? 'border-[#C9A84C]/20 bg-[#F5F7FA]'
+                    : 'border-[#E2E8F0] bg-white'
               }`}
             >
               <p className={`text-[10px] font-semibold leading-tight ${
-                isCurrent ? 'text-[#4A235A]' : done ? 'text-[#1A3022]' : 'text-[#9A9288]'
+                isCurrent ? 'text-[#C9A84C]' : done ? 'text-[#C9A84C]' : 'text-[#94A3B8]'
               }`}>
                 {done ? '✓' : isCurrent ? '●' : '○'} {labels[step] || step}
               </p>
               {isCurrent && (
-                <p className="text-[10px] font-medium text-[#4A235A] mt-1">Current</p>
+                <p className="text-[10px] font-medium text-[#C9A84C] mt-1">Current</p>
               )}
               {info?.at && (
-                <p className="text-[10px] text-[#7A7267] mt-1">{formatDate(info.at)}</p>
+                <p className="text-[10px] text-[#4A5568] mt-1">{formatDate(info.at)}</p>
               )}
               {showActors && info?.by && (
-                <p className="text-[10px] text-[#7A7267] truncate">{info.by}</p>
+                <p className="text-[10px] text-[#4A5568] truncate">{info.by}</p>
               )}
             </li>
           )

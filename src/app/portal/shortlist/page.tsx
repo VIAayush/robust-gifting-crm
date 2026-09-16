@@ -30,7 +30,7 @@ export default async function PortalShortlistPage() {
         </div>
         <Link
           href="/portal/requirements/new"
-          className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-[#1A3022] px-4 text-sm font-semibold text-white hover:bg-[#274433] sm:w-auto"
+          className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-[#C9A84C] px-4 text-sm font-semibold text-white hover:bg-[#A87C2A] sm:w-auto"
         >
           Create Requirement
         </Link>
@@ -50,13 +50,13 @@ export default async function PortalShortlistPage() {
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
               <Link
                 href="/portal/catalogue"
-                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#1A3022] px-4 text-sm font-semibold text-white hover:bg-[#274433]"
+                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#C9A84C] px-4 text-sm font-semibold text-white hover:bg-[#A87C2A]"
               >
                 Browse catalogue
               </Link>
               <Link
                 href="/portal/campaigns"
-                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E5DFD5] bg-white px-4 text-sm font-semibold text-[#1A3022] hover:bg-[#FAF7F2]"
+                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white px-4 text-sm font-semibold text-[#C9A84C] hover:bg-[#F5F7FA]"
               >
                 View campaigns
               </Link>
@@ -72,9 +72,9 @@ export default async function PortalShortlistPage() {
                 <div key={row.id} className="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
                   <ProductImage src={offering.client_image_url} alt={offering.display_name || 'Gift'} size="md" />
                   <div className="flex flex-1 flex-col space-y-3 p-4">
-                    <p className="text-[10px] uppercase tracking-wider text-[#1A3022]">{campaign?.name}</p>
+                    <p className="text-[10px] uppercase tracking-wider text-[#C9A84C]">{campaign?.name}</p>
                     <Link href={`/portal/catalogue/${offering.id}`}>
-                      <h3 className="text-md font-bold text-gray-900 hover:text-[#1A3022]">{offering.display_name}</h3>
+                      <h3 className="text-md font-bold text-gray-900 hover:text-[#C9A84C]">{offering.display_name}</h3>
                     </Link>
                     <p className="text-sm text-gray-600">
                       {formatCurrency(offering.selling_price)} · qty {row.quantity || 1} · {row.kind}

@@ -19,7 +19,7 @@ export default async function CategoriesPage() {
 
   return (
     <SiteShell>
-      <div className="border-b border-[#E8E4DE] bg-[#F6F4F1]">
+      <div className="border-b border-[#E2E8F0] bg-[#F1F4F9]">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
           <p className="store-eyebrow">Shop</p>
           <h1 className="store-section-title mt-2">Shop by category</h1>
@@ -35,7 +35,7 @@ export default async function CategoriesPage() {
               <Link
                 key={category.name}
                 href={`/categories/${slugify(category.name)}`}
-                className="group overflow-hidden rounded-md border border-[#E8E4DE] bg-white transition-shadow hover:shadow-[0_8px_24px_rgba(27,36,48,0.08)]"
+                className="group overflow-hidden rounded-md border border-[#E2E8F0] bg-white transition-shadow hover:shadow-[0_8px_24px_rgba(27,36,48,0.08)]"
               >
                 <div className="aspect-[5/4] catalogue-studio-field">
                   {sample ? (
@@ -50,7 +50,7 @@ export default async function CategoriesPage() {
                     />
                   ) : null}
                 </div>
-                <div className="border-t border-[#E8E4DE] px-5 py-4">
+                <div className="border-t border-[#E2E8F0] px-5 py-4">
                   <p className="font-serif text-2xl text-[#1B2430]">{category.name}</p>
                   <p className="mt-1 text-xs text-[#5C6570]">
                     {count} {count === 1 ? 'gift' : 'gifts'}

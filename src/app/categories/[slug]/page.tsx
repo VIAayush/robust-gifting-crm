@@ -29,7 +29,7 @@ export default async function CategoryDetailPage({ params }: Props) {
 
   return (
     <SiteShell>
-      <div className="border-b border-[#E8E4DE] bg-[#F6F4F1]">
+      <div className="border-b border-[#E2E8F0] bg-[#F1F4F9]">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
           <p className="store-eyebrow">Category</p>
           <h1 className="store-section-title mt-2">{name}</h1>

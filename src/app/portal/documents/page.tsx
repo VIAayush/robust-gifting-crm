@@ -35,7 +35,7 @@ export default async function PortalDocumentsPage() {
 
         <div className="space-y-3 p-3 md:hidden">
           {(invoices || []).map((inv) => (
-            <article key={inv.id} className="rounded-xl border border-[#E8E4DE] bg-[#FAF7F2] p-4">
+            <article key={inv.id} className="rounded-xl border border-[#E2E8F0] bg-[#F5F7FA] p-4">
               <p className="font-mono text-sm font-semibold text-gray-900">{inv.invoice_number}</p>
               <p className="mt-1 text-xs text-gray-500">
                 {formatDate(inv.invoice_date)} · due {formatDate(inv.due_date)}
@@ -89,7 +89,7 @@ export default async function PortalDocumentsPage() {
           {(mockups || []).map((m) => {
             const href = fileHref(m.storage_path)
             return (
-              <article key={m.id} className="space-y-3 rounded-xl border border-[#E8E4DE] bg-[#FAF7F2] p-4">
+              <article key={m.id} className="space-y-3 rounded-xl border border-[#E2E8F0] bg-[#F5F7FA] p-4">
                 <div>
                   <p className="text-sm font-semibold text-gray-900">{m.file_name}</p>
                   <p className="mt-1 text-xs text-gray-500">{m.mime_type} · {formatDate(m.created_at)}</p>
@@ -99,7 +99,7 @@ export default async function PortalDocumentsPage() {
                     href={href}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-[#1A3022] px-3 text-xs font-semibold text-white hover:bg-[#274433]"
+                    className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-[#C9A84C] px-3 text-xs font-semibold text-white hover:bg-[#A87C2A]"
                   >
                     Open file
                   </a>
@@ -136,7 +136,7 @@ export default async function PortalDocumentsPage() {
                           href={href}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#E5DFD5] bg-white px-3 text-xs font-semibold text-[#1A3022] hover:bg-[#FAF7F2]"
+                          className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white px-3 text-xs font-semibold text-[#C9A84C] hover:bg-[#F5F7FA]"
                         >
                           Open
                         </a>

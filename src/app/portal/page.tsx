@@ -28,7 +28,7 @@ export default async function PortalHomePage() {
           <h2 className="font-serif text-lg">My orders</h2>
           <Link
             href="/portal/orders"
-            className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#E5DFD5] bg-white px-3 text-xs font-semibold text-[#1A3022] hover:bg-[#FAF7F2]"
+            className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white px-3 text-xs font-semibold text-[#C9A84C] hover:bg-[#F5F7FA]"
           >
             View all
           </Link>
@@ -40,7 +40,7 @@ export default async function PortalHomePage() {
               <Link
                 key={o.id}
                 href={`/portal/orders/${o.id}`}
-                className="flex flex-col gap-1 rounded-xl border border-[#EFE9E0] bg-[#FAF7F2] px-3 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-1 rounded-xl border border-[#E7ECF3] bg-[#F5F7FA] px-3 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
               >
                 <span className="font-medium text-gray-900">{campaign?.name || o.order_number}</span>
                 <span className="text-xs text-gray-500 sm:text-sm">

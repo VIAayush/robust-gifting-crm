@@ -92,7 +92,7 @@ export async function PublicHome() {
       </section>
 
       {/* Featured Categories */}
-      <section className="bg-[#F6F4F1] py-10 sm:py-14 lg:py-16">
+      <section className="bg-[#F1F4F9] py-10 sm:py-14 lg:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <Reveal>
             <div className="flex items-end justify-between gap-4">
@@ -127,7 +127,7 @@ export async function PublicHome() {
                         />
                       ) : null}
                     </div>
-                    <div className="border-t border-[#E8E4DE] px-3 py-3 text-center sm:px-4 sm:py-4">
+                    <div className="border-t border-[#E2E8F0] px-3 py-3 text-center sm:px-4 sm:py-4">
                       <p className="font-serif text-lg text-[#1B2430] sm:text-xl">{category.name}</p>
                       {CATEGORY_LINES[category.name] ? (
                         <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-[#5C6570]">
@@ -147,7 +147,7 @@ export async function PublicHome() {
       <section className="relative overflow-hidden py-20 text-white">
         <div className="absolute inset-0">
           <Image src="/site/banner-brand.webp" alt="" fill sizes="100vw" className="object-cover" />
-          <div className="absolute inset-0 bg-[#1A3022]/88" />
+          <div className="absolute inset-0 bg-[#0D1B2A]/88" />
         </div>
         <div className="relative mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
           <Reveal>
@@ -188,7 +188,7 @@ export async function PublicHome() {
                 <Reveal key={collection.slug} delay={(index % 3) * 50}>
                   <Link
                     href={`/collections/${collection.slug}`}
-                    className="group flex h-full flex-col overflow-hidden rounded-md border border-[#E8E4DE] bg-white transition-shadow hover:shadow-[0_8px_24px_rgba(27,36,48,0.08)]"
+                    className="group flex h-full flex-col overflow-hidden rounded-md border border-[#E2E8F0] bg-white transition-shadow hover:shadow-[0_8px_24px_rgba(27,36,48,0.08)]"
                   >
                     <div className="relative aspect-[5/3] catalogue-studio-field">
                       {sample ? (
@@ -207,7 +207,7 @@ export async function PublicHome() {
                       <p className="text-[10px] uppercase tracking-[0.18em] text-[#5C6570]">{collection.kicker}</p>
                       <p className="mt-2 font-serif text-2xl text-[#1B2430]">{collection.title}</p>
                       <p className="mt-2 flex-1 text-sm leading-relaxed text-[#5C6570]">{collection.description}</p>
-                      <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#1A3022]">
+                      <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#C9A84C]">
                         Open collection {ARROW}
                       </p>
                     </div>
@@ -231,7 +231,7 @@ export async function PublicHome() {
               <Reveal key={occasion.slug} delay={(index % 3) * 40}>
                 <Link
                   href={occasion.href}
-                  className="group flex gap-4 overflow-hidden rounded-md border border-[#E8E4DE] bg-white p-3 transition-shadow hover:shadow-[0_8px_24px_rgba(27,36,48,0.08)] sm:p-4"
+                  className="group flex gap-4 overflow-hidden rounded-md border border-[#E2E8F0] bg-white p-3 transition-shadow hover:shadow-[0_8px_24px_rgba(27,36,48,0.08)] sm:p-4"
                 >
                   <div className="h-24 w-24 shrink-0 overflow-hidden rounded-md catalogue-studio-field sm:h-28 sm:w-28">
                     {occasion.sample ? (
@@ -249,7 +249,7 @@ export async function PublicHome() {
                   <div className="min-w-0 flex-1 py-1">
                     <p className="font-serif text-xl text-[#1B2430]">{occasion.title}</p>
                     <p className="mt-1 text-sm text-[#5C6570]">{occasion.line}</p>
-                    <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#1A3022]">
+                    <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#C9A84C]">
                       Browse {ARROW}
                     </p>
                   </div>
@@ -262,7 +262,7 @@ export async function PublicHome() {
 
       {/* Shop by price */}
       {budgetCounts.length > 0 ? (
-        <section className="bg-[#F6F4F1] py-10 sm:py-14 lg:py-16">
+        <section className="bg-[#F1F4F9] py-10 sm:py-14 lg:py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <Reveal>
               <p className="store-eyebrow">Shop by price</p>
@@ -273,7 +273,7 @@ export async function PublicHome() {
                 <Link
                   key={band.id}
                   href={`/catalogue?budget=${encodeURIComponent(band.id)}`}
-                  className="rounded-md border border-[#E8E4DE] bg-white px-4 py-6 text-center transition-shadow hover:shadow-[0_8px_20px_rgba(27,36,48,0.07)]"
+                  className="rounded-md border border-[#E2E8F0] bg-white px-4 py-6 text-center transition-shadow hover:shadow-[0_8px_20px_rgba(27,36,48,0.07)]"
                 >
                   <p className="font-serif text-xl text-[#1B2430]">{band.label}</p>
                 </Link>
@@ -306,7 +306,7 @@ export async function PublicHome() {
       </section>
 
       {more.length > 0 ? (
-        <section className="bg-[#F6F4F1] py-10 sm:py-14 lg:py-16">
+        <section className="bg-[#F1F4F9] py-10 sm:py-14 lg:py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <Reveal>
               <div className="flex items-end justify-between gap-4">
@@ -360,7 +360,7 @@ export async function PublicHome() {
                 body: 'Quotations, orders, courier partners and invoicing in the same system.',
               },
             ].map((item) => (
-              <div key={item.title} className="border-t border-[#1A3022]/15 pt-5">
+              <div key={item.title} className="border-t border-[#C9A84C]/15 pt-5">
                 <p className="font-serif text-xl">{item.title}</p>
                 <p className="mt-3 text-sm leading-relaxed text-[#5C6570]">{item.body}</p>
               </div>
@@ -373,7 +373,7 @@ export async function PublicHome() {
       <section className="relative overflow-hidden py-14 text-center text-white sm:py-20">
         <div className="absolute inset-0">
           <Image src="/site/cta-dark.webp" alt="" fill sizes="100vw" className="object-cover" />
-          <div className="absolute inset-0 bg-[#0E1A13]/86" />
+          <div className="absolute inset-0 bg-[#08111A]/86" />
         </div>
         <div className="relative mx-auto max-w-3xl px-4 sm:px-6">
           <Reveal>
@@ -386,7 +386,7 @@ export async function PublicHome() {
             </p>
             <Link
               href="/request-quote"
-              className="mt-8 inline-flex bg-white px-8 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#1A3022]"
+              className="mt-8 inline-flex bg-white px-8 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#C9A84C]"
             >
               Request a Quote
             </Link>

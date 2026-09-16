@@ -23,7 +23,7 @@ export default async function RequestQuotePage({
 
   return (
     <SiteShell>
-      <div className="border-b border-[#E8E4DE] bg-[#F6F4F1]">
+      <div className="border-b border-[#E2E8F0] bg-[#F1F4F9]">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
           <p className="store-eyebrow">Request a quote</p>
           <h1 className="store-section-title mt-2">Tell us about the programme.</h1>
@@ -36,7 +36,7 @@ export default async function RequestQuotePage({
             fulfilment included.
           </p>
         </div>
-        <div className="rounded-md border border-[#E8E4DE] bg-white p-6 sm:p-8">
+        <div className="rounded-md border border-[#E2E8F0] bg-white p-6 sm:p-8">
           <QuoteForm productId={product?.id} productName={product?.name} portalHref={portalHref} />
         </div>
       </div>

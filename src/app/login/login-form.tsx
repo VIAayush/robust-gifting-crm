@@ -60,22 +60,22 @@ export function LoginForm({ next = '', resetSuccess = false }: { next?: string; 
   };
 
   return (
-    <div className="flex min-h-[100dvh] flex-col justify-center bg-[#F4EFE6] px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+    <div className="flex min-h-[100dvh] flex-col justify-center bg-[#F1F4F9] px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
       <div className="space-y-3 text-center sm:mx-auto sm:w-full sm:max-w-md">
         <Link href="/home" className="inline-block">
-          <BrandName as="h1" className="font-serif text-3xl tracking-tight text-[#1C1917] sm:text-4xl" />
+          <BrandName as="h1" className="font-serif text-3xl tracking-tight text-[#0D1B2A] sm:text-4xl" />
         </Link>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#7A7267]">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#4A5568]">
           Corporate Gifting CRM
         </p>
-        <p className="text-xs leading-relaxed text-[#7A7267]">
+        <p className="text-xs leading-relaxed text-[#4A5568]">
           Corporate gifting, from enquiry to payment.
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-lg">
-        <div className="bg-white py-8 px-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] rounded-2xl border border-[#E5DFD5] sm:px-10">
-          <p className="text-sm text-[#5A5248] mb-6 text-center">
+        <div className="bg-white py-8 px-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] rounded-2xl border border-[#E2E8F0] sm:px-10">
+          <p className="text-sm text-[#64748B] mb-6 text-center">
             Sign in to <BrandName />
           </p>
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -92,7 +92,7 @@ export function LoginForm({ next = '', resetSuccess = false }: { next?: string; 
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-[#5A5248] mb-1.5 uppercase tracking-wider">
+              <label className="block text-xs font-semibold text-[#64748B] mb-1.5 uppercase tracking-wider">
                 Email Address
               </label>
               <div className="relative">
@@ -106,7 +106,7 @@ export function LoginForm({ next = '', resetSuccess = false }: { next?: string; 
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="email"
                   required
-                  className="block w-full rounded-xl border border-[#E5DFD5] bg-[#FAF7F2] py-3 pl-10 pr-3 text-base text-[#1C1917] placeholder-gray-400 transition-colors focus:border-[#1A3022] focus:outline-none focus:ring-1 focus:ring-[#1A3022] sm:py-2.5 sm:text-xs"
+                  className="block w-full rounded-xl border border-[#E2E8F0] bg-[#F5F7FA] py-3 pl-10 pr-3 text-base text-[#0D1B2A] placeholder-gray-400 transition-colors focus:border-[#C9A84C] focus:outline-none focus:ring-1 focus:ring-[#C9A84C] sm:py-2.5 sm:text-xs"
                   placeholder="Enter your email"
                 />
               </div>
@@ -114,10 +114,10 @@ export function LoginForm({ next = '', resetSuccess = false }: { next?: string; 
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold text-[#5A5248] uppercase tracking-wider">
+                <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                   Password
                 </label>
-                <Link href="/forgot-password" className="text-[11px] font-semibold text-[#4A235A] hover:underline">
+                <Link href="/forgot-password" className="text-[11px] font-semibold text-[#C9A84C] hover:underline">
                   Forgot password?
                 </Link>
               </div>
@@ -127,15 +127,15 @@ export function LoginForm({ next = '', resetSuccess = false }: { next?: string; 
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center items-center py-3 px-4 rounded-xl text-xs font-semibold text-white bg-[#1A3022] hover:bg-[#274433] hover:text-white focus:outline-none shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="w-full flex justify-center items-center py-3 px-4 rounded-xl text-xs font-semibold text-white bg-[#C9A84C] hover:bg-[#A87C2A] hover:text-white focus:outline-none shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign in'}
             </button>
           </form>
 
-          <p className="text-xs text-center text-[#7A7267] mt-5">
+          <p className="text-xs text-center text-[#4A5568] mt-5">
             Need an account?{' '}
-            <Link href="/signup" className="font-semibold text-[#4A235A] hover:underline">
+            <Link href="/signup" className="font-semibold text-[#C9A84C] hover:underline">
               Sign up
             </Link>
           </p>

@@ -25,7 +25,7 @@ export function HeroShowcase({ products }: { products: PublicProduct[] }) {
   const active = slides[index]
 
   return (
-    <div className="relative overflow-hidden bg-[#EFE8DC]">
+    <div className="relative overflow-hidden bg-[#EEF2F7]">
       <div className="relative aspect-[4/5] sm:aspect-square lg:aspect-[5/6]">
         {slides.map((product, i) => (
           <Link
@@ -47,13 +47,13 @@ export function HeroShowcase({ products }: { products: PublicProduct[] }) {
           </Link>
         ))}
       </div>
-      <div className="flex items-end justify-between gap-4 border-t border-[#C9C0B2]/70 px-1 pt-4">
+      <div className="flex items-end justify-between gap-4 border-t border-[#CBD5E1]/70 px-1 pt-4">
         <div>
           <p className="text-[10px] uppercase tracking-[0.2em] text-[#5A5348]">{active.category_name}</p>
-          <p className="mt-1 font-serif text-xl text-[#1C1917]">{active.name}</p>
+          <p className="mt-1 font-serif text-xl text-[#0D1B2A]">{active.name}</p>
         </div>
         <div className="text-right">
-          <p className="text-sm text-[#1A3022]">{formatCurrency(active.price)}</p>
+          <p className="text-sm text-[#C9A84C]">{formatCurrency(active.price)}</p>
           <div className="mt-3 flex justify-end gap-1.5">
             {slides.map((product, i) => (
               <button
@@ -62,7 +62,7 @@ export function HeroShowcase({ products }: { products: PublicProduct[] }) {
                 aria-label={`Show ${product.name}`}
                 onClick={() => setIndex(i)}
                 className={`h-1.5 w-1.5 rounded-full transition-colors ${
-                  i === index ? 'bg-[#1A3022]' : 'bg-[#D6CEBE]'
+                  i === index ? 'bg-[#C9A84C]' : 'bg-[#D7E1EC]'
                 }`}
               />
             ))}

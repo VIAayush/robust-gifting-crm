@@ -85,7 +85,7 @@ export function SiteHeader({
   return (
     <header className="sticky top-0 z-40">
       {/* Desktop utility bar */}
-      <div className="hidden bg-[#1A3022] text-white lg:block">
+      <div className="hidden bg-[#0D1B2A] text-white lg:block">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-2.5 lg:px-8">
           <form onSubmit={submitSearch} className="relative flex min-w-0 flex-1 items-center gap-2 max-w-md">
             <Search size={16} className="shrink-0 text-white/80" />
@@ -98,12 +98,12 @@ export function SiteHeader({
               className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/65"
             />
             {focused && matches.length > 0 ? (
-              <div className="absolute left-0 top-full z-50 mt-2 w-full overflow-hidden rounded-md border border-[#E8E4DE] bg-white shadow-lg">
+              <div className="absolute left-0 top-full z-50 mt-2 w-full overflow-hidden rounded-md border border-[#E2E8F0] bg-white shadow-lg">
                 {matches.map((item) => (
                   <Link
                     key={item.id}
                     href={item.href}
-                    className="block px-4 py-2.5 text-sm text-[#1B2430] hover:bg-[#F6F4F1]"
+                    className="block px-4 py-2.5 text-sm text-[#1B2430] hover:bg-[#F1F4F9]"
                     onMouseDown={(event) => event.preventDefault()}
                   >
                     <span className="block font-medium">{item.name}</span>
@@ -136,7 +136,7 @@ export function SiteHeader({
             )}
             <Link
               href="/request-quote"
-              className="rounded-sm bg-white px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#1A3022]"
+              className="rounded-sm bg-white px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#C9A84C]"
             >
               Quote
             </Link>
@@ -145,15 +145,15 @@ export function SiteHeader({
       </div>
 
       {/* Main nav / mobile bar */}
-      <div className="border-b border-[#E8E4DE] bg-white">
+      <div className="border-b border-[#E2E8F0] bg-white">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4 sm:h-16 sm:px-6 lg:px-8">
           <Link href="/home" className="flex items-center">
-            <Image src="/logo.png" alt="Robust Gifting Solutions" width={196} height={85} className="h-[52px] w-auto sm:h-[60px]" priority />
+            <Image src="/logo.png" alt="Robust Gifting" width={600} height={600} className="h-11 w-11 sm:h-12 sm:w-12" priority />
           </Link>
 
           <nav className="hidden items-center gap-5 text-[13px] text-[#1B2430] lg:flex xl:gap-7">
             {PRIMARY_NAV.map((item) => (
-              <Link key={item.href} href={item.href} className="hover:text-[#1A3022]">
+              <Link key={item.href} href={item.href} className="hover:text-[#C9A84C]">
                 {item.label}
               </Link>
             ))}
@@ -164,7 +164,7 @@ export function SiteHeader({
             <button
               type="button"
               aria-label="Search catalogue"
-              className="flex h-11 w-11 items-center justify-center text-[#1A3022]"
+              className="flex h-11 w-11 items-center justify-center text-[#C9A84C]"
               onClick={() => {
                 setSearchOpen(true)
                 setOpen(false)
@@ -174,13 +174,13 @@ export function SiteHeader({
             </button>
             <Link
               href="/login"
-              className="rounded-sm bg-[#1A3022] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white"
+              className="rounded-sm bg-[#C9A84C] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white"
             >
               Sign in
             </Link>
             <button
               type="button"
-              className="flex h-11 w-11 items-center justify-center text-[#1A3022]"
+              className="flex h-11 w-11 items-center justify-center text-[#C9A84C]"
               aria-label={open ? 'Close menu' : 'Open menu'}
               aria-expanded={open}
               onClick={() => {
@@ -195,7 +195,7 @@ export function SiteHeader({
 
         {/* Mobile search panel */}
         {searchOpen ? (
-          <div className="border-t border-[#E8E4DE] bg-white px-4 py-3 lg:hidden">
+          <div className="border-t border-[#E2E8F0] bg-white px-4 py-3 lg:hidden">
             <form onSubmit={submitSearch} className="flex items-center gap-2">
               <Search size={18} className="shrink-0 text-[#5C6570]" />
               <input
@@ -203,14 +203,14 @@ export function SiteHeader({
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search gifts, categories, SKUs"
-                className="w-full bg-transparent py-2 text-base text-[#1B2430] outline-none placeholder:text-[#8A929C]"
+                className="w-full bg-transparent py-2 text-base text-[#1B2430] outline-none placeholder:text-[#94A3B8]"
               />
               <button type="button" aria-label="Close search" onClick={() => setSearchOpen(false)} className="p-2">
                 <X size={18} className="text-[#5C6570]" />
               </button>
             </form>
             {matches.length > 0 ? (
-              <div className="mt-2 max-h-56 overflow-y-auto border-t border-[#E8E4DE]">
+              <div className="mt-2 max-h-56 overflow-y-auto border-t border-[#E2E8F0]">
                 {matches.map((item) => (
                   <Link
                     key={item.id}
@@ -233,19 +233,19 @@ export function SiteHeader({
 
         {/* Mobile drawer */}
         {open ? (
-          <div className="fixed inset-x-0 bottom-0 top-14 z-50 overflow-y-auto border-t border-[#E8E4DE] bg-white px-4 py-6 sm:top-16 lg:hidden">
+          <div className="fixed inset-x-0 bottom-0 top-14 z-50 overflow-y-auto border-t border-[#E2E8F0] bg-white px-4 py-6 sm:top-16 lg:hidden">
             <nav className="mx-auto flex max-w-7xl flex-col gap-1">
               {PRIMARY_NAV.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpen(false)}
-                  className="border-b border-[#F0EDE8] py-3.5 text-base text-[#1B2430]"
+                  className="border-b border-[#EEF1F6] py-3.5 text-base text-[#1B2430]"
                 >
                   {item.label}
                 </Link>
               ))}
-              <p className="pb-2 pt-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8A929C]">
+              <p className="pb-2 pt-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#94A3B8]">
                 Categories
               </p>
               {categoryLinks.map((item) => (
@@ -253,7 +253,7 @@ export function SiteHeader({
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpen(false)}
-                  className="border-b border-[#F0EDE8] py-3.5 text-base text-[#5C6570]"
+                  className="border-b border-[#EEF1F6] py-3.5 text-base text-[#5C6570]"
                 >
                   {item.label}
                 </Link>
@@ -261,7 +261,7 @@ export function SiteHeader({
               <Link
                 href="/request-quote"
                 onClick={() => setOpen(false)}
-                className="mt-6 inline-flex items-center justify-center bg-[#1A3022] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white"
+                className="mt-6 inline-flex items-center justify-center bg-[#C9A84C] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white"
               >
                 Request a Quote
               </Link>

@@ -16,12 +16,12 @@ function CredentialsOnce({
 }) {
   const [revealed, setRevealed] = useState(false)
   return (
-    <div className="md:col-span-2 p-3 rounded-xl border border-[#E5DFD5] bg-[#FAF7F2] space-y-2">
-      <p className="text-xs font-semibold text-[#1C1917]">Client login created</p>
-      <p className="text-[11px] text-[#7A7267]">Share these credentials now. They are not stored in the CRM and cannot be recovered later.</p>
-      <p className="text-xs"><span className="text-[#7A7267]">Client ID / Login email:</span> <span className="font-mono">{email}</span></p>
+    <div className="md:col-span-2 p-3 rounded-xl border border-[#E2E8F0] bg-[#F5F7FA] space-y-2">
+      <p className="text-xs font-semibold text-[#0D1B2A]">Client login created</p>
+      <p className="text-[11px] text-[#4A5568]">Share these credentials now. They are not stored in the CRM and cannot be recovered later.</p>
+      <p className="text-xs"><span className="text-[#4A5568]">Client ID / Login email:</span> <span className="font-mono">{email}</span></p>
       <p className="text-xs">
-        <span className="text-[#7A7267]">Temporary password — share securely:</span>{' '}
+        <span className="text-[#4A5568]">Temporary password — share securely:</span>{' '}
         <span className="font-mono">{revealed ? password : '••••••••'}</span>
       </p>
       <div className="flex flex-wrap gap-2">
@@ -38,7 +38,7 @@ function CredentialsOnce({
         >
           Copy
         </button>
-        <button type="button" onClick={onDone} className="px-3 py-1.5 text-xs font-semibold text-white bg-[#4A235A] rounded-lg">
+        <button type="button" onClick={onDone} className="px-3 py-1.5 text-xs font-semibold text-white bg-[#C9A84C] rounded-lg">
           Done
         </button>
       </div>
@@ -126,7 +126,7 @@ export function PortalClientForm({ companyId }: { companyId: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="md:col-span-2 px-3 py-2 text-xs font-semibold text-white bg-[#4A235A] rounded-lg disabled:opacity-50"
+        className="md:col-span-2 px-3 py-2 text-xs font-semibold text-white bg-[#C9A84C] rounded-lg disabled:opacity-50"
       >
         {pending ? 'Creating login…' : 'Create client login'}
       </button>

@@ -43,7 +43,7 @@ export default async function CampaignDetailPage({
       )}
       <div>
         <h1 className="font-serif text-2xl">{campaign.name}</h1>
-        <p className="text-xs text-[#7A7267] mt-1">
+        <p className="text-xs text-[#4A5568] mt-1">
           {company?.name} · {campaign.employee_quantity?.toLocaleString('en-IN')} employees · {formatCurrency(campaign.budget_per_employee)} / person · {formatCurrency(campaign.total_budget)} total
         </p>
         <p className="text-xs mt-1">Status: {campaign.status} · Client catalogue: {campaign.published_to_client_at ? 'published' : 'not published'}</p>
@@ -68,7 +68,7 @@ export default async function CampaignDetailPage({
         <input name="budget_per_employee" type="number" step="0.01" min="0" defaultValue={campaign.budget_per_employee || 0} className="border rounded-lg px-3 py-2" />
         <SheetDateField name="required_delivery_date" label="Required delivery" defaultValue={campaign.required_delivery_date || ''} />
         <input name="description" defaultValue={campaign.description || ''} placeholder="Notes" className="min-h-11 rounded-lg border px-3 py-2" />
-        <button className="min-h-11 rounded-lg bg-[#1A3022] font-semibold text-white">Save campaign</button>
+        <button className="min-h-11 rounded-lg bg-[#C9A84C] font-semibold text-white">Save campaign</button>
       </form>
 
       <form action={asFormAction(addCampaignProduct)} className="grid gap-3 rounded-2xl border bg-white p-4 text-xs md:grid-cols-3">
@@ -88,12 +88,12 @@ export default async function CampaignDetailPage({
           ]}
         />
         <input name="selling_price" type="number" step="0.01" placeholder="Client selling price" className="border rounded-lg px-2 py-2" />
-        <button className="bg-[#1A3022] text-white rounded-lg font-semibold">Add as draft offering</button>
+        <button className="bg-[#C9A84C] text-white rounded-lg font-semibold">Add as draft offering</button>
       </form>
 
       <div className="bg-white border rounded-2xl overflow-hidden">
         <table className="w-full text-xs">
-          <thead className="bg-[#FAF7F2] text-left">
+          <thead className="bg-[#F5F7FA] text-left">
             <tr>
               <th className="p-3">Client offering</th>
               <th className="p-3">Client price</th>
@@ -109,7 +109,7 @@ export default async function CampaignDetailPage({
                 <tr key={row.id} className="border-t">
                   <td className="p-3">
                     <p className="font-semibold">{row.display_name || product?.name}</p>
-                    <p className="text-[#7A7267]">{product?.sku} · internal {formatCurrency(product?.price)}</p>
+                    <p className="text-[#4A5568]">{product?.sku} · internal {formatCurrency(product?.price)}</p>
                     {discontinued ? (
                       <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
                         Master product discontinued — unpublish or replace
@@ -121,13 +121,13 @@ export default async function CampaignDetailPage({
                   <td className="p-3 space-x-2">
                     {row.visibility !== 'published' ? (
                       discontinued ? (
-                        <span className="text-[#7A7267]">Cannot publish</span>
+                        <span className="text-[#4A5568]">Cannot publish</span>
                       ) : (
                         <form action={asFormAction(setCampaignProductVisibility)} className="inline">
                           <input type="hidden" name="campaign_id" value={campaign.id} />
                           <input type="hidden" name="id" value={row.id} />
                           <input type="hidden" name="visibility" value="published" />
-                          <button className="underline text-[#1A3022]">Publish to client</button>
+                          <button className="underline text-[#C9A84C]">Publish to client</button>
                         </form>
                       )
                     ) : (

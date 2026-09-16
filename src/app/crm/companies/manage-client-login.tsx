@@ -38,21 +38,21 @@ export function ManageClientLogin({
 
   return (
     <>
-      <button type="button" onClick={() => { setOpen(true); setIssued(null); setPassword(''); setRevealed(false) }} className="text-[11px] font-semibold text-[#4A235A] hover:underline">
+      <button type="button" onClick={() => { setOpen(true); setIssued(null); setPassword(''); setRevealed(false) }} className="text-[11px] font-semibold text-[#C9A84C] hover:underline">
         Manage Login
       </button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <button type="button" className="absolute inset-0 bg-black/40" aria-label="Close" onClick={() => setOpen(false)} />
-          <div className="relative bg-white rounded-2xl border border-[#E5DFD5] shadow-lg w-full max-w-md p-5 space-y-3 text-xs">
-            <h3 className="text-sm font-bold text-[#1C1917]">Manage Login</h3>
-            <p><span className="text-[#7A7267]">Name:</span> {client.full_name || '—'}</p>
-            <p><span className="text-[#7A7267]">Client ID / Login email:</span> <span className="font-mono">{client.email}</span></p>
-            <p><span className="text-[#7A7267]">Role:</span> {client.role.replace(/_/g, ' ')}</p>
-            <p><span className="text-[#7A7267]">Status:</span> {client.is_active ? 'Active' : 'Inactive'}</p>
-            <p className="text-[#7A7267]">Existing passwords cannot be viewed. Set a new temporary password to share with the client.</p>
+          <div className="relative bg-white rounded-2xl border border-[#E2E8F0] shadow-lg w-full max-w-md p-5 space-y-3 text-xs">
+            <h3 className="text-sm font-bold text-[#0D1B2A]">Manage Login</h3>
+            <p><span className="text-[#4A5568]">Name:</span> {client.full_name || '—'}</p>
+            <p><span className="text-[#4A5568]">Client ID / Login email:</span> <span className="font-mono">{client.email}</span></p>
+            <p><span className="text-[#4A5568]">Role:</span> {client.role.replace(/_/g, ' ')}</p>
+            <p><span className="text-[#4A5568]">Status:</span> {client.is_active ? 'Active' : 'Inactive'}</p>
+            <p className="text-[#4A5568]">Existing passwords cannot be viewed. Set a new temporary password to share with the client.</p>
             {issued ? (
-              <div className="p-3 rounded-xl bg-[#FAF7F2] border border-[#E5DFD5] space-y-2">
+              <div className="p-3 rounded-xl bg-[#F5F7FA] border border-[#E2E8F0] space-y-2">
                 <p className="font-semibold">Temporary password — share securely</p>
                 <p className="font-mono">{revealed ? issued : '••••••••'}</p>
                 <div className="flex gap-2">
@@ -72,7 +72,7 @@ export function ManageClientLogin({
                   className="w-full border rounded-lg px-3 py-2"
                 />
                 <div className="flex gap-2">
-                  <button type="button" disabled={pending || password.length < 8} onClick={() => submit(false)} className="px-3 py-2 font-semibold text-white bg-[#4A235A] rounded-lg disabled:opacity-50">
+                  <button type="button" disabled={pending || password.length < 8} onClick={() => submit(false)} className="px-3 py-2 font-semibold text-white bg-[#C9A84C] rounded-lg disabled:opacity-50">
                     {pending ? 'Saving…' : 'Set temporary password'}
                   </button>
                   <button type="button" disabled={pending} onClick={() => submit(true)} className="px-3 py-2 border rounded-lg disabled:opacity-50">

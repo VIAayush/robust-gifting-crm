@@ -30,7 +30,7 @@ export default async function PortalRequirementsPage() {
         </div>
         <Link 
           href="/portal/requirements/new"
-          className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-[#1A3022] px-4 text-sm font-semibold text-white hover:bg-[#274433] sm:w-auto"
+          className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-[#C9A84C] px-4 text-sm font-semibold text-white hover:bg-[#A87C2A] sm:w-auto"
         >
           Create New Requirement
         </Link>
@@ -44,7 +44,7 @@ export default async function PortalRequirementsPage() {
         <>
           <div className="space-y-3 md:hidden">
             {requirements.map((req) => (
-              <article key={req.id} className="space-y-3 rounded-xl border border-[#E8E4DE] bg-white p-4">
+              <article key={req.id} className="space-y-3 rounded-xl border border-[#E2E8F0] bg-white p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-gray-900">{req.name}</p>

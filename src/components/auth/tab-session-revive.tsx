@@ -17,8 +17,8 @@ export function TabSessionRevive() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#F4EFE6] flex items-center justify-center">
-      <p className="text-sm text-[#7A7267]">Restoring this tab’s session…</p>
+    <div className="min-h-screen bg-[#F1F4F9] flex items-center justify-center">
+      <p className="text-sm text-[#4A5568]">Restoring this tab’s session…</p>
     </div>
   )
 }

@@ -40,35 +40,35 @@ export default async function AuditLogPage({
   return (
     <div className="p-4 sm:p-8 max-w-[1600px] mx-auto space-y-6">
       <div>
-        <h1 className="font-serif text-2xl font-normal text-[#1C1917]">Audit Log</h1>
-        <p className="text-xs text-[#7A7267] mt-1">Company-wide create, update, assignment and status history.</p>
+        <h1 className="font-serif text-2xl font-normal text-[#0D1B2A]">Audit Log</h1>
+        <p className="text-xs text-[#4A5568] mt-1">Company-wide create, update, assignment and status history.</p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-[#E5DFD5] overflow-x-auto shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-x-auto shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
         <table className="w-full text-xs min-w-[900px]">
-          <thead className="bg-[#FAF7F2] border-b border-[#E5DFD5]">
+          <thead className="bg-[#F5F7FA] border-b border-[#E2E8F0]">
             <tr>
-              <th className="text-left px-5 py-3.5 font-semibold text-[#7A7267]">When</th>
-              <th className="text-left px-5 py-3.5 font-semibold text-[#7A7267]">User</th>
-              <th className="text-left px-5 py-3.5 font-semibold text-[#7A7267]">Action</th>
-              <th className="text-left px-5 py-3.5 font-semibold text-[#7A7267]">Entity</th>
-              <th className="text-left px-5 py-3.5 font-semibold text-[#7A7267]">Previous</th>
-              <th className="text-left px-5 py-3.5 font-semibold text-[#7A7267]">New</th>
+              <th className="text-left px-5 py-3.5 font-semibold text-[#4A5568]">When</th>
+              <th className="text-left px-5 py-3.5 font-semibold text-[#4A5568]">User</th>
+              <th className="text-left px-5 py-3.5 font-semibold text-[#4A5568]">Action</th>
+              <th className="text-left px-5 py-3.5 font-semibold text-[#4A5568]">Entity</th>
+              <th className="text-left px-5 py-3.5 font-semibold text-[#4A5568]">Previous</th>
+              <th className="text-left px-5 py-3.5 font-semibold text-[#4A5568]">New</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#EFE9E0]">
+          <tbody className="divide-y divide-[#E7ECF3]">
             {logs?.length ? (
               logs.map((log) => {
                 const href = entityHref(log.entity, log.entity_id)
                 const label = `${describeAudit(log.action, log.entity || 'record')} ${log.entity_id ? `#${String(log.entity_id).slice(0, 8)}` : ''}`
                 return (
-                  <tr key={log.id} className="hover:bg-[#FAF7F2]">
+                  <tr key={log.id} className="hover:bg-[#F5F7FA]">
                     <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{formatDateTime(log.created_at)}</td>
-                    <td className="px-5 py-3 text-[#1C1917]">{(log.profile as any)?.full_name || (log.profile as any)?.email || 'System'}</td>
-                    <td className="px-5 py-3 font-semibold text-[#1C1917] capitalize">{log.action?.replace(/_/g, ' ')}</td>
+                    <td className="px-5 py-3 text-[#0D1B2A]">{(log.profile as any)?.full_name || (log.profile as any)?.email || 'System'}</td>
+                    <td className="px-5 py-3 font-semibold text-[#0D1B2A] capitalize">{log.action?.replace(/_/g, ' ')}</td>
                     <td className="px-5 py-3">
                       {href ? (
-                        <Link href={href} className="text-[#1A3022] hover:underline font-medium">{label}</Link>
+                        <Link href={href} className="text-[#C9A84C] hover:underline font-medium">{label}</Link>
                       ) : (
                         <span className="capitalize">{label}</span>
                       )}

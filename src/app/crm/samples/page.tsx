@@ -36,9 +36,9 @@ export default async function SamplesPage({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-[var(--color-primary)]">Sample Management</h1>
-        <p className="text-xs text-[#7A7267] mt-1">
+        <p className="text-xs text-[#4A5568] mt-1">
           Track physical samples in office, with the team, with a client, or pending from a supplier. Use{' '}
-          <span className="font-semibold text-[#1A3022]">Send to client</span> on any product below to dispatch samples
+          <span className="font-semibold text-[#C9A84C]">Send to client</span> on any product below to dispatch samples
           directly to a company.
         </p>
       </div>
@@ -65,7 +65,7 @@ export default async function SamplesPage({
           ['Pending Supplier', totalPending],
         ].map(([label, value]) => (
           <div key={String(label)} className="p-4 bg-white border rounded-xl">
-            <p className="text-xs text-[#7A7267]">{label}</p>
+            <p className="text-xs text-[#4A5568]">{label}</p>
             <p className="text-xl font-semibold">{value}</p>
           </div>
         ))}
@@ -85,12 +85,12 @@ export default async function SamplesPage({
           ]}
         />
         <label className="block space-y-1">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#7A7267]">Quantity</span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#4A5568]">Quantity</span>
           <input name="quantity" type="number" min="1" defaultValue={1} required className="min-h-11 w-full rounded-lg border px-2 py-2" />
         </label>
         {showCost ? (
           <label className="block space-y-1">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#7A7267]">Unit cost</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#4A5568]">Unit cost</span>
             <input name="unit_cost" type="number" step="0.01" min="0" placeholder="0.00" className="min-h-11 w-full rounded-lg border px-2 py-2" />
           </label>
         ) : (
@@ -98,7 +98,7 @@ export default async function SamplesPage({
         )}
         <button
           type="submit"
-          className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#1A3022] px-4 py-2.5 font-semibold text-white md:col-span-4"
+          className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#C9A84C] px-4 py-2.5 font-semibold text-white md:col-span-4"
         >
           Receive into office
         </button>
@@ -106,7 +106,7 @@ export default async function SamplesPage({
 
       <div className="bg-white rounded-2xl border overflow-hidden">
         <table className="w-full text-left text-sm">
-          <thead className="bg-[#FAF7F2] text-xs text-[#7A7267]">
+          <thead className="bg-[#F5F7FA] text-xs text-[#4A5568]">
             <tr>
               <th className="p-3">Product</th>
               <th className="p-3">Office</th>
@@ -124,7 +124,7 @@ export default async function SamplesPage({
                 <tr key={sample.id} className="border-t align-top">
                   <td className="p-3">
                     <Link href={`/crm/products/${sample.product_id}`} className="font-medium hover:underline">{product?.name}</Link>
-                    <p className="text-[11px] text-[#7A7267]">{product?.sku}</p>
+                    <p className="text-[11px] text-[#4A5568]">{product?.sku}</p>
                   </td>
                   <td className="p-3">{sample.in_office || 0}</td>
                   <td className="p-3">{sample.with_team || 0}</td>
@@ -135,11 +135,11 @@ export default async function SamplesPage({
                     <div className="min-w-[220px] space-y-2">
                       <form
                         action={asFormAction(moveSample)}
-                        className="space-y-1.5 rounded-lg border border-[#1A3022]/25 bg-[#F4EFE6] p-2 text-[11px]"
+                        className="space-y-1.5 rounded-lg border border-[#C9A84C]/25 bg-[#F1F4F9] p-2 text-[11px]"
                       >
                         <input type="hidden" name="stock_id" value={sample.id} />
                         <input type="hidden" name="to_holder" value="client" />
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#1A3022]">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#C9A84C]">
                           Send to client
                         </p>
                         <MobileSheetSelect
@@ -170,13 +170,13 @@ export default async function SamplesPage({
                             required
                             className="rounded border px-1 py-1"
                           />
-                          <button className="rounded bg-[#1A3022] py-1 font-semibold text-white">Send</button>
+                          <button className="rounded bg-[#C9A84C] py-1 font-semibold text-white">Send</button>
                         </div>
                         <input name="note" placeholder="Note (optional)" className="w-full rounded border px-1 py-1" />
                       </form>
 
                       <details className="text-[11px]">
-                        <summary className="cursor-pointer text-[#7A7267]">Other movement</summary>
+                        <summary className="cursor-pointer text-[#4A5568]">Other movement</summary>
                         <form action={asFormAction(moveSample)} className="mt-1.5 grid grid-cols-2 gap-1">
                           <input type="hidden" name="stock_id" value={sample.id} />
                           <MobileSheetSelect

@@ -11,20 +11,20 @@ export function AuthShell({
   children: ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-[#F4EFE6] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#F1F4F9] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <BrandName as="h1" className="font-serif text-3xl tracking-tight text-[#1C1917] sm:text-4xl" />
-        <p className="text-[11px] uppercase tracking-[0.2em] font-semibold text-[#7A7267] mt-1">
+        <BrandName as="h1" className="font-serif text-3xl tracking-tight text-[#0D1B2A] sm:text-4xl" />
+        <p className="text-[11px] uppercase tracking-[0.2em] font-semibold text-[#4A5568] mt-1">
           Corporate Gifting CRM
         </p>
-        <p className="text-xs text-[#7A7267] mt-3">
+        <p className="text-xs text-[#4A5568] mt-3">
           Corporate gifting, from enquiry to payment.
         </p>
       </div>
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-lg">
-        <div className="bg-white py-8 px-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] rounded-2xl border border-[#E5DFD5] sm:px-10">
-          <p className="text-sm text-[#5A5248] mb-6 text-center">{title}</p>
-          {subtitle ? <p className="text-xs text-[#7A7267] -mt-4 mb-6 text-center">{subtitle}</p> : null}
+        <div className="bg-white py-8 px-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] rounded-2xl border border-[#E2E8F0] sm:px-10">
+          <p className="text-sm text-[#64748B] mb-6 text-center">{title}</p>
+          {subtitle ? <p className="text-xs text-[#4A5568] -mt-4 mb-6 text-center">{subtitle}</p> : null}
           {children}
         </div>
       </div>

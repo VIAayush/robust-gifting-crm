@@ -8,7 +8,7 @@ type Size = 'xs' | 'sm' | 'md' | 'lg' | 'hero'
 type Fit = 'contain' | 'cover'
 
 /** Warm studio field — keep in sync with `.catalogue-studio-field` in globals.css */
-export const STUDIO_FIELD = '#E4D9C8'
+export const STUDIO_FIELD = '#E7EDF4'
 
 const sizeWrap: Record<Size, string> = {
   xs: 'w-8 h-8',
@@ -29,13 +29,13 @@ function usableSrc(src?: string | null): string | null {
 function Fallback({ alt, compact }: { alt: string; compact: boolean }) {
   return (
     <div
-      className="flex h-full w-full flex-col items-center justify-center gap-1 text-[#1A3022]"
+      className="flex h-full w-full flex-col items-center justify-center gap-1 text-[#C9A84C]"
       style={{ backgroundColor: STUDIO_FIELD }}
       role="img"
       aria-label={alt || 'Product'}
     >
       <span className={cn('font-serif tracking-tight', compact ? 'text-xs' : 'text-lg')}>S</span>
-      {!compact && <Package className="h-5 w-5 text-[#C4B8A8]" aria-hidden="true" />}
+      {!compact && <Package className="h-5 w-5 text-[#C9D3E0]" aria-hidden="true" />}
     </div>
   )
 }

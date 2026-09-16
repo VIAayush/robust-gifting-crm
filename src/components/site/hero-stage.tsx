@@ -98,7 +98,7 @@ export function HeroStage({
   const mobilePreview = floats.slice(0, 3)
 
   return (
-    <section className="relative isolate overflow-hidden bg-[#1A3022] text-white">
+    <section className="relative isolate overflow-hidden bg-[#0D1B2A] text-white">
       <div className="absolute inset-0">
         <Image
           src="/site/hero-composition.webp"
@@ -108,16 +108,16 @@ export function HeroStage({
           sizes="100vw"
           className="object-cover opacity-35"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0E1A13] via-[#1A3022]/92 to-[#1A3022]/75" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#08111A] via-[#0D1B2A]/92 to-[#0D1B2A]/75" />
       </div>
 
       <div className="relative mx-auto grid min-h-[auto] max-w-7xl items-center gap-8 px-4 py-12 sm:gap-10 sm:px-6 sm:py-16 lg:min-h-[78vh] lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-20">
         <div>
           <h1 className="max-w-2xl font-serif leading-[1.2] tracking-tight">
-            <span className="block text-[1.75rem] font-semibold italic text-[#F4EFE6] sm:text-[2.1rem] lg:text-[2.5rem] xl:text-[3.3rem]">
+            <span className="block text-[1.75rem] font-semibold italic text-[#F1F4F9] sm:text-[2.1rem] lg:text-[2.5rem] xl:text-[3.3rem]">
               Corporate gifting,
             </span>
-            <span className="mt-1 block text-[1.75rem] font-semibold italic text-[#F4EFE6] sm:mt-2 sm:text-[2.1rem] lg:text-[2.5rem] xl:text-[3.3rem]">
+            <span className="mt-1 block text-[1.75rem] font-semibold italic text-[#F1F4F9] sm:mt-2 sm:text-[2.1rem] lg:text-[2.5rem] xl:text-[3.3rem]">
               designed to be remembered.
             </span>
           </h1>
@@ -127,7 +127,7 @@ export function HeroStage({
           <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap">
             <Link
               href="/catalogue"
-              className="inline-flex items-center justify-center bg-white px-6 py-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#1A3022] sm:py-3"
+              className="inline-flex items-center justify-center bg-gradient-to-br from-[#E8C96A] via-[#C9A84C] to-[#A87C2A] px-6 py-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0D1B2A] shadow-[0_4px_14px_rgba(201,168,76,0.35)] sm:py-3"
             >
               Explore Catalogue
             </Link>
@@ -161,9 +161,9 @@ export function HeroStage({
                       imgClassName="catalogue-product-img"
                     />
                   </div>
-                  <div className="border-t border-[#E8E4DE] px-2.5 py-2 text-[#1B2430]">
+                  <div className="border-t border-[#E2E8F0] px-2.5 py-2 text-[#1B2430]">
                     <p className="truncate text-center text-[11px] leading-snug">{product.name}</p>
-                    <p className="mt-0.5 text-center text-[11px] font-semibold text-[#1A3022]">
+                    <p className="mt-0.5 text-center text-[11px] font-semibold text-[#C9A84C]">
                       {formatCurrency(product.price)}
                     </p>
                   </div>
@@ -193,9 +193,9 @@ export function HeroStage({
                     imgClassName="catalogue-product-img scale-[1.04]"
                   />
                 </div>
-                <div className="border-t border-[#E8E4DE] bg-white px-3 py-2.5 text-[#1B2430]">
+                <div className="border-t border-[#E2E8F0] bg-white px-3 py-2.5 text-[#1B2430]">
                   <p className="truncate text-center text-[12px] leading-snug">{product.name}</p>
-                  <p className="mt-0.5 text-center text-[11px] font-semibold text-[#1A3022]">View gift</p>
+                  <p className="mt-0.5 text-center text-[11px] font-semibold text-[#C9A84C]">View gift</p>
                 </div>
               </div>
             </Link>

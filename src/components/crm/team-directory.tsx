@@ -55,9 +55,9 @@ export function TeamDirectory({
 
       <div className="space-y-4 md:hidden">
         {staff.map((p) => (
-          <article key={p.id} className="space-y-3 rounded-xl border border-[#E8E4DE] bg-white p-4">
+          <article key={p.id} className="space-y-3 rounded-xl border border-[#E2E8F0] bg-white p-4">
             <div>
-              <p className="text-sm font-semibold text-[#1C1917]">{p.full_name}</p>
+              <p className="text-sm font-semibold text-[#0D1B2A]">{p.full_name}</p>
               <p className="mt-0.5 text-xs text-gray-500">{p.email}</p>
               <span
                 className={`mt-2 inline-block rounded px-2 py-1 text-[11px] font-medium uppercase ${
@@ -67,7 +67,7 @@ export function TeamDirectory({
                 {p.role}
               </span>
             </div>
-            <form action={asFormAction(updateTeamMember)} className="grid gap-2 border-t border-[#EFE9E0] pt-3">
+            <form action={asFormAction(updateTeamMember)} className="grid gap-2 border-t border-[#E7ECF3] pt-3">
               <input type="hidden" name="id" value={p.id} />
               <MobileSheetSelect name="role" label="Role" defaultValue={p.role} options={ROLE_OPTIONS} />
               <MobileSheetSelect
@@ -85,7 +85,7 @@ export function TeamDirectory({
               />
               <button
                 type="submit"
-                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#1A3022] px-3 text-xs font-semibold text-white hover:bg-[#274433] hover:text-white"
+                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#C9A84C] px-3 text-xs font-semibold text-white hover:bg-[#A87C2A] hover:text-white"
               >
                 Save
               </button>
@@ -141,7 +141,7 @@ export function TeamDirectory({
                     />
                     <button
                       type="submit"
-                      className="inline-flex min-h-9 items-center justify-center rounded-lg bg-[#1A3022] px-3 text-xs font-semibold text-white hover:bg-[#274433] hover:text-white"
+                      className="inline-flex min-h-9 items-center justify-center rounded-lg bg-[#C9A84C] px-3 text-xs font-semibold text-white hover:bg-[#A87C2A] hover:text-white"
                     >
                       Save
                     </button>

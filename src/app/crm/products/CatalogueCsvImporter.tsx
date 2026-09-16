@@ -164,7 +164,7 @@ export function CatalogueCsvImporter() {
             type="button"
             disabled={pending || !mappedRequired}
             onClick={onImport}
-            className="px-6 py-2 text-xs font-semibold text-white bg-[#4A235A] hover:bg-[#3d1c4a] rounded-lg disabled:opacity-50"
+            className="px-6 py-2 text-xs font-semibold text-white bg-[#C9A84C] hover:bg-[#A87C2A] rounded-lg disabled:opacity-50"
           >
             {pending ? 'Importing…' : 'Import products'}
           </button>

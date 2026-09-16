@@ -104,14 +104,14 @@ export default async function OrderControlCenterPage({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-[var(--color-primary)] sm:text-2xl">Order Control Center</h1>
-          <p className="mt-1 text-xs text-[#7A7267]">Who owns each order right now, and whether it is healthy.</p>
-          <p className="mt-2 text-[10px] leading-relaxed text-[#7A7267]">
+          <p className="mt-1 text-xs text-[#4A5568]">Who owns each order right now, and whether it is healthy.</p>
+          <p className="mt-2 text-[10px] leading-relaxed text-[#4A5568]">
             Lifecycle: {ORDER_LIFECYCLE.map((s) => ORDER_STATUS_LABELS[s]).join(' → ')}
           </p>
         </div>
         <div className="flex gap-2 text-xs">
-          <Link href={tableHref} className={`min-h-10 flex-1 rounded-lg border px-3 py-2 text-center sm:flex-none ${view === 'table' ? 'border-[#1A3022] bg-[#1A3022] text-white' : 'bg-white'}`}>Table</Link>
-          <Link href={kanbanHref} className={`min-h-10 flex-1 rounded-lg border px-3 py-2 text-center sm:flex-none ${view === 'kanban' ? 'border-[#1A3022] bg-[#1A3022] text-white' : 'bg-white'}`}>Kanban</Link>
+          <Link href={tableHref} className={`min-h-10 flex-1 rounded-lg border px-3 py-2 text-center sm:flex-none ${view === 'table' ? 'border-[#C9A84C] bg-[#C9A84C] text-white' : 'bg-white'}`}>Table</Link>
+          <Link href={kanbanHref} className={`min-h-10 flex-1 rounded-lg border px-3 py-2 text-center sm:flex-none ${view === 'kanban' ? 'border-[#C9A84C] bg-[#C9A84C] text-white' : 'bg-white'}`}>Kanban</Link>
         </div>
       </div>
 
@@ -236,40 +236,40 @@ export default async function OrderControlCenterPage({
         />
       </div>
 
-      <form className="hidden grid-cols-2 gap-3 rounded-2xl border border-[#E5DFD5] bg-white p-4 md:grid-cols-4 lg:grid lg:grid-cols-9">
+      <form className="hidden grid-cols-2 gap-3 rounded-2xl border border-[#E2E8F0] bg-white p-4 md:grid-cols-4 lg:grid lg:grid-cols-9">
         {view === 'kanban' ? <input type="hidden" name="view" value="kanban" /> : null}
-        <select name="client" defaultValue={params.client || ''} className="rounded-lg border bg-[#FAF7F2] px-2 py-2 text-xs">
+        <select name="client" defaultValue={params.client || ''} className="rounded-lg border bg-[#F5F7FA] px-2 py-2 text-xs">
           <option value="">All clients</option>
           {(companies || []).map((c: { id: string; name: string }) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <select name="department" defaultValue={params.department || ''} className="rounded-lg border bg-[#FAF7F2] px-2 py-2 text-xs">
+        <select name="department" defaultValue={params.department || ''} className="rounded-lg border bg-[#F5F7FA] px-2 py-2 text-xs">
           <option value="">All departments</option>
           {(departments || []).map((d: { id: string; name: string }) => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
-        <select name="employee" defaultValue={params.employee || ''} className="rounded-lg border bg-[#FAF7F2] px-2 py-2 text-xs">
+        <select name="employee" defaultValue={params.employee || ''} className="rounded-lg border bg-[#F5F7FA] px-2 py-2 text-xs">
           <option value="">All employees</option>
           {(staff || []).map((s: { id: string; full_name: string | null }) => <option key={s.id} value={s.id}>{s.full_name}</option>)}
         </select>
-        <select name="stage" defaultValue={params.stage || ''} className="rounded-lg border bg-[#FAF7F2] px-2 py-2 text-xs">
+        <select name="stage" defaultValue={params.stage || ''} className="rounded-lg border bg-[#F5F7FA] px-2 py-2 text-xs">
           <option value="">All stages</option>
           {ORDER_LIFECYCLE.map((s) => <option key={s} value={s}>{ORDER_STATUS_LABELS[s]}</option>)}
           <option value="cancelled">Cancelled</option>
         </select>
-        <select name="health" defaultValue={params.health || ''} className="rounded-lg border bg-[#FAF7F2] px-2 py-2 text-xs">
+        <select name="health" defaultValue={params.health || ''} className="rounded-lg border bg-[#F5F7FA] px-2 py-2 text-xs">
           <option value="">All health</option>
           <option value="on_track">On Track</option>
           <option value="at_risk">At Risk</option>
           <option value="delayed">Delayed</option>
         </select>
-        <input type="date" name="from" defaultValue={params.from || ''} className="rounded-lg border bg-[#FAF7F2] px-2 py-2 text-xs" />
-        <input type="date" name="to" defaultValue={params.to || ''} className="rounded-lg border bg-[#FAF7F2] px-2 py-2 text-xs" />
-        <select name="sort" defaultValue={params.sort || 'delivery'} className="rounded-lg border bg-[#FAF7F2] px-2 py-2 text-xs">
+        <input type="date" name="from" defaultValue={params.from || ''} className="rounded-lg border bg-[#F5F7FA] px-2 py-2 text-xs" />
+        <input type="date" name="to" defaultValue={params.to || ''} className="rounded-lg border bg-[#F5F7FA] px-2 py-2 text-xs" />
+        <select name="sort" defaultValue={params.sort || 'delivery'} className="rounded-lg border bg-[#F5F7FA] px-2 py-2 text-xs">
           <option value="delivery">Delivery date</option>
           <option value="value">Order value</option>
           <option value="updated">Last updated</option>
           <option value="priority">Priority</option>
         </select>
-        <button className="rounded-lg bg-[#1A3022] px-3 text-xs font-semibold text-white">Apply</button>
+        <button className="rounded-lg bg-[#C9A84C] px-3 text-xs font-semibold text-white">Apply</button>
       </form>
 
       {view === 'kanban' ? (
@@ -293,9 +293,9 @@ export default async function OrderControlCenterPage({
           })}
         />
       ) : (
-        <div className="bg-white rounded-2xl border border-[#E5DFD5] overflow-x-auto">
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[#FAF7F2] text-[#7A7267]">
+            <thead className="bg-[#F5F7FA] text-[#4A5568]">
               <tr>
                 <th className="px-3 py-3 font-semibold">Order</th>
                 <th className="px-3 py-3 font-semibold">Client</th>
@@ -309,16 +309,16 @@ export default async function OrderControlCenterPage({
                 <th className="px-3 py-3 font-semibold">Updated</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#EFE9E0]">
+            <tbody className="divide-y divide-[#E7ECF3]">
               {rows.map((o) => {
                 const company = oneRelation(o.company)
                 const assignee = oneRelation(o.assignee)
                 const department = oneRelation(o.department)
                 const campaign = oneRelation(o.campaign)
                 return (
-                  <tr key={o.id} className="hover:bg-[#FAF7F2]">
+                  <tr key={o.id} className="hover:bg-[#F5F7FA]">
                     <td className="px-3 py-3">
-                      <Link href={`/crm/orders/${o.id}`} className="font-mono font-semibold text-[#1A3022] hover:underline">
+                      <Link href={`/crm/orders/${o.id}`} className="font-mono font-semibold text-[#C9A84C] hover:underline">
                         {o.order_number || `ORD-${o.id.slice(0, 6)}`}
                       </Link>
                     </td>
@@ -337,12 +337,12 @@ export default async function OrderControlCenterPage({
                         {HEALTH_LABELS[o.health]}
                       </span>
                     </td>
-                    <td className="px-3 py-3 text-[#7A7267]">{formatDate(o.updated_at)}</td>
+                    <td className="px-3 py-3 text-[#4A5568]">{formatDate(o.updated_at)}</td>
                   </tr>
                 )
               })}
               {rows.length === 0 && (
-                <tr><td colSpan={10} className="px-3 py-8 text-center text-[#7A7267]">No orders match these filters.</td></tr>
+                <tr><td colSpan={10} className="px-3 py-8 text-center text-[#4A5568]">No orders match these filters.</td></tr>
               )}
             </tbody>
           </table>

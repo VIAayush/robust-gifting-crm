@@ -39,7 +39,7 @@ export default async function PortalQuotationsPage() {
         <>
           <div className="space-y-3 md:hidden">
             {quotations?.map((quote) => (
-              <article key={quote.id} className="space-y-3 rounded-xl border border-[#E8E4DE] bg-white p-4">
+              <article key={quote.id} className="space-y-3 rounded-xl border border-[#E2E8F0] bg-white p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-mono text-sm font-semibold text-gray-900">{quote.quotation_number}</p>
@@ -54,7 +54,7 @@ export default async function PortalQuotationsPage() {
                 <p className="text-base font-semibold text-gray-900">{formatCurrency(quote.total)}</p>
                 <Link
                   href={`/portal/quotations/${quote.id}`}
-                  className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-[#1A3022] px-3 text-xs font-semibold text-white hover:bg-[#274433]"
+                  className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-[#C9A84C] px-3 text-xs font-semibold text-white hover:bg-[#A87C2A]"
                 >
                   View details
                 </Link>
@@ -94,7 +94,7 @@ export default async function PortalQuotationsPage() {
                       <td className="px-6 py-4 text-right">
                         <Link
                           href={`/portal/quotations/${quote.id}`}
-                          className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#E5DFD5] bg-white px-3 text-xs font-semibold text-[#1A3022] hover:bg-[#FAF7F2]"
+                          className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white px-3 text-xs font-semibold text-[#C9A84C] hover:bg-[#F5F7FA]"
                         >
                           View details
                         </Link>

@@ -9,20 +9,20 @@ export default function GlobalError({
 }) {
   return (
     <html lang="en">
-      <body style={{ fontFamily: 'Georgia, serif', background: '#F4EFE6', margin: 0 }}>
+      <body style={{ fontFamily: 'Georgia, serif', background: '#F1F4F9', margin: 0 }}>
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <div
             style={{
               maxWidth: 420,
               width: '100%',
               background: '#FFFFFF',
-              border: '1px solid #E5DFD5',
+              border: '1px solid #E2E8F0',
               borderRadius: 8,
               padding: 24,
               textAlign: 'center',
             }}
           >
-            <h1 style={{ fontSize: 18, fontWeight: 400, color: '#1C1917', margin: 0 }}>
+            <h1 style={{ fontSize: 18, fontWeight: 400, color: '#0D1B2A', margin: 0 }}>
               Robust
               <span
                 aria-hidden="true"
@@ -38,11 +38,11 @@ export default function GlobalError({
               />
               Gifting Solutions could not load
             </h1>
-            <p style={{ fontSize: 14, fontFamily: 'system-ui, sans-serif', color: '#6B6358', marginTop: 8 }}>
+            <p style={{ fontSize: 14, fontFamily: 'system-ui, sans-serif', color: '#64748B', marginTop: 8 }}>
               An unexpected error occurred while starting the application.
             </p>
             {error.digest && (
-              <p style={{ fontSize: 12, color: '#7A7267', marginTop: 8, fontFamily: 'monospace' }}>
+              <p style={{ fontSize: 12, color: '#4A5568', marginTop: 8, fontFamily: 'monospace' }}>
                 Reference: {error.digest}
               </p>
             )}
@@ -53,7 +53,7 @@ export default function GlobalError({
                 padding: '8px 16px',
                 borderRadius: 6,
                 border: 'none',
-                background: '#1A3022',
+                background: '#C9A84C',
                 color: '#fff',
                 cursor: 'pointer',
                 fontSize: 13,

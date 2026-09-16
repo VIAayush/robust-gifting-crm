@@ -73,7 +73,7 @@ export function PwaInstallButton({
           'inline-flex items-center gap-1.5 text-xs transition-opacity hover:opacity-90 disabled:opacity-60',
           isDark
             ? 'rounded-sm border border-white/35 px-2.5 py-1.5 text-white/95'
-            : 'rounded-sm border border-[#D9D3C9] px-2.5 py-1.5 text-[#1A3022]',
+            : 'rounded-sm border border-[#D6DEE8] px-2.5 py-1.5 text-[#C9A84C]',
           className,
         )}
       >
@@ -82,7 +82,7 @@ export function PwaInstallButton({
       </button>
 
       {hintOpen ? (
-        <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-md border border-[#E8E4DE] bg-white p-3 text-left text-xs leading-relaxed text-[#1B2430] shadow-lg">
+        <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-md border border-[#E2E8F0] bg-white p-3 text-left text-xs leading-relaxed text-[#1B2430] shadow-lg">
           <div className="mb-2 flex items-start justify-between gap-2">
             <p className="font-medium">Install Robust Gifting</p>
             <button type="button" aria-label="Close" onClick={() => setHintOpen(false)} className="text-[#5C6570]">

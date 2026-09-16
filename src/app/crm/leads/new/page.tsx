@@ -92,7 +92,7 @@ export default async function NewLeadPage({
           <span className="text-xs font-semibold text-gray-700">Notes</span>
           <textarea name="notes" rows={3} className="mt-1 w-full rounded-lg border px-3 py-2" />
         </label>
-        <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#1A3022] px-4 text-sm font-semibold text-white hover:bg-[#274433]">
+        <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#C9A84C] px-4 text-sm font-semibold text-white hover:bg-[#A87C2A]">
           Create Lead
         </button>
       </form>

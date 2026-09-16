@@ -79,8 +79,8 @@ export function PortalLayout({ children, user }: PortalLayoutProps) {
   }, [])
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-[#F4EFE6]">
-      <header className="sticky top-0 z-50 border-b border-[#E5DFD5] bg-white">
+    <div className="flex min-h-[100dvh] flex-col bg-[#F1F4F9]">
+      <header className="sticky top-0 z-50 border-b border-[#E2E8F0] bg-white">
         <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
           <div className="flex h-14 items-center justify-between gap-3 sm:h-16">
             <div className="flex min-w-0 items-center gap-3">
@@ -128,7 +128,7 @@ export function PortalLayout({ children, user }: PortalLayoutProps) {
               )}
               <button
                 onClick={() => signOut()}
-                className="hidden h-10 w-10 items-center justify-center rounded-lg border border-[#E5DFD5] text-gray-600 transition-colors hover:bg-red-50 hover:text-red-600 xl:inline-flex"
+                className="hidden h-10 w-10 items-center justify-center rounded-lg border border-[#E2E8F0] text-gray-600 transition-colors hover:bg-red-50 hover:text-red-600 xl:inline-flex"
                 title="Logout"
               >
                 <LogOut className="h-4 w-4" />

@@ -131,8 +131,8 @@ export default async function MyWorkPage({
   const visibleQuotes = quoteRows.filter((q: WorkQuote) => filter === 'completed' ? q.status === 'accepted' : inRange(q.created_at))
 
   const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <section className="bg-white rounded-2xl border border-[#E5DFD5] p-5 space-y-3">
-      <h2 className="font-serif text-lg text-[#1C1917]">{title}</h2>
+    <section className="bg-white rounded-2xl border border-[#E2E8F0] p-5 space-y-3">
+      <h2 className="font-serif text-lg text-[#0D1B2A]">{title}</h2>
       {children}
     </section>
   )
@@ -141,7 +141,7 @@ export default async function MyWorkPage({
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-[var(--color-primary)]">My Work</h1>
-        <p className="text-xs text-[#7A7267] mt-1">Assigned work for {profile.full_name || profile.email}.</p>
+        <p className="text-xs text-[#4A5568] mt-1">Assigned work for {profile.full_name || profile.email}.</p>
       </div>
 
       <div className="md:hidden">
@@ -167,7 +167,7 @@ export default async function MyWorkPage({
             key={f.id}
             href={`/crm/my-work?filter=${f.id}`}
             className={`rounded-lg px-3 py-2 text-xs font-medium ${
-              filter === f.id ? 'bg-[#1A3022] text-white' : 'border bg-white text-gray-600 hover:bg-gray-50'
+              filter === f.id ? 'bg-[#C9A84C] text-white' : 'border bg-white text-gray-600 hover:bg-gray-50'
             }`}
           >
             {f.label}
@@ -176,10 +176,10 @@ export default async function MyWorkPage({
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
-        <div className="bg-white border rounded-xl p-3"><p className="text-[10px] uppercase text-[#7A7267]">Leads</p><p className="text-lg font-semibold">{leadRows.length}</p></div>
-        <div className="bg-white border rounded-xl p-3"><p className="text-[10px] uppercase text-[#7A7267]">Requirements</p><p className="text-lg font-semibold">{requirementRows.length}</p></div>
-        <div className="bg-white border rounded-xl p-3"><p className="text-[10px] uppercase text-[#7A7267]">Quotations</p><p className="text-lg font-semibold">{quoteRows.length}</p></div>
-        <div className="bg-white border rounded-xl p-3"><p className="text-[10px] uppercase text-[#7A7267]">Orders</p><p className="text-lg font-semibold">{myOrders.length}</p></div>
+        <div className="bg-white border rounded-xl p-3"><p className="text-[10px] uppercase text-[#4A5568]">Leads</p><p className="text-lg font-semibold">{leadRows.length}</p></div>
+        <div className="bg-white border rounded-xl p-3"><p className="text-[10px] uppercase text-[#4A5568]">Requirements</p><p className="text-lg font-semibold">{requirementRows.length}</p></div>
+        <div className="bg-white border rounded-xl p-3"><p className="text-[10px] uppercase text-[#4A5568]">Quotations</p><p className="text-lg font-semibold">{quoteRows.length}</p></div>
+        <div className="bg-white border rounded-xl p-3"><p className="text-[10px] uppercase text-[#4A5568]">Orders</p><p className="text-lg font-semibold">{myOrders.length}</p></div>
       </div>
 
       <Section title="My tasks">
@@ -187,9 +187,9 @@ export default async function MyWorkPage({
         {visibleTasks.map((t: WorkTask) => {
           const ord = oneRelation(t.orders)
           return (
-            <Link key={t.id} href={t.order_id ? `/crm/orders/${t.order_id}` : '/crm/tasks'} className="block p-3 rounded-xl bg-[#FAF7F2] border border-[#EFE9E0]">
+            <Link key={t.id} href={t.order_id ? `/crm/orders/${t.order_id}` : '/crm/tasks'} className="block p-3 rounded-xl bg-[#F5F7FA] border border-[#E7ECF3]">
               <p className="text-sm font-medium">{t.title}</p>
-              <p className="text-[11px] text-[#7A7267] mt-0.5">{ord?.order_number || 'Task'} · due {formatDate(t.due_at)}</p>
+              <p className="text-[11px] text-[#4A5568] mt-0.5">{ord?.order_number || 'Task'} · due {formatDate(t.due_at)}</p>
             </Link>
           )
         })}
@@ -201,10 +201,10 @@ export default async function MyWorkPage({
           const company = oneRelation(o.company)
           const health = orderHealth(o.status, o.expected_delivery_date, o.stage_due_at)
           return (
-            <Link key={o.id} href={`/crm/orders/${o.id}`} className="flex items-center justify-between p-3 rounded-xl border border-[#EFE9E0] hover:bg-[#FAF7F2]">
+            <Link key={o.id} href={`/crm/orders/${o.id}`} className="flex items-center justify-between p-3 rounded-xl border border-[#E7ECF3] hover:bg-[#F5F7FA]">
               <div>
                 <p className="text-sm font-semibold font-mono">{o.order_number}</p>
-                <p className="text-[11px] text-[#7A7267]">{company?.name} · {ORDER_STATUS_LABELS[o.status] || o.status} · {formatCurrency(o.order_value)}</p>
+                <p className="text-[11px] text-[#4A5568]">{company?.name} · {ORDER_STATUS_LABELS[o.status] || o.status} · {formatCurrency(o.order_value)}</p>
               </div>
               <span className={`text-[10px] px-2 py-0.5 rounded-full ${HEALTH_STYLES[health]}`}>{HEALTH_LABELS[health]}</span>
             </Link>
@@ -222,10 +222,10 @@ export default async function MyWorkPage({
                 <Link
                   key={l.id}
                   href={`/crm/leads/${l.id}`}
-                  className="block rounded-xl border border-[#EFE9E0] bg-[#FAF7F2] p-3 text-sm"
+                  className="block rounded-xl border border-[#E7ECF3] bg-[#F5F7FA] p-3 text-sm"
                 >
                   <p className="font-medium text-gray-900">{company?.name || 'Lead'}</p>
-                  <p className="mt-0.5 text-[11px] text-[#7A7267]">{l.stage} · {formatCurrency(l.estimated_value)}</p>
+                  <p className="mt-0.5 text-[11px] text-[#4A5568]">{l.stage} · {formatCurrency(l.estimated_value)}</p>
                 </Link>
               )
             })}
@@ -236,10 +236,10 @@ export default async function MyWorkPage({
               <Link
                 key={r.id}
                 href={`/crm/requirements/${r.id}`}
-                className="block rounded-xl border border-[#EFE9E0] bg-[#FAF7F2] p-3 text-sm"
+                className="block rounded-xl border border-[#E7ECF3] bg-[#F5F7FA] p-3 text-sm"
               >
                 <p className="font-medium text-gray-900">{r.name}</p>
-                <p className="mt-0.5 text-[11px] text-[#7A7267]">{r.status}</p>
+                <p className="mt-0.5 text-[11px] text-[#4A5568]">{r.status}</p>
               </Link>
             ))}
           </Section>
@@ -249,10 +249,10 @@ export default async function MyWorkPage({
               <Link
                 key={q.id}
                 href={`/crm/quotations/${q.id}`}
-                className="block rounded-xl border border-[#EFE9E0] bg-[#FAF7F2] p-3 text-sm"
+                className="block rounded-xl border border-[#E7ECF3] bg-[#F5F7FA] p-3 text-sm"
               >
                 <p className="font-mono font-medium text-gray-900">{q.quotation_number}</p>
-                <p className="mt-0.5 text-[11px] text-[#7A7267]">{q.status} · {formatCurrency(q.total)}</p>
+                <p className="mt-0.5 text-[11px] text-[#4A5568]">{q.status} · {formatCurrency(q.total)}</p>
               </Link>
             ))}
           </Section>

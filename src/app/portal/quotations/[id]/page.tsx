@@ -56,7 +56,7 @@ export default async function PortalQuotationDetailPage({ params }: { params: Pr
 
           <div className="sm:text-right">
             <p className="text-[10px] uppercase font-bold text-gray-400">Total Estimate</p>
-            <p className="text-2xl font-bold text-[#4A235A]">{formatCurrency(quote.total)}</p>
+            <p className="text-2xl font-bold text-[#C9A84C]">{formatCurrency(quote.total)}</p>
             <p className="text-xs text-gray-500 mt-0.5">
               Valid until: <span className="font-bold text-gray-800">{quote.valid_until ? formatDate(quote.valid_until) : '30 Days'}</span>
             </p>
@@ -72,7 +72,7 @@ export default async function PortalQuotationDetailPage({ params }: { params: Pr
               {quote.items?.map((item: { id: string; quantity: number; unit_price: number; line_total: number; product?: { name?: string; sku?: string } | { name?: string; sku?: string }[] | null }) => {
                 const product = oneRelation(item.product)
                 return (
-                  <article key={item.id} className="rounded-xl border border-[#E8E4DE] bg-[#FAF7F2] p-4">
+                  <article key={item.id} className="rounded-xl border border-[#E2E8F0] bg-[#F5F7FA] p-4">
                     <p className="text-sm font-semibold text-gray-900">{product?.name}</p>
                     <p className="mt-0.5 font-mono text-[10px] text-gray-400">{product?.sku}</p>
                     <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
@@ -153,7 +153,7 @@ export default async function PortalQuotationDetailPage({ params }: { params: Pr
               )}
               <div className="flex justify-between text-base font-bold text-gray-900 pt-2 border-t border-gray-200">
                 <span>Total Amount:</span>
-                <span className="text-[#4A235A]">{formatCurrency(quote.total)}</span>
+                <span className="text-[#C9A84C]">{formatCurrency(quote.total)}</span>
               </div>
             </div>
           </div>

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <SiteShell>
-      <div className="border-b border-[#E8E4DE] bg-[#F6F4F1]">
+      <div className="border-b border-[#E2E8F0] bg-[#F1F4F9]">
         <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
           <p className="store-eyebrow">About us</p>
           <h1 className="mt-3 font-serif text-[1.75rem] font-normal tracking-tight text-[#1B2430] sm:text-3xl lg:text-4xl">
@@ -35,7 +35,7 @@ export default function AboutPage() {
         <div className="pt-4">
           <Link
             href="/catalogue"
-            className="inline-flex bg-[#1A3022] px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white"
+            className="inline-flex bg-[#C9A84C] px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white"
           >
             Explore Catalogue
           </Link>

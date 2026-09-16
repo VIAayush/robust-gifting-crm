@@ -122,9 +122,9 @@ export default async function GstReportsPage({
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-primary)]">GST Reports</h1>
-          <p className="text-xs text-[#7A7267] mt-1">GST and tax reporting for invoices and transactions</p>
+          <p className="text-xs text-[#4A5568] mt-1">GST and tax reporting for invoices and transactions</p>
         </div>
-        <Link href="/crm/reports" className="text-xs text-[#4A235A] font-semibold">
+        <Link href="/crm/reports" className="text-xs text-[#C9A84C] font-semibold">
           Business analytics →
         </Link>
       </div>
@@ -134,7 +134,7 @@ export default async function GstReportsPage({
         to={params.to || ''}
         clearHref="/crm/gst-reports"
         submitLabel="Apply period"
-        className="rounded-2xl border border-[#E5DFD5] bg-white p-3 sm:p-4"
+        className="rounded-2xl border border-[#E2E8F0] bg-white p-3 sm:p-4"
       />
 
       {error && (
@@ -147,12 +147,12 @@ export default async function GstReportsPage({
         <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
           <p className="text-sm text-gray-500 mb-1">Total Taxable Value</p>
           <p className="text-2xl font-bold">{formatCurrency(taxableTotal)}</p>
-          <p className="text-[10px] text-[#7A7267] mt-1">From linked quotations only</p>
+          <p className="text-[10px] text-[#4A5568] mt-1">From linked quotations only</p>
         </div>
         <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
           <p className="text-sm text-gray-500 mb-1">Total GST</p>
           <p className="text-2xl font-bold">{formatCurrency(gstTotal)}</p>
-          <p className="text-[10px] text-[#7A7267] mt-1">{withStoredGst} invoice{withStoredGst === 1 ? '' : 's'} with stored tax</p>
+          <p className="text-[10px] text-[#4A5568] mt-1">{withStoredGst} invoice{withStoredGst === 1 ? '' : 's'} with stored tax</p>
         </div>
         <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
           <p className="text-sm text-gray-500 mb-1">CGST</p>
@@ -168,30 +168,30 @@ export default async function GstReportsPage({
         </div>
       </div>
 
-      <div className="bg-white p-5 rounded-2xl border border-[#E5DFD5] text-xs space-y-2">
-        <h2 className="font-bold text-sm text-[#1C1917]">GST Summary</h2>
+      <div className="bg-white p-5 rounded-2xl border border-[#E2E8F0] text-xs space-y-2">
+        <h2 className="font-bold text-sm text-[#0D1B2A]">GST Summary</h2>
         <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-3">
-          <div><span className="text-[#7A7267]">Taxable amount</span><p className="font-semibold">{formatCurrency(taxableTotal)}</p></div>
-          <div><span className="text-[#7A7267]">Total GST</span><p className="font-semibold">{formatCurrency(gstTotal)}</p></div>
-          <div><span className="text-[#7A7267]">Invoice grand total</span><p className="font-semibold">{formatCurrency(grandTotal)}</p></div>
+          <div><span className="text-[#4A5568]">Taxable amount</span><p className="font-semibold">{formatCurrency(taxableTotal)}</p></div>
+          <div><span className="text-[#4A5568]">Total GST</span><p className="font-semibold">{formatCurrency(gstTotal)}</p></div>
+          <div><span className="text-[#4A5568]">Invoice grand total</span><p className="font-semibold">{formatCurrency(grandTotal)}</p></div>
           <div>
-            <span className="text-[#7A7267]">Org default tax rate</span>
+            <span className="text-[#4A5568]">Org default tax rate</span>
             <p className="font-semibold">{defaultRate != null ? `${defaultRate}%` : '—'}</p>
           </div>
         </div>
-        <p className="text-[#7A7267] pt-2 border-t">
+        <p className="text-[#4A5568] pt-2 border-t">
           Invoices store a single total. GST rate and tax amount are taken from the linked quotation when present
           ({defaultRate != null ? `organisation default ${defaultRate}%` : 'see organisation settings'}).
           CGST, SGST and IGST are not stored on invoices, so those columns stay as —.
         </p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-[#E5DFD5] overflow-x-auto">
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-x-auto">
         <div className="px-4 py-3 border-b">
           <h2 className="font-bold text-sm">Invoice-wise GST Report</h2>
         </div>
         <table className="w-full text-left text-xs min-w-[880px]">
-          <thead className="bg-[#FAF7F2] text-[#7A7267]">
+          <thead className="bg-[#F5F7FA] text-[#4A5568]">
             <tr>
               <th className="p-3 font-semibold">Invoice Number</th>
               <th className="p-3 font-semibold">Invoice Date</th>
@@ -207,11 +207,11 @@ export default async function GstReportsPage({
               <th className="p-3 font-semibold">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#EFE9E0]">
+          <tbody className="divide-y divide-[#E7ECF3]">
             {mapped.map((row) => (
-              <tr key={row.id} className="hover:bg-[#FAF7F2]">
+              <tr key={row.id} className="hover:bg-[#F5F7FA]">
                 <td className="p-3 font-mono">
-                  <Link href={`/crm/invoices/${row.id}`} className="text-[#4A235A] hover:underline">{row.invoice_number}</Link>
+                  <Link href={`/crm/invoices/${row.id}`} className="text-[#C9A84C] hover:underline">{row.invoice_number}</Link>
                 </td>
                 <td className="p-3">{formatDate(row.invoice_date)}</td>
                 <td className="p-3">{row.companyName}</td>
@@ -235,12 +235,12 @@ export default async function GstReportsPage({
         </table>
       </div>
 
-      <div className="bg-white rounded-2xl border border-[#E5DFD5] overflow-x-auto">
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-x-auto">
         <div className="px-4 py-3 border-b">
           <h2 className="font-bold text-sm">GST by Customer</h2>
         </div>
         <table className="w-full text-left text-xs">
-          <thead className="bg-[#FAF7F2] text-[#7A7267]">
+          <thead className="bg-[#F5F7FA] text-[#4A5568]">
             <tr>
               <th className="p-3 font-semibold">Customer</th>
               <th className="p-3 font-semibold">GSTIN</th>
@@ -250,7 +250,7 @@ export default async function GstReportsPage({
               <th className="p-3 font-semibold text-right">Invoice Total</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#EFE9E0]">
+          <tbody className="divide-y divide-[#E7ECF3]">
             {Array.from(byCompany.values()).map((row) => (
               <tr key={row.name}>
                 <td className="p-3">{row.name}</td>
