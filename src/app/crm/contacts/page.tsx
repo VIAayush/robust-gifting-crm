@@ -84,7 +84,7 @@ export default async function ContactsPage(props: { searchParams: Promise<{ sear
             { value: 'other', label: 'Other' },
           ]}
         />
-        <button className="rounded-lg bg-[#C9A84C] py-2.5 font-semibold text-white hover:text-white md:col-span-3">Add contact</button>
+        <button className="rounded-lg bg-[#9C7A33] py-2.5 font-semibold text-white hover:text-white md:col-span-3">Add contact</button>
       </form>
 
       <form className="flex-1 max-w-md flex gap-2">
@@ -146,7 +146,7 @@ export default async function ContactsPage(props: { searchParams: Promise<{ sear
                           { value: 'other', label: 'Other' },
                         ]}
                       />
-                      <button className="inline-flex min-h-9 items-center justify-center rounded-lg bg-[#C9A84C] px-3 text-xs font-semibold text-white hover:bg-[#A87C2A] hover:text-white">Save</button>
+                      <button className="inline-flex min-h-9 items-center justify-center rounded-lg bg-[#9C7A33] px-3 text-xs font-semibold text-white hover:bg-[#7C6224] hover:text-white">Save</button>
                     </form>
                     <ConfirmAction
                       title="Delete contact?"

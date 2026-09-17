@@ -73,7 +73,7 @@ export function PwaInstallButton({
           'inline-flex items-center gap-1.5 text-xs transition-opacity hover:opacity-90 disabled:opacity-60',
           isDark
             ? 'rounded-sm border border-white/35 px-2.5 py-1.5 text-white/95'
-            : 'rounded-sm border border-[#D6DEE8] px-2.5 py-1.5 text-[#C9A84C]',
+            : 'rounded-sm border border-[#D6DEE8] px-2.5 py-1.5 text-[#9C7A33]',
           className,
         )}
       >

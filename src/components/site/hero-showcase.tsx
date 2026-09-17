@@ -53,7 +53,7 @@ export function HeroShowcase({ products }: { products: PublicProduct[] }) {
           <p className="mt-1 font-serif text-xl text-[#0D1B2A]">{active.name}</p>
         </div>
         <div className="text-right">
-          <p className="text-sm text-[#C9A84C]">{formatCurrency(active.price)}</p>
+          <p className="text-sm text-[#9C7A33]">{formatCurrency(active.price)}</p>
           <div className="mt-3 flex justify-end gap-1.5">
             {slides.map((product, i) => (
               <button
@@ -62,7 +62,7 @@ export function HeroShowcase({ products }: { products: PublicProduct[] }) {
                 aria-label={`Show ${product.name}`}
                 onClick={() => setIndex(i)}
                 className={`h-1.5 w-1.5 rounded-full transition-colors ${
-                  i === index ? 'bg-[#C9A84C]' : 'bg-[#D7E1EC]'
+                  i === index ? 'bg-[#9C7A33]' : 'bg-[#D7E1EC]'
                 }`}
               />
             ))}

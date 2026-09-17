@@ -207,7 +207,7 @@ export async function PublicHome() {
                       <p className="text-[10px] uppercase tracking-[0.18em] text-[#5C6570]">{collection.kicker}</p>
                       <p className="mt-2 font-serif text-2xl text-[#1B2430]">{collection.title}</p>
                       <p className="mt-2 flex-1 text-sm leading-relaxed text-[#5C6570]">{collection.description}</p>
-                      <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#C9A84C]">
+                      <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9C7A33]">
                         Open collection {ARROW}
                       </p>
                     </div>
@@ -249,7 +249,7 @@ export async function PublicHome() {
                   <div className="min-w-0 flex-1 py-1">
                     <p className="font-serif text-xl text-[#1B2430]">{occasion.title}</p>
                     <p className="mt-1 text-sm text-[#5C6570]">{occasion.line}</p>
-                    <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#C9A84C]">
+                    <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9C7A33]">
                       Browse {ARROW}
                     </p>
                   </div>
@@ -360,7 +360,7 @@ export async function PublicHome() {
                 body: 'Quotations, orders, courier partners and invoicing in the same system.',
               },
             ].map((item) => (
-              <div key={item.title} className="border-t border-[#C9A84C]/15 pt-5">
+              <div key={item.title} className="border-t border-[#9C7A33]/15 pt-5">
                 <p className="font-serif text-xl">{item.title}</p>
                 <p className="mt-3 text-sm leading-relaxed text-[#5C6570]">{item.body}</p>
               </div>
@@ -386,7 +386,7 @@ export async function PublicHome() {
             </p>
             <Link
               href="/request-quote"
-              className="mt-8 inline-flex bg-white px-8 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#C9A84C]"
+              className="mt-8 inline-flex bg-white px-8 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9C7A33]"
             >
               Request a Quote
             </Link>

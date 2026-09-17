@@ -13,14 +13,14 @@ export function SiteFooter({
     <footer className="mt-0 border-t border-[#E2E8F0] bg-[#F1F4F9] text-[#1B2430]">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:gap-10 sm:px-6 sm:py-14 md:grid-cols-2 lg:grid-cols-4 lg:px-8">
         <div className="md:col-span-2 lg:col-span-1">
-          <Image src="/logo.png" alt="Robust Gifting Solutions" width={196} height={85} className="h-[100px] w-auto" />
+          <Image src="/logo.png" alt="Robust Gifting" width={600} height={600} className="h-[110px] w-[110px]" />
           <p className="mt-3 max-w-xs text-sm leading-relaxed text-[#5C6570]">
             Your destination for curated corporate gifts — catalogue, quotation and fulfilment in one place.
           </p>
         </div>
 
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#C9A84C]">Shop</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9C7A33]">Shop</p>
           <div className="mt-4 flex flex-col gap-2.5 text-sm text-[#5C6570]">
             <Link href="/catalogue" className="hover:text-[#1B2430]">
               Catalogue
@@ -41,7 +41,7 @@ export function SiteFooter({
         </div>
 
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#C9A84C]">About us</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9C7A33]">About us</p>
           <div className="mt-4 flex flex-col gap-2.5 text-sm text-[#5C6570]">
             <Link href="/about" className="hover:text-[#1B2430]">
               About
@@ -59,7 +59,7 @@ export function SiteFooter({
         </div>
 
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#C9A84C]">Shop by price</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9C7A33]">Shop by price</p>
           <div className="mt-4 flex flex-col gap-2.5 text-sm text-[#5C6570]">
             {BUDGET_BANDS.map((band) => (
               <Link key={band.id} href={`/catalogue?budget=${encodeURIComponent(band.id)}`} className="hover:text-[#1B2430]">

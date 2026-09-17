@@ -110,8 +110,8 @@ export default async function OrderControlCenterPage({
           </p>
         </div>
         <div className="flex gap-2 text-xs">
-          <Link href={tableHref} className={`min-h-10 flex-1 rounded-lg border px-3 py-2 text-center sm:flex-none ${view === 'table' ? 'border-[#C9A84C] bg-[#C9A84C] text-white' : 'bg-white'}`}>Table</Link>
-          <Link href={kanbanHref} className={`min-h-10 flex-1 rounded-lg border px-3 py-2 text-center sm:flex-none ${view === 'kanban' ? 'border-[#C9A84C] bg-[#C9A84C] text-white' : 'bg-white'}`}>Kanban</Link>
+          <Link href={tableHref} className={`min-h-10 flex-1 rounded-lg border px-3 py-2 text-center sm:flex-none ${view === 'table' ? 'border-[#9C7A33] bg-[#9C7A33] text-white' : 'bg-white'}`}>Table</Link>
+          <Link href={kanbanHref} className={`min-h-10 flex-1 rounded-lg border px-3 py-2 text-center sm:flex-none ${view === 'kanban' ? 'border-[#9C7A33] bg-[#9C7A33] text-white' : 'bg-white'}`}>Kanban</Link>
         </div>
       </div>
 
@@ -269,7 +269,7 @@ export default async function OrderControlCenterPage({
           <option value="updated">Last updated</option>
           <option value="priority">Priority</option>
         </select>
-        <button className="rounded-lg bg-[#C9A84C] px-3 text-xs font-semibold text-white">Apply</button>
+        <button className="rounded-lg bg-[#9C7A33] px-3 text-xs font-semibold text-white">Apply</button>
       </form>
 
       {view === 'kanban' ? (
@@ -318,7 +318,7 @@ export default async function OrderControlCenterPage({
                 return (
                   <tr key={o.id} className="hover:bg-[#F5F7FA]">
                     <td className="px-3 py-3">
-                      <Link href={`/crm/orders/${o.id}`} className="font-mono font-semibold text-[#C9A84C] hover:underline">
+                      <Link href={`/crm/orders/${o.id}`} className="font-mono font-semibold text-[#9C7A33] hover:underline">
                         {o.order_number || `ORD-${o.id.slice(0, 6)}`}
                       </Link>
                     </td>

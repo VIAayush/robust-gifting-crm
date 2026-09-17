@@ -169,12 +169,12 @@ export default async function PortalCataloguePage({
               name="q"
               defaultValue={q}
               placeholder="Search gifts"
-              className="min-h-10 w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A84C]"
+              className="min-h-10 w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#9C7A33]"
             />
           </div>
           <button
             type="submit"
-            className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg bg-[#C9A84C] px-3 text-xs font-semibold text-white hover:bg-[#A87C2A]"
+            className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg bg-[#9C7A33] px-3 text-xs font-semibold text-white hover:bg-[#7C6224]"
           >
             Search
           </button>
@@ -239,7 +239,7 @@ export default async function PortalCataloguePage({
                       </p>
                     )}
                     <Link href={`/portal/catalogue/product/${product.id}`}>
-                      <h3 className="mt-1 line-clamp-1 text-sm font-semibold text-gray-900 hover:text-[#C9A84C]">{product.name}</h3>
+                      <h3 className="mt-1 line-clamp-1 text-sm font-semibold text-gray-900 hover:text-[#9C7A33]">{product.name}</h3>
                     </Link>
                     <p className="mt-1 line-clamp-2 text-xs text-gray-500">{product.description || ''}</p>
                   </div>
@@ -269,7 +269,7 @@ export default async function PortalCataloguePage({
               {currentPage > 1 ? (
                 <Link
                   href={pageHref(currentPage - 1)}
-                  className="inline-flex min-h-10 flex-1 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white px-3 text-xs font-semibold text-[#C9A84C] hover:bg-[#F5F7FA] sm:flex-none"
+                  className="inline-flex min-h-10 flex-1 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white px-3 text-xs font-semibold text-[#9C7A33] hover:bg-[#F5F7FA] sm:flex-none"
                 >
                   Previous
                 </Link>
@@ -282,7 +282,7 @@ export default async function PortalCataloguePage({
               {currentPage < totalPages ? (
                 <Link
                   href={pageHref(currentPage + 1)}
-                  className="inline-flex min-h-10 flex-1 items-center justify-center rounded-lg bg-[#C9A84C] px-3 text-xs font-semibold text-white hover:bg-[#A87C2A] sm:flex-none"
+                  className="inline-flex min-h-10 flex-1 items-center justify-center rounded-lg bg-[#9C7A33] px-3 text-xs font-semibold text-white hover:bg-[#7C6224] sm:flex-none"
                 >
                   Next
                 </Link>

@@ -28,7 +28,7 @@ export default async function PortalHomePage() {
           <h2 className="font-serif text-lg">My orders</h2>
           <Link
             href="/portal/orders"
-            className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white px-3 text-xs font-semibold text-[#C9A84C] hover:bg-[#F5F7FA]"
+            className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white px-3 text-xs font-semibold text-[#9C7A33] hover:bg-[#F5F7FA]"
           >
             View all
           </Link>

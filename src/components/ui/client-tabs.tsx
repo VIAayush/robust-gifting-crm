@@ -20,7 +20,7 @@ export function ClientTabs({
   initialTab,
   panels,
   className = '',
-  activeClassName = 'border-[#C9A84C] text-[#C9A84C]',
+  activeClassName = 'border-[#9C7A33] text-[#9C7A33]',
   idleClassName = 'border-transparent text-gray-500',
 }: {
   tabs: string[]

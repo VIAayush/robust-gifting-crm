@@ -33,7 +33,7 @@ function VisibilityBadge({ access, companyCount }: { access: string | null; comp
   }
   if (access === 'selected') {
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-[#C9A84C]">
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-[#9C7A33]">
         <Lock size={11} /> {companyCount} {companyCount === 1 ? 'company' : 'companies'}
       </span>
     )
@@ -92,7 +92,7 @@ export function ProductsBrowser({
             type="button"
             onClick={() => chooseView('grid')}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-              view === 'grid' ? 'bg-[#C9A84C] text-white' : 'text-gray-600 hover:bg-gray-50'
+              view === 'grid' ? 'bg-[#9C7A33] text-white' : 'text-gray-600 hover:bg-gray-50'
             }`}
             aria-pressed={view === 'grid'}
           >
@@ -102,7 +102,7 @@ export function ProductsBrowser({
             type="button"
             onClick={() => chooseView('list')}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-              view === 'list' ? 'bg-[#C9A84C] text-white' : 'text-gray-600 hover:bg-gray-50'
+              view === 'list' ? 'bg-[#9C7A33] text-white' : 'text-gray-600 hover:bg-gray-50'
             }`}
             aria-pressed={view === 'list'}
           >
@@ -125,14 +125,14 @@ export function ProductsBrowser({
                 <Link
                   key={p.id}
                   href={`/crm/products/${p.id}`}
-                  className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col hover:border-[#C9A84C] hover:shadow-sm transition-all"
+                  className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col hover:border-[#9C7A33] hover:shadow-sm transition-all"
                 >
                   <div className="aspect-square bg-[#F5F7FA] border-b border-gray-100">
                     <ProductImage src={p.image_url} alt={p.name} size="md" className="min-h-0 h-full" />
                   </div>
                   <div className="p-3.5 flex-1 flex flex-col gap-2">
                     {category?.name && (
-                      <p className="text-[10px] font-bold text-[#C9A84C] uppercase tracking-wider">{category.name}</p>
+                      <p className="text-[10px] font-bold text-[#9C7A33] uppercase tracking-wider">{category.name}</p>
                     )}
                     <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 leading-snug">{p.name}</h3>
                     <p className="font-mono text-[10px] text-gray-400">{p.sku}</p>
@@ -145,7 +145,7 @@ export function ProductsBrowser({
                         <StatusBadge status={p.status} />
                         <VisibilityBadge access={p.catalogue_access} companyCount={companyCount} />
                       </div>
-                      <span className="text-[11px] font-semibold text-[#C9A84C]">View / Edit</span>
+                      <span className="text-[11px] font-semibold text-[#9C7A33]">View / Edit</span>
                     </div>
                   </div>
                 </Link>
@@ -181,7 +181,7 @@ export function ProductsBrowser({
                           <ProductImage src={p.image_url} alt={p.name} size="sm" className="rounded-xl border border-gray-200" />
                         </div>
                         <div>
-                          <p className="font-bold text-gray-900 group-hover:text-[#C9A84C] transition-colors">{p.name}</p>
+                          <p className="font-bold text-gray-900 group-hover:text-[#9C7A33] transition-colors">{p.name}</p>
                           <p className="font-mono text-[10px] text-gray-400">{p.sku}</p>
                         </div>
                       </Link>

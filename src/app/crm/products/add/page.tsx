@@ -17,9 +17,9 @@ export default async function AddProductChoicePage() {
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <Link
             href="/crm/products/import"
-            className="group flex flex-col items-start gap-3 rounded-xl border border-gray-200 p-5 text-left transition-colors hover:border-[#C9A84C] hover:bg-[#C9A84C]/5"
+            className="group flex flex-col items-start gap-3 rounded-xl border border-gray-200 p-5 text-left transition-colors hover:border-[#9C7A33] hover:bg-[#9C7A33]/5"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#C9A84C]/10 text-[#C9A84C]">
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#9C7A33]/10 text-[#9C7A33]">
               <Upload size={18} />
             </span>
             <span className="font-semibold text-gray-900">Import CSV</span>
@@ -30,9 +30,9 @@ export default async function AddProductChoicePage() {
 
           <Link
             href="/crm/products/new"
-            className="group flex flex-col items-start gap-3 rounded-xl border border-gray-200 p-5 text-left transition-colors hover:border-[#C9A84C] hover:bg-[#C9A84C]/5"
+            className="group flex flex-col items-start gap-3 rounded-xl border border-gray-200 p-5 text-left transition-colors hover:border-[#9C7A33] hover:bg-[#9C7A33]/5"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#C9A84C]/10 text-[#C9A84C]">
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#9C7A33]/10 text-[#9C7A33]">
               <PencilLine size={18} />
             </span>
             <span className="font-semibold text-gray-900">Add Manually</span>

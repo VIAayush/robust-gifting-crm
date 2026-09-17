@@ -70,7 +70,7 @@ export default async function CampaignsPage() {
           <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#4A5568]">Notes</span>
           <input name="description" placeholder="Optional notes" className="min-h-11 w-full rounded-lg border px-3 py-2" />
         </label>
-        <button className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#C9A84C] py-2.5 font-semibold text-white">
+        <button className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#9C7A33] py-2.5 font-semibold text-white">
           Create campaign
         </button>
       </form>
@@ -80,7 +80,7 @@ export default async function CampaignsPage() {
           campaignRows.map((camp: CampaignRow) => {
             const company = oneRelation(camp.company)
             return (
-              <Link key={camp.id} href={`/crm/campaigns/${camp.id}`} className="bg-white rounded-2xl border border-[#E2E8F0] p-6 space-y-4 hover:border-[#C9A84C]">
+              <Link key={camp.id} href={`/crm/campaigns/${camp.id}`} className="bg-white rounded-2xl border border-[#E2E8F0] p-6 space-y-4 hover:border-[#9C7A33]">
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="text-base font-bold text-[#0D1B2A]">{camp.name}</h3>

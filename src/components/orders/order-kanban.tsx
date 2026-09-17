@@ -60,7 +60,7 @@ export function OrderKanban({
               >
                 <div className="flex items-center justify-between px-2 py-2">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-[#4A5568]">{ORDER_STATUS_LABELS[column]}</p>
-                  <span className="text-[11px] text-[#C9A84C] font-semibold">{cards.length}</span>
+                  <span className="text-[11px] text-[#9C7A33] font-semibold">{cards.length}</span>
                 </div>
                 <div className="space-y-2 min-h-[120px]">
                   {cards.map((card) => (
@@ -70,7 +70,7 @@ export function OrderKanban({
                       onDragStart={(e) => e.dataTransfer.setData('text/order-id', card.id)}
                       className={`bg-white rounded-xl border border-[#E7ECF3] p-3 ${canDrag ? 'cursor-grab' : ''}`}
                     >
-                      <Link href={`/crm/orders/${card.id}`} className="font-mono text-xs font-semibold text-[#C9A84C] hover:underline">
+                      <Link href={`/crm/orders/${card.id}`} className="font-mono text-xs font-semibold text-[#9C7A33] hover:underline">
                         {card.order_number}
                       </Link>
                       <p className="text-xs text-[#64748B] mt-1">{card.companyName}</p>

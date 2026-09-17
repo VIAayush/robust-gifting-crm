@@ -29,7 +29,7 @@ function usableSrc(src?: string | null): string | null {
 function Fallback({ alt, compact }: { alt: string; compact: boolean }) {
   return (
     <div
-      className="flex h-full w-full flex-col items-center justify-center gap-1 text-[#C9A84C]"
+      className="flex h-full w-full flex-col items-center justify-center gap-1 text-[#9C7A33]"
       style={{ backgroundColor: STUDIO_FIELD }}
       role="img"
       aria-label={alt || 'Product'}

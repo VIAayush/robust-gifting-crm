@@ -35,7 +35,7 @@ export function PasswordField({
         autoComplete={autoComplete}
         required={required}
         minLength={minLength}
-        className="block w-full pl-10 pr-10 py-2.5 bg-[#F5F7FA] border border-[#E2E8F0] rounded-xl text-xs text-[#0D1B2A] placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#C9A84C] focus:border-[#C9A84C] transition-colors"
+        className="block w-full pl-10 pr-10 py-2.5 bg-[#F5F7FA] border border-[#E2E8F0] rounded-xl text-xs text-[#0D1B2A] placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#9C7A33] focus:border-[#9C7A33] transition-colors"
         placeholder={placeholder}
       />
       <button

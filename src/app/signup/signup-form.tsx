@@ -88,7 +88,7 @@ export function SignupForm() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="block w-full pl-10 pr-3 py-2.5 bg-[#F5F7FA] border border-[#E2E8F0] rounded-xl text-xs text-[#0D1B2A] placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#C9A84C] focus:border-[#C9A84C]"
+              className="block w-full pl-10 pr-3 py-2.5 bg-[#F5F7FA] border border-[#E2E8F0] rounded-xl text-xs text-[#0D1B2A] placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#9C7A33] focus:border-[#9C7A33]"
               placeholder="Your name"
             />
           </div>
@@ -105,7 +105,7 @@ export function SignupForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="block w-full pl-10 pr-3 py-2.5 bg-[#F5F7FA] border border-[#E2E8F0] rounded-xl text-xs text-[#0D1B2A] placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#C9A84C] focus:border-[#C9A84C]"
+              className="block w-full pl-10 pr-3 py-2.5 bg-[#F5F7FA] border border-[#E2E8F0] rounded-xl text-xs text-[#0D1B2A] placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#9C7A33] focus:border-[#9C7A33]"
               placeholder="you@company.com"
             />
           </div>
@@ -121,14 +121,14 @@ export function SignupForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full flex justify-center items-center py-3 px-4 rounded-xl text-xs font-semibold text-white bg-[#C9A84C] hover:bg-[#A87C2A] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full flex justify-center items-center py-3 px-4 rounded-xl text-xs font-semibold text-white bg-[#9C7A33] hover:bg-[#7C6224] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create account'}
         </button>
       </form>
       <p className="text-xs text-center text-[#4A5568] mt-5">
         Already have an account?{' '}
-        <Link href="/login" className="font-semibold text-[#C9A84C] hover:underline">Sign in</Link>
+        <Link href="/login" className="font-semibold text-[#9C7A33] hover:underline">Sign in</Link>
       </p>
     </AuthShell>
   )

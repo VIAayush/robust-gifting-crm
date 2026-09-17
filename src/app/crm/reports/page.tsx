@@ -278,7 +278,7 @@ export default async function ReportsPage({
             <p className="text-sm text-gray-500">Full SKU-level sample stock lives on the Sample Stock page.</p>
             <Link
               href="/crm/samples"
-              className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#C9A84C] px-3 text-xs font-semibold text-[#C9A84C] hover:bg-[#F1F4F9]"
+              className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#9C7A33] px-3 text-xs font-semibold text-[#9C7A33] hover:bg-[#F1F4F9]"
             >
               Open sample stock
             </Link>
@@ -308,7 +308,7 @@ export default async function ReportsPage({
             </p>
             <Link
               href="/crm/gst-reports"
-              className="inline-flex min-h-9 items-center justify-center rounded-lg bg-[#C9A84C] px-3 text-xs font-semibold text-white hover:bg-[#A87C2A] hover:text-white"
+              className="inline-flex min-h-9 items-center justify-center rounded-lg bg-[#9C7A33] px-3 text-xs font-semibold text-white hover:bg-[#7C6224] hover:text-white"
             >
               Open GST reports
             </Link>

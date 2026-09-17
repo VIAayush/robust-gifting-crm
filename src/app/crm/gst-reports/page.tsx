@@ -124,7 +124,7 @@ export default async function GstReportsPage({
           <h1 className="text-2xl font-bold text-[var(--color-primary)]">GST Reports</h1>
           <p className="text-xs text-[#4A5568] mt-1">GST and tax reporting for invoices and transactions</p>
         </div>
-        <Link href="/crm/reports" className="text-xs text-[#C9A84C] font-semibold">
+        <Link href="/crm/reports" className="text-xs text-[#9C7A33] font-semibold">
           Business analytics →
         </Link>
       </div>
@@ -211,7 +211,7 @@ export default async function GstReportsPage({
             {mapped.map((row) => (
               <tr key={row.id} className="hover:bg-[#F5F7FA]">
                 <td className="p-3 font-mono">
-                  <Link href={`/crm/invoices/${row.id}`} className="text-[#C9A84C] hover:underline">{row.invoice_number}</Link>
+                  <Link href={`/crm/invoices/${row.id}`} className="text-[#9C7A33] hover:underline">{row.invoice_number}</Link>
                 </td>
                 <td className="p-3">{formatDate(row.invoice_date)}</td>
                 <td className="p-3">{row.companyName}</td>

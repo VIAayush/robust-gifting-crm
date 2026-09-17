@@ -106,7 +106,7 @@ export function LoginForm({ next = '', resetSuccess = false }: { next?: string; 
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="email"
                   required
-                  className="block w-full rounded-xl border border-[#E2E8F0] bg-[#F5F7FA] py-3 pl-10 pr-3 text-base text-[#0D1B2A] placeholder-gray-400 transition-colors focus:border-[#C9A84C] focus:outline-none focus:ring-1 focus:ring-[#C9A84C] sm:py-2.5 sm:text-xs"
+                  className="block w-full rounded-xl border border-[#E2E8F0] bg-[#F5F7FA] py-3 pl-10 pr-3 text-base text-[#0D1B2A] placeholder-gray-400 transition-colors focus:border-[#9C7A33] focus:outline-none focus:ring-1 focus:ring-[#9C7A33] sm:py-2.5 sm:text-xs"
                   placeholder="Enter your email"
                 />
               </div>
@@ -117,7 +117,7 @@ export function LoginForm({ next = '', resetSuccess = false }: { next?: string; 
                 <label className="block text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                   Password
                 </label>
-                <Link href="/forgot-password" className="text-[11px] font-semibold text-[#C9A84C] hover:underline">
+                <Link href="/forgot-password" className="text-[11px] font-semibold text-[#9C7A33] hover:underline">
                   Forgot password?
                 </Link>
               </div>
@@ -127,7 +127,7 @@ export function LoginForm({ next = '', resetSuccess = false }: { next?: string; 
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center items-center py-3 px-4 rounded-xl text-xs font-semibold text-white bg-[#C9A84C] hover:bg-[#A87C2A] hover:text-white focus:outline-none shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="w-full flex justify-center items-center py-3 px-4 rounded-xl text-xs font-semibold text-white bg-[#9C7A33] hover:bg-[#7C6224] hover:text-white focus:outline-none shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign in'}
             </button>
@@ -135,7 +135,7 @@ export function LoginForm({ next = '', resetSuccess = false }: { next?: string; 
 
           <p className="text-xs text-center text-[#4A5568] mt-5">
             Need an account?{' '}
-            <Link href="/signup" className="font-semibold text-[#C9A84C] hover:underline">
+            <Link href="/signup" className="font-semibold text-[#9C7A33] hover:underline">
               Sign up
             </Link>
           </p>

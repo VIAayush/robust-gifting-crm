@@ -68,7 +68,7 @@ export default async function AuditLogPage({
                     <td className="px-5 py-3 font-semibold text-[#0D1B2A] capitalize">{log.action?.replace(/_/g, ' ')}</td>
                     <td className="px-5 py-3">
                       {href ? (
-                        <Link href={href} className="text-[#C9A84C] hover:underline font-medium">{label}</Link>
+                        <Link href={href} className="text-[#9C7A33] hover:underline font-medium">{label}</Link>
                       ) : (
                         <span className="capitalize">{label}</span>
                       )}

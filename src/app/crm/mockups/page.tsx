@@ -92,7 +92,7 @@ export default async function MockupsPage() {
             { value: 'client', label: 'Share with client' },
           ]}
         />
-        <button className="rounded-lg bg-[#C9A84C] py-2.5 font-semibold text-white md:col-span-3">Register mockup</button>
+        <button className="rounded-lg bg-[#9C7A33] py-2.5 font-semibold text-white md:col-span-3">Register mockup</button>
       </form>
 
       <div className="bg-white rounded-lg border overflow-hidden">
@@ -154,7 +154,7 @@ export default async function MockupsPage() {
                             { value: 'rejected', label: 'Rejected' },
                           ]}
                         />
-                        <button className="inline-flex min-h-9 items-center justify-center rounded-lg bg-[#C9A84C] px-3 text-xs font-semibold text-white hover:bg-[#A87C2A] hover:text-white">Save</button>
+                        <button className="inline-flex min-h-9 items-center justify-center rounded-lg bg-[#9C7A33] px-3 text-xs font-semibold text-white hover:bg-[#7C6224] hover:text-white">Save</button>
                       </form>
                       <ConfirmAction
                         title="Delete mockup?"

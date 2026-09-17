@@ -99,7 +99,7 @@ export default async function PortalDocumentsPage() {
                     href={href}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-[#C9A84C] px-3 text-xs font-semibold text-white hover:bg-[#A87C2A]"
+                    className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-[#9C7A33] px-3 text-xs font-semibold text-white hover:bg-[#7C6224]"
                   >
                     Open file
                   </a>
@@ -136,7 +136,7 @@ export default async function PortalDocumentsPage() {
                           href={href}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white px-3 text-xs font-semibold text-[#C9A84C] hover:bg-[#F5F7FA]"
+                          className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white px-3 text-xs font-semibold text-[#9C7A33] hover:bg-[#F5F7FA]"
                         >
                           Open
                         </a>

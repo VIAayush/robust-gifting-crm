@@ -148,7 +148,7 @@ export function ResetPasswordForm({
         <button
           type="submit"
           disabled={!canSubmit}
-          className="w-full flex justify-center items-center py-3 px-4 rounded-xl text-xs font-semibold text-white bg-[#C9A84C] hover:bg-[#A87C2A] disabled:opacity-50"
+          className="w-full flex justify-center items-center py-3 px-4 rounded-xl text-xs font-semibold text-white bg-[#9C7A33] hover:bg-[#7C6224] disabled:opacity-50"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reset password'}
         </button>
@@ -156,11 +156,11 @@ export function ResetPasswordForm({
       <p className="text-xs text-center text-[#4A5568] mt-5 space-y-2">
         {!hasSession && ready ? (
           <span className="block">
-            <Link href="/forgot-password" className="font-semibold text-[#C9A84C] hover:underline">Request a new reset link</Link>
+            <Link href="/forgot-password" className="font-semibold text-[#9C7A33] hover:underline">Request a new reset link</Link>
           </span>
         ) : null}
         <span className="block">
-          <Link href="/login" className="font-semibold text-[#C9A84C] hover:underline">Back to sign in</Link>
+          <Link href="/login" className="font-semibold text-[#9C7A33] hover:underline">Back to sign in</Link>
         </span>
       </p>
     </AuthShell>

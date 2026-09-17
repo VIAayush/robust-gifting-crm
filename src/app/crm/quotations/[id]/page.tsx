@@ -69,7 +69,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
       <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="p-1.5 bg-[#C9A84C]/10 text-[#C9A84C] rounded-lg">
+            <span className="p-1.5 bg-[#9C7A33]/10 text-[#9C7A33] rounded-lg">
               <FileText size={16} />
             </span>
             <span className="font-mono text-xs font-bold text-gray-500">{quote.quotation_number}</span>
@@ -120,7 +120,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
           )}
           {quote.status === 'accepted' && !linkedOrder && (
             <form action={convertAction}>
-              <button type="submit" className="px-4 py-2 bg-[#C9A84C] hover:bg-[#A87C2A] text-white rounded-lg text-xs font-semibold shadow-sm transition-colors inline-flex items-center gap-1.5">
+              <button type="submit" className="px-4 py-2 bg-[#9C7A33] hover:bg-[#7C6224] text-white rounded-lg text-xs font-semibold shadow-sm transition-colors inline-flex items-center gap-1.5">
                 <ArrowRight size={14} /> Convert to Order
               </button>
             </form>
@@ -128,7 +128,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
           {linkedOrder && (
             <Link
               href={`/crm/orders/${linkedOrder.id}`}
-              className="px-4 py-2 bg-[#C9A84C] hover:opacity-90 hover:text-white text-white rounded-lg text-xs font-semibold shadow-sm inline-flex items-center gap-1.5"
+              className="px-4 py-2 bg-[#9C7A33] hover:opacity-90 hover:text-white text-white rounded-lg text-xs font-semibold shadow-sm inline-flex items-center gap-1.5"
             >
               <ArrowRight size={14} /> View order {linkedOrder.order_number}
             </Link>
@@ -207,7 +207,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
           )}
           <div className="flex justify-between w-60 text-sm font-bold text-gray-900 pt-2 border-t border-gray-200 mt-1">
             <span>Total:</span>
-            <span className="text-[#C9A84C]">{formatCurrency(quote.total)}</span>
+            <span className="text-[#9C7A33]">{formatCurrency(quote.total)}</span>
           </div>
         </div>
       </div>

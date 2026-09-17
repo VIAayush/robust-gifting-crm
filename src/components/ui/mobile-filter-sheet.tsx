@@ -34,7 +34,7 @@ export function MobileFilterSheetOption({
       type="button"
       onClick={onSelect}
       className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-3.5 text-left transition-colors ${
-        active ? 'bg-[#C9A84C] text-white' : 'text-[#1B2430] hover:bg-[#F1F4F9]'
+        active ? 'bg-[#9C7A33] text-white' : 'text-[#1B2430] hover:bg-[#F1F4F9]'
       }`}
     >
       <span className="min-w-0 truncate text-[15px]">{label}</span>
@@ -110,7 +110,7 @@ export function MobileFilterSheetShell({
               type="button"
               aria-label="Close"
               onClick={onClose}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F1F4F9] text-[#C9A84C]"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F1F4F9] text-[#9C7A33]"
             >
               <X size={18} />
             </button>
@@ -150,7 +150,7 @@ export function MobileFilterTrigger({
       </span>
       <span className="mt-1.5 flex items-center justify-between gap-2 text-[15px] text-[#1B2430]">
         <span className="min-w-0 truncate">{value}</span>
-        <ChevronDown size={16} className="shrink-0 text-[#C9A84C]" />
+        <ChevronDown size={16} className="shrink-0 text-[#9C7A33]" />
       </span>
     </button>
   )
@@ -315,7 +315,7 @@ export function MobileDateRangeFilter({
               <button
                 type="submit"
                 form={`mobile-date-range-${formId}`}
-                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-[#C9A84C] px-3 text-sm font-semibold text-white"
+                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-[#9C7A33] px-3 text-sm font-semibold text-white"
               >
                 {submitLabel}
               </button>
@@ -376,7 +376,7 @@ export function MobileDateRangeFilter({
           </label>
           <button
             type="submit"
-            className="min-h-10 rounded-lg bg-[#C9A84C] px-3 py-1.5 font-semibold text-white hover:text-white"
+            className="min-h-10 rounded-lg bg-[#9C7A33] px-3 py-1.5 font-semibold text-white hover:text-white"
           >
             {submitLabel}
           </button>
@@ -601,7 +601,7 @@ export function SheetDateField({
               </button>
               <button
                 type="button"
-                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-[#C9A84C] px-3 text-sm font-semibold text-white"
+                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-[#9C7A33] px-3 text-sm font-semibold text-white"
                 onClick={() => {
                   const today = new Date()
                   const next = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
@@ -618,7 +618,7 @@ export function SheetDateField({
             <div className="flex items-center justify-between gap-2">
               <button
                 type="button"
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1F4F9] text-[#C9A84C]"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1F4F9] text-[#9C7A33]"
                 onClick={() => {
                   const next = shiftMonth(viewYear, viewMonth, -1)
                   setViewYear(next.year)
@@ -656,7 +656,7 @@ export function SheetDateField({
               </div>
               <button
                 type="button"
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1F4F9] text-[#C9A84C]"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1F4F9] text-[#9C7A33]"
                 onClick={() => {
                   const next = shiftMonth(viewYear, viewMonth, 1)
                   setViewYear(next.year)
@@ -693,7 +693,7 @@ export function SheetDateField({
                     onClick={() => pickDay(day)}
                     className={`inline-flex min-h-11 items-center justify-center rounded-lg text-sm font-medium transition-colors ${
                       active
-                        ? 'bg-[#C9A84C] text-white'
+                        ? 'bg-[#9C7A33] text-white'
                         : disabled
                           ? 'cursor-not-allowed text-[#C9D3E0]'
                           : 'text-[#1B2430] hover:bg-[#F1F4F9]'

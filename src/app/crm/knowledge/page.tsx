@@ -36,7 +36,7 @@ export default async function KnowledgePage() {
         {(profile.role === 'admin' || profile.role === 'operations') && (
           <Link
             href="/crm/order-management"
-            className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-[#C9A84C] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#A87C2A] hover:text-white sm:w-auto"
+            className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-[#9C7A33] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#7C6224] hover:text-white sm:w-auto"
           >
             Open order management
           </Link>
@@ -57,7 +57,7 @@ export default async function KnowledgePage() {
         )}
         <Link
           href="/crm/announcements"
-          className="inline-flex min-h-10 w-full items-center justify-center rounded-lg border border-[#C9A84C] bg-white px-4 py-2 text-xs font-semibold text-[#C9A84C] transition-colors hover:bg-[#F1F4F9] sm:w-auto"
+          className="inline-flex min-h-10 w-full items-center justify-center rounded-lg border border-[#9C7A33] bg-white px-4 py-2 text-xs font-semibold text-[#9C7A33] transition-colors hover:bg-[#F1F4F9] sm:w-auto"
         >
           All announcements
         </Link>

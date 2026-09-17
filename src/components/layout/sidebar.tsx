@@ -212,7 +212,7 @@ export function Sidebar({ role, user, onNavigate, showClose, onClose, mobileOpen
                       onClick={onNavigate}
                       className={`flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-all ${
                         isActive
-                          ? 'bg-[#A87C2A] font-semibold text-[#F5F7FA] shadow-sm'
+                          ? 'bg-[#7C6224] font-semibold text-[#F5F7FA] shadow-sm'
                           : 'text-[#94A3B8] hover:bg-[#13273B] hover:text-[#F5F7FA]'
                       }`}
                     >

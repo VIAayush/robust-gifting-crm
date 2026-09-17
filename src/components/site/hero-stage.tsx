@@ -127,7 +127,7 @@ export function HeroStage({
           <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap">
             <Link
               href="/catalogue"
-              className="inline-flex items-center justify-center bg-gradient-to-br from-[#E8C96A] via-[#C9A84C] to-[#A87C2A] px-6 py-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0D1B2A] shadow-[0_4px_14px_rgba(201,168,76,0.35)] sm:py-3"
+              className="inline-flex items-center justify-center bg-gradient-to-br from-[#D9BC7A] via-[#9C7A33] to-[#7C6224] px-6 py-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0D1B2A] shadow-[0_4px_14px_rgba(201,168,76,0.35)] sm:py-3"
             >
               Explore Catalogue
             </Link>
@@ -163,7 +163,7 @@ export function HeroStage({
                   </div>
                   <div className="border-t border-[#E2E8F0] px-2.5 py-2 text-[#1B2430]">
                     <p className="truncate text-center text-[11px] leading-snug">{product.name}</p>
-                    <p className="mt-0.5 text-center text-[11px] font-semibold text-[#C9A84C]">
+                    <p className="mt-0.5 text-center text-[11px] font-semibold text-[#9C7A33]">
                       {formatCurrency(product.price)}
                     </p>
                   </div>
@@ -195,7 +195,7 @@ export function HeroStage({
                 </div>
                 <div className="border-t border-[#E2E8F0] bg-white px-3 py-2.5 text-[#1B2430]">
                   <p className="truncate text-center text-[12px] leading-snug">{product.name}</p>
-                  <p className="mt-0.5 text-center text-[11px] font-semibold text-[#C9A84C]">View gift</p>
+                  <p className="mt-0.5 text-center text-[11px] font-semibold text-[#9C7A33]">View gift</p>
                 </div>
               </div>
             </Link>

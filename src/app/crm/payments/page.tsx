@@ -41,7 +41,7 @@ export default async function PaymentsPage() {
               {payment.invoice_id ? (
                 <Link
                   href={`/crm/invoices/${payment.invoice_id}`}
-                  className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-[#C9A84C] px-3 text-xs font-semibold text-white hover:bg-[#A87C2A]"
+                  className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-[#9C7A33] px-3 text-xs font-semibold text-white hover:bg-[#7C6224]"
                 >
                   View {invoice?.invoice_number || 'invoice'}
                 </Link>
@@ -83,7 +83,7 @@ export default async function PaymentsPage() {
                 <td className="p-3 text-sm">
                   <Link
                     href={`/crm/invoices/${payment.invoice_id}`}
-                    className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white px-3 text-xs font-semibold text-[#C9A84C] hover:bg-[#F5F7FA]"
+                    className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#E2E8F0] bg-white px-3 text-xs font-semibold text-[#9C7A33] hover:bg-[#F5F7FA]"
                   >
                     {invoice?.invoice_number}
                   </Link>
