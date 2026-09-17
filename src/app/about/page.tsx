@@ -5,7 +5,7 @@ import { SiteShell } from '@/components/site/site-shell'
 
 export const metadata: Metadata = {
   title: 'About',
-  description: 'Robust Gifting Solutions is a corporate gifting CRM and catalogue, from enquiry through fulfilment.',
+  description: 'Robust Gifting is a corporate gifting CRM and catalogue, from enquiry through fulfilment.',
 }
 
 export default function AboutPage() {

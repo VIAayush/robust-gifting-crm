@@ -7,7 +7,7 @@ import { isUuid } from '@/lib/utils'
 
 export const metadata: Metadata = {
   title: 'Request a Quote',
-  description: 'Request a corporate gifting quotation from Robust Gifting Solutions.',
+  description: 'Request a corporate gifting quotation from Robust Gifting.',
 }
 
 export default async function RequestQuotePage({

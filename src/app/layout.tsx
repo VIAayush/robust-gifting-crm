@@ -27,10 +27,10 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 }
 export const metadata: Metadata = {
-  title: 'Robust Gifting Solutions — Corporate Gifting',
+  title: 'Robust Gifting — Corporate Gifting',
   description:
     'Curated corporate gifts for teams, clients and brands — catalogue, quotation and fulfilment in one place.',
-  applicationName: 'Robust Gifting Solutions',
+  applicationName: 'Robust Gifting',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,

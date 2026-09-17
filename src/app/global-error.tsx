@@ -23,20 +23,7 @@ export default function GlobalError({
             }}
           >
             <h1 style={{ fontSize: 18, fontWeight: 400, color: '#0D1B2A', margin: 0 }}>
-              Robust
-              <span
-                aria-hidden="true"
-                style={{
-                  display: 'inline-block',
-                  width: '0.38em',
-                  height: 1,
-                  margin: '0 0.28em 0.2em',
-                  background: 'currentColor',
-                  opacity: 0.7,
-                  verticalAlign: 'middle',
-                }}
-              />
-              Gifting Solutions could not load
+              Robust Gifting could not load
             </h1>
             <p style={{ fontSize: 14, fontFamily: 'system-ui, sans-serif', color: '#64748B', marginTop: 8 }}>
               An unexpected error occurred while starting the application.

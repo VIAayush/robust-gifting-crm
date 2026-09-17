@@ -1,4 +1,4 @@
-/* Robust Gifting Solutions PWA service worker */
+/* Robust Gifting PWA service worker */
 const CACHE = 'robust-gifting-pwa-v1'
 const PRECACHE = ['/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png']
 

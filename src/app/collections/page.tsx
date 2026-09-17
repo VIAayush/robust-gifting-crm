@@ -8,7 +8,7 @@ const ARROW = '\u2192'
 
 export const metadata: Metadata = {
   title: 'Collections',
-  description: 'Editorial Robust Gifting Solutions collections and corporate occasions, grouped from the existing catalogue.',
+  description: 'Editorial Robust Gifting collections and corporate occasions, grouped from the existing catalogue.',
 }
 
 export default function CollectionsPage() {

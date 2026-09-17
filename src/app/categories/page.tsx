@@ -8,7 +8,7 @@ import { PRODUCT_CATEGORY_ORDER, sortProductCategories } from '@/lib/products/ca
 
 export const metadata: Metadata = {
   title: 'Categories',
-  description: 'Browse Robust Gifting Solutions gifts by category.',
+  description: 'Browse Robust Gifting gifts by category.',
 }
 
 export default async function CategoriesPage() {

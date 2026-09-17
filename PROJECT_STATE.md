@@ -1,9 +1,9 @@
-# Project state — Robust Gifting Solutions Corporate Gifting CRM
+# Project state — Robust Gifting Corporate Gifting CRM
 
 Last updated: 2026-09-03
 
-This is the Robust Gifting Solutions application. The displayed customer-facing
-brand is **Robust Gifting Solutions** everywhere; the `robust-gifting`/`souvenir`-prefixed
+This is the Robust Gifting application. The displayed customer-facing
+brand is **Robust Gifting** everywhere; the `robust-gifting`/`souvenir`-prefixed
 localStorage keys, DOM event names, CSS keyframes and the `x-giffter-tab` session header are
 internal identifiers kept as-is so multi-tab session isolation keeps working.
 

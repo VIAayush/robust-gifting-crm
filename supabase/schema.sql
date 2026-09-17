@@ -1,4 +1,4 @@
--- Robust Gifting Solutions - complete database baseline
+-- Robust Gifting - complete database baseline
 -- Captures the full schema (tables, constraints, indexes, functions, triggers,
 -- RLS policies, storage buckets and grants) as applied to the Robust Gifting
 -- Supabase project. The dated files in supabase/migrations/ are retained as the
@@ -429,7 +429,7 @@ create table if not exists public.orders (
 
 create table if not exists public.org_settings (
   id integer default 1 not null,
-  organisation_name text default 'Robust Gifting Solutions'::text not null,
+  organisation_name text default 'Robust Gifting'::text not null,
   default_tax_percent numeric(5,2) default 18 not null,
   currency text default 'INR'::text not null,
   updated_at timestamp with time zone default now() not null
@@ -2118,5 +2118,5 @@ grant all on all tables in schema public to anon, authenticated, service_role;
 -- Organisation settings row
 -- ---------------------------------------------------------------------------
 insert into public.org_settings (id, organisation_name, default_tax_percent, currency)
-values (1, 'Robust Gifting Solutions', 18, 'INR')
+values (1, 'Robust Gifting', 18, 'INR')
 on conflict (id) do nothing;

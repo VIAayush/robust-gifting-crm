@@ -2,10 +2,15 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createRecoveryServerClient } from '@/lib/supabase/recovery-server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { isSafeNext, landingPathForRole } from '@/lib/safe-next'
 import { requestOrigin, recoveryRedirectTo } from '@/lib/auth/request-origin'
 import { validateNewPassword } from '@/lib/auth/password'
+import { sendEmail } from '@/lib/email/resend'
+import { passwordResetEmail } from '@/lib/email/templates'
+
+const RESET_REQUESTED_MESSAGE = 'If an account exists for that email, a password reset link has been sent.'
 
 export async function signIn(formData: FormData): Promise<{ error?: string; redirectTo?: string } | undefined> {
   const email = String(formData.get('email') || '').trim()
@@ -105,8 +110,37 @@ export async function requestPasswordReset(formData: FormData): Promise<{ error?
     return { error: 'Enter a valid email address' }
   }
 
-  const supabase = await createRecoveryServerClient()
   const redirectTo = await recoveryRedirectTo()
+  const admin = createAdminClient()
+
+  if (admin) {
+    // Generate the recovery link ourselves (service-role only) and email it via Resend,
+    // instead of letting Supabase's own mailer send it.
+    const { data, error } = await admin.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: { redirectTo },
+    })
+
+    if (error) {
+      const message = error.message.toLowerCase()
+      if (!message.includes('not found') && !message.includes('no user')) {
+        console.error('[auth] generateLink failed:', error.message)
+      }
+      return { message: RESET_REQUESTED_MESSAGE }
+    }
+
+    const actionLink = data?.properties?.action_link
+    if (actionLink) {
+      const { subject, html } = passwordResetEmail({ resetUrl: actionLink })
+      const sent = await sendEmail({ to: email, subject, html })
+      if (!sent.ok) console.error('[auth] failed to send password reset email:', sent.error)
+    }
+    return { message: RESET_REQUESTED_MESSAGE }
+  }
+
+  // Resend/service-role not configured yet — fall back to Supabase's own email delivery.
+  const supabase = await createRecoveryServerClient()
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo,
   })
@@ -118,9 +152,7 @@ export async function requestPasswordReset(formData: FormData): Promise<{ error?
     }
   }
 
-  return {
-    message: 'If an account exists for that email, a password reset link has been sent.',
-  }
+  return { message: RESET_REQUESTED_MESSAGE }
 }
 
 export async function updatePassword(formData: FormData): Promise<{ error?: string; success?: boolean }> {

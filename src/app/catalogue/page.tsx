@@ -10,7 +10,7 @@ import { isUuid } from '@/lib/utils'
 
 export const metadata: Metadata = {
   title: 'Catalogue',
-  description: 'Browse the Robust Gifting Solutions corporate gifting catalogue.',
+  description: 'Browse the Robust Gifting corporate gifting catalogue.',
 }
 
 const BUDGETS = [{ id: '', label: 'Any budget' }, ...BUDGET_BANDS] as const

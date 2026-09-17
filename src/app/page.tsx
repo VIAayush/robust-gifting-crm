@@ -12,7 +12,7 @@ function firstParam(value: string | string[] | undefined) {
 }
 
 export const metadata: Metadata = {
-  title: "Robust Gifting Solutions — Corporate Gifting, Refined",
+  title: "Robust Gifting — Corporate Gifting, Refined",
   description: "A premium corporate gifting catalogue for teams, clients and brands.",
 }
 
