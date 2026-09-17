@@ -95,15 +95,14 @@ export async function getPublicProduct(id: string): Promise<PublicProduct | null
 }
 
 export async function getPublicCategories() {
-  const products = await getPublicCatalogueProducts()
-  const unique = Array.from(
-    new Map(
-      products
-        .filter((product) => product.category_id && product.category_name)
-        .map((product) => [product.category_id as string, product.category_name as string])
-    ).entries()
-  ).map(([id, name]) => ({ id, name }))
-  return sortProductCategories(unique)
+  const client = await publicDbClient()
+  if (!client) return []
+  const { data, error } = await client.from('categories').select('id, name')
+  if (error || !data) {
+    console.error('[catalogue] public categories fetch failed:', error?.message || 'no data')
+    return []
+  }
+  return sortProductCategories(data as Named[])
 }
 
 export function sanitiseCatalogueSearch(value: string) {

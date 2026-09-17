@@ -29,7 +29,7 @@ const CATEGORY_LINES: Record<string, string> = {
 export async function PublicHome() {
   const products = await getPublicCatalogueProducts()
   const categories = homeCategoryTiles(await getPublicCategories(), 6)
-  const collections = CATALOGUE_COLLECTIONS.filter((collection) => products.some(collection.match)).slice(0, 6)
+  const collections = CATALOGUE_COLLECTIONS.slice(0, 6)
   const {
     heroProducts,
     categorySamples,
@@ -60,7 +60,7 @@ export async function PublicHome() {
       const price = product.price || 0
       return price >= band.min && price < band.max
     }).length,
-  })).filter((band) => band.count > 0)
+  }))
 
   const occasionVisuals = CATALOGUE_OCCASIONS.map((occasion) => ({
     ...occasion,
@@ -261,27 +261,25 @@ export async function PublicHome() {
       </section>
 
       {/* Shop by price */}
-      {budgetCounts.length > 0 ? (
-        <section className="bg-[#F1F4F9] py-10 sm:py-14 lg:py-16">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <Reveal>
-              <p className="store-eyebrow">Shop by price</p>
-              <h2 className="store-section-title mt-2">Start where the brief starts.</h2>
-            </Reveal>
-            <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              {budgetCounts.map((band) => (
-                <Link
-                  key={band.id}
-                  href={`/catalogue?budget=${encodeURIComponent(band.id)}`}
-                  className="rounded-md border border-[#E2E8F0] bg-white px-4 py-6 text-center transition-shadow hover:shadow-[0_8px_20px_rgba(27,36,48,0.07)]"
-                >
-                  <p className="font-serif text-xl text-[#1B2430]">{band.label}</p>
-                </Link>
-              ))}
-            </div>
+      <section className="bg-[#F1F4F9] py-10 sm:py-14 lg:py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <Reveal>
+            <p className="store-eyebrow">Shop by price</p>
+            <h2 className="store-section-title mt-2">Start where the brief starts.</h2>
+          </Reveal>
+          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {budgetCounts.map((band) => (
+              <Link
+                key={band.id}
+                href={`/catalogue?budget=${encodeURIComponent(band.id)}`}
+                className="rounded-md border border-[#E2E8F0] bg-white px-4 py-6 text-center transition-shadow hover:shadow-[0_8px_20px_rgba(27,36,48,0.07)]"
+              >
+                <p className="font-serif text-xl text-[#1B2430]">{band.label}</p>
+              </Link>
+            ))}
           </div>
-        </section>
-      ) : null}
+        </div>
+      </section>
 
       {/* From the catalogue grid */}
       <section className="bg-white py-10 sm:py-14 lg:py-16">
