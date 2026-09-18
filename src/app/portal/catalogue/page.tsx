@@ -5,6 +5,7 @@ import { formatCurrency, asRows, isUuid } from '@/lib/utils'
 import { ProductImage } from '@/components/ui/product-image'
 import { Package, Search } from 'lucide-react'
 import { sortProductCategories } from '@/lib/products/categories'
+import { swatchHex } from '@/lib/products/colours'
 import { MobileFilterBar } from '@/components/ui/mobile-filter-sheet'
 import { CatalogueShortlistButton } from '@/components/portal/catalogue-shortlist-button'
 
@@ -138,6 +139,22 @@ export default async function PortalCataloguePage({
   const total = count || 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
+  const productIds = (products || []).map((p) => p.id)
+  const coloursByProduct = new Map<string, string[]>()
+  if (productIds.length > 0) {
+    const { data: variantRows } = await supabase
+      .from('client_product_variants')
+      .select('product_id, colour, sort_order')
+      .in('product_id', productIds)
+      .order('sort_order')
+    for (const row of variantRows || []) {
+      if (!row.colour) continue
+      const list = coloursByProduct.get(row.product_id) || []
+      list.push(row.colour)
+      coloursByProduct.set(row.product_id, list)
+    }
+  }
+
   const pageHref = (nextPage: number) => {
     const params = new URLSearchParams()
     if (q) params.set('q', q)
@@ -247,6 +264,18 @@ export default async function PortalCataloguePage({
                     <div>
                       <p className="text-base font-semibold text-gray-900">{formatCurrency(product.price)}</p>
                       <p className="text-[10px] text-gray-400">MOQ: {product.moq || 1} units</p>
+                      {(coloursByProduct.get(product.id)?.length || 0) > 1 && (
+                        <div className="mt-1.5 flex items-center gap-1">
+                          {coloursByProduct.get(product.id)!.slice(0, 6).map((colour, i) => (
+                            <span
+                              key={`${colour}-${i}`}
+                              className="h-2.5 w-2.5 rounded-full border border-black/10"
+                              style={{ backgroundColor: swatchHex(colour) || '#E2E8F0' }}
+                              title={colour}
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <CatalogueShortlistButton
                       product={{

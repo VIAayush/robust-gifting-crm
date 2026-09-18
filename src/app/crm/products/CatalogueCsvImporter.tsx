@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { autoMapHeaders, parseCsv } from '@/lib/csv'
-import { importCatalogueCsv, type ImportSummary } from './import-actions'
+import { importCatalogueCsv, validateCatalogueCsv, type ImportSummary } from './import-actions'
 import { MobileSheetSelect } from '@/components/ui/mobile-filter-sheet'
 
 const FIELD_LABELS: { key: string; label: string; required?: boolean }[] = [
@@ -24,6 +24,8 @@ const FIELD_LABELS: { key: string; label: string; required?: boolean }[] = [
   { key: 'size', label: 'Size' },
   { key: 'gender', label: 'Gender' },
   { key: 'material', label: 'Material' },
+  { key: 'variant_sku', label: 'Variant SKU (optional, rarely needed)' },
+  { key: 'extra_price', label: 'Variant price difference' },
   { key: 'status', label: 'Status' },
 ]
 
@@ -34,6 +36,7 @@ export function CatalogueCsvImporter() {
   const [mapping, setMapping] = useState<Record<string, string>>({})
   const [images, setImages] = useState<File[]>([])
   const [summary, setSummary] = useState<ImportSummary | null>(null)
+  const [validated, setValidated] = useState(false)
   const [pending, startTransition] = useTransition()
 
   const mappedRequired = useMemo(
@@ -41,8 +44,21 @@ export function CatalogueCsvImporter() {
     [mapping],
   )
 
-  const onCsv = async (file: File | null) => {
+  const buildFormData = () => {
+    const data = new FormData()
+    data.set('csv', csvFile as File)
+    data.set('mapping', JSON.stringify(mapping))
+    images.forEach((image) => data.append('images', image))
+    return data
+  }
+
+  const resetValidation = () => {
+    setValidated(false)
     setSummary(null)
+  }
+
+  const onCsv = async (file: File | null) => {
+    resetValidation()
     setCsvFile(file)
     if (!file) {
       setHeaders([])
@@ -56,27 +72,44 @@ export function CatalogueCsvImporter() {
     setMapping(autoMapHeaders(table.headers))
   }
 
-  const onImport = () => {
+  const onValidate = () => {
     if (!csvFile) {
       toast.error('Choose a CSV file to import')
       return
     }
     if (!mappedRequired) {
-      toast.error('Map product name, SKU and price before importing')
+      toast.error('Map product name, SKU and price before validating')
       return
     }
-    const data = new FormData()
-    data.set('csv', csvFile)
-    data.set('mapping', JSON.stringify(mapping))
-    images.forEach((image) => data.append('images', image))
     startTransition(async () => {
-      const result = await importCatalogueCsv(data)
+      const result = await validateCatalogueCsv(buildFormData())
+      if ('error' in result) {
+        toast.error(result.error)
+        setValidated(false)
+        return
+      }
+      setSummary(result)
+      setValidated(true)
+      if (result.failed === 0) toast.success('No issues found — ready to import')
+      else toast.error(`${result.failed} row${result.failed === 1 ? '' : 's'} need fixing before you can import`)
+    })
+  }
+
+  const onImport = () => {
+    if (!csvFile || !validated) return
+    startTransition(async () => {
+      const result = await importCatalogueCsv(buildFormData())
       if ('error' in result) {
         toast.error(result.error)
         return
       }
       setSummary(result)
-      if (result.imported > 0) toast.success(`${result.imported} products imported`)
+      if (!result.committed) {
+        toast.error('Import blocked — the CSV changed since it was validated. Validate again.')
+        setValidated(false)
+        return
+      }
+      if (result.imported > 0) toast.success(`${result.imported} product${result.imported === 1 ? '' : 's'} imported`)
       if (result.failed > 0) toast.error(`${result.failed} rows failed`)
     })
   }
@@ -94,7 +127,9 @@ export function CatalogueCsvImporter() {
           />
           <p className="text-[11px] text-gray-500 mt-2">
             Required columns: product name, SKU, price. Optional: description, category, supplier, MOQ,
-            visibility, companies, image_url, image_filename, colour, size.
+            visibility, companies, image_url, image_filename, colour, size. Give the same colour a row per
+            colour with the same SKU (or a colour-suffixed SKU, e.g. <span className="font-mono">RG-NO-02-BLUE</span>)
+            and they will import as one product with colour variants, not separate products.
           </p>
         </div>
 
@@ -104,12 +139,16 @@ export function CatalogueCsvImporter() {
             type="file"
             accept="image/png,image/jpeg,image/webp"
             multiple
-            onChange={(e) => setImages(Array.from(e.target.files || []))}
+            onChange={(e) => {
+              setImages(Array.from(e.target.files || []))
+              resetValidation()
+            }}
             className="text-xs file:mr-2 file:px-3 file:py-1.5 file:rounded-md file:border file:border-gray-200 file:bg-white file:text-xs"
           />
           <p className="text-[11px] text-gray-500 mt-2">
-            Match files to the CSV <span className="font-mono">image_filename</span> column. Public
-            <span className="font-mono"> image_url</span> values are stored as-is.
+            Match files to the CSV <span className="font-mono">image_filename</span> column (exact name, any
+            case, with or without a folder prefix). Separate multiple photos for one row with a comma,
+            semicolon or pipe. Public <span className="font-mono">image_url</span> values are stored as-is.
           </p>
           {images.length > 0 && (
             <p className="text-[11px] text-gray-600 mt-1">{images.length} image{images.length === 1 ? '' : 's'} ready to match</p>
@@ -127,7 +166,10 @@ export function CatalogueCsvImporter() {
                 label={`${field.label}${field.required ? ' *' : ''}`}
                 showDesktopLabel
                 value={mapping[field.key] || ''}
-                onChange={(next) => setMapping((prev) => ({ ...prev, [field.key]: next }))}
+                onChange={(next) => {
+                  setMapping((prev) => ({ ...prev, [field.key]: next }))
+                  resetValidation()
+                }}
                 emptyLabel="Ignore"
                 options={[
                   { value: '', label: 'Ignore' },
@@ -160,34 +202,72 @@ export function CatalogueCsvImporter() {
             </div>
           )}
 
-          <button
-            type="button"
-            disabled={pending || !mappedRequired}
-            onClick={onImport}
-            className="px-6 py-2 text-xs font-semibold text-white bg-[#9C7A33] hover:bg-[#7C6224] rounded-lg disabled:opacity-50"
-          >
-            {pending ? 'Importing…' : 'Import products'}
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            {!validated || (summary && summary.failed > 0) ? (
+              <button
+                type="button"
+                disabled={pending || !mappedRequired}
+                onClick={onValidate}
+                className="px-6 py-2 text-xs font-semibold text-white bg-[#9C7A33] hover:bg-[#7C6224] rounded-lg disabled:opacity-50"
+              >
+                {pending ? 'Validating…' : 'Validate'}
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={onImport}
+                  className="px-6 py-2 text-xs font-semibold text-white bg-green-700 hover:bg-green-800 rounded-lg disabled:opacity-50"
+                >
+                  {pending ? 'Importing…' : 'Import products'}
+                </button>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={onValidate}
+                  className="px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg disabled:opacity-50"
+                >
+                  Re-validate
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
 
       {summary && (
         <div className="bg-white p-6 rounded-2xl border border-gray-200 space-y-3">
-          <h2 className="text-sm font-bold text-gray-900">Import summary</h2>
+          <h2 className="text-sm font-bold text-gray-900">
+            {summary.committed ? 'Import summary' : summary.failed === 0 ? 'Validation passed' : 'Validation found issues'}
+          </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
             <SummaryStat label="Total rows" value={summary.total} />
-            <SummaryStat label="Imported" value={summary.imported} />
+            <SummaryStat label={summary.committed ? 'Imported' : 'Ready to import'} value={summary.imported} />
             <SummaryStat label="Skipped" value={summary.skipped} />
             <SummaryStat label="Failed" value={summary.failed} />
           </div>
           {summary.failures.length > 0 && (
-            <ul className="text-xs text-red-700 space-y-1">
-              {summary.failures.slice(0, 50).map((failure) => (
-                <li key={`${failure.row}-${failure.sku}`}>
-                  Row {failure.row} ({failure.sku}): {failure.reason}
-                </li>
-              ))}
-            </ul>
+            <div>
+              <p className="text-xs font-semibold text-red-700 mb-1">Fix these rows before importing:</p>
+              <ul className="text-xs text-red-700 space-y-1">
+                {summary.failures.slice(0, 50).map((failure) => (
+                  <li key={`${failure.row}-${failure.sku}`}>
+                    Row {failure.row} ({failure.sku}): {failure.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {summary.warnings.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-amber-700 mb-1">Warnings (won&apos;t block import):</p>
+              <ul className="text-xs text-amber-700 space-y-1">
+                {summary.warnings.map((warning, i) => (
+                  <li key={i}>{warning.message}</li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
       )}

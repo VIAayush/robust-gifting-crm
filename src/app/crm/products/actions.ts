@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getProfile } from '@/lib/auth'
 import { writeAudit } from '@/lib/audit'
+import { resyncPrimaryImage } from '@/lib/products/gallery'
 
 const CATALOGUE_ROLES = ['admin', 'sales'] as const
 const VISIBILITY_ROLES = ['admin'] as const
@@ -122,37 +123,101 @@ export async function createProduct(formData: FormData) {
   }
 
   let imageHint = ''
+  let hasPrimaryImage = Boolean(image_url)
   if (imageFile instanceof File && imageFile.size > 0) {
     const extension = ALLOWED_IMAGE_TYPES[imageFile.type]
     if (!extension) {
       imageHint = 'upload-failed'
     } else {
-      const objectPath = `${product.id}/${Date.now()}.${extension}`
+      const objectPath = `${product.id}/shared/${Date.now()}.${extension}`
       const { error: uploadError } = await supabase.storage
         .from(IMAGE_BUCKET)
         .upload(objectPath, imageFile, { contentType: imageFile.type, upsert: false })
       if (uploadError) {
         imageHint = 'upload-failed'
       } else {
+        const nextUrl = publicImageUrl(objectPath)
         const { error: imageUpdateError } = await supabase
           .from('products')
-          .update({ image_url: publicImageUrl(objectPath) })
+          .update({ image_url: nextUrl })
           .eq('id', product.id)
-        if (imageUpdateError) imageHint = 'upload-failed'
+        if (imageUpdateError) {
+          imageHint = 'upload-failed'
+        } else {
+          await supabase.from('product_images').insert({
+            product_id: product.id,
+            variant_id: null,
+            image_url: nextUrl,
+            storage_path: objectPath,
+            sort_order: 0,
+            is_primary: true,
+          })
+          hasPrimaryImage = true
+        }
       }
     }
-  } else if (!image_url) {
-    imageHint = 'needed'
   }
+  if (!hasPrimaryImage) imageHint = 'needed'
 
-  const colour = ((formData.get('colour') as string) || '').trim() || null
   const size = ((formData.get('size') as string) || '').trim() || null
   const gender = ((formData.get('gender') as string) || '').trim() || null
   const material = ((formData.get('material') as string) || '').trim() || null
-  if (colour || size || gender || material) {
+
+  const variantKeys = formData.getAll('variant_key') as string[]
+  const variantColours = formData.getAll('variant_colour') as string[]
+  if (variantKeys.length > 0) {
+    for (let i = 0; i < variantKeys.length; i++) {
+      const colour = (variantColours[i] || '').trim()
+      if (!colour) continue
+      const { data: variant, error: variantError } = await supabase
+        .from('product_variants')
+        .insert({
+          product_id: product.id,
+          colour,
+          display_name: colour,
+          size,
+          gender,
+          material,
+          sort_order: i,
+        })
+        .select('id')
+        .single()
+      if (variantError || !variant) continue
+
+      const photos = formData.getAll(`variant_photos_${variantKeys[i]}`).filter(
+        (f): f is File => f instanceof File && f.size > 0,
+      )
+      for (let p = 0; p < photos.length; p++) {
+        const photo = photos[p]
+        const extension = ALLOWED_IMAGE_TYPES[photo.type]
+        if (!extension || photo.size > MAX_IMAGE_BYTES) continue
+        const objectPath = `${product.id}/${variant.id}/${Date.now()}-${p}.${extension}`
+        const { error: uploadError } = await supabase.storage
+          .from(IMAGE_BUCKET)
+          .upload(objectPath, photo, { contentType: photo.type, upsert: false })
+        if (uploadError) continue
+        const photoUrl = publicImageUrl(objectPath)
+        const isPrimary = !hasPrimaryImage
+        await supabase.from('product_images').insert({
+          product_id: product.id,
+          variant_id: variant.id,
+          image_url: photoUrl,
+          storage_path: objectPath,
+          sort_order: p,
+          is_primary: isPrimary,
+        })
+        if (isPrimary) {
+          await supabase.from('products').update({ image_url: photoUrl }).eq('id', product.id)
+          hasPrimaryImage = true
+          imageHint = ''
+        }
+      }
+    }
+  } else if (size || gender || material) {
+    // No colours, but the product still carries a size/gender/material combination.
     await supabase.from('product_variants').insert({
       product_id: product.id,
-      colour,
+      colour: null,
       size,
       gender,
       material,
@@ -320,7 +385,7 @@ export async function uploadProductImage(formData: FormData) {
     .maybeSingle()
   if (!product) return { error: 'Unable to upload product image. Please check the file and try again.' }
 
-  const objectPath = `${productId}/${Date.now()}.${extension}`
+  const objectPath = `${productId}/shared/${Date.now()}.${extension}`
   const { error: uploadError } = await supabase.storage
     .from(IMAGE_BUCKET)
     .upload(objectPath, file, { contentType: file.type, upsert: false })
@@ -337,12 +402,25 @@ export async function uploadProductImage(formData: FormData) {
     return { error: 'Unable to upload product image. Please check the file and try again.' }
   }
 
+  // This legacy single-photo control only ever manages the product's shared
+  // (variant_id null) primary image, so the multi-photo gallery panel on the
+  // same page reflects exactly what it just did.
   if (isStoredProductImage(product.image_url)) {
     const previous = objectPathFromUrl(product.image_url)
     if (previous && previous !== objectPath) {
       await supabase.storage.from(IMAGE_BUCKET).remove([previous])
     }
+    await supabase.from('product_images').delete().eq('product_id', productId).is('variant_id', null).eq('image_url', product.image_url)
   }
+  await supabase.from('product_images').update({ is_primary: false }).eq('product_id', productId)
+  await supabase.from('product_images').insert({
+    product_id: productId,
+    variant_id: null,
+    image_url: nextUrl,
+    storage_path: objectPath,
+    sort_order: 0,
+    is_primary: true,
+  })
 
   revalidatePath(`/crm/products/${productId}`)
   revalidatePath('/crm/products')
@@ -368,13 +446,13 @@ export async function removeProductImage(formData: FormData) {
     .maybeSingle()
   if (!product) return { error: 'Unable to remove product image. Please try again.' }
 
-  const { error } = await supabase.from('products').update({ image_url: null }).eq('id', productId)
-  if (error) return { error: 'Unable to remove product image. Please try again.' }
-
   if (isStoredProductImage(product.image_url)) {
     const previous = objectPathFromUrl(product.image_url)
     if (previous) await supabase.storage.from(IMAGE_BUCKET).remove([previous])
+    await supabase.from('product_images').delete().eq('product_id', productId).is('variant_id', null).eq('image_url', product.image_url)
   }
+  // Falls back to another photo (e.g. a colour variant's) if one exists, instead of always going blank.
+  await resyncPrimaryImage(supabase, productId)
 
   revalidatePath(`/crm/products/${productId}`)
   revalidatePath('/crm/products')
@@ -565,6 +643,12 @@ export async function removeProduct(formData: FormData) {
   }
 
   const imageUrl = product.image_url
+  const { data: galleryImages } = await supabase
+    .from('product_images')
+    .select('storage_path')
+    .eq('product_id', productId)
+  const galleryStoragePaths = (galleryImages || []).map((i) => i.storage_path).filter((p): p is string => Boolean(p))
+
   const { error } = await supabase.from('products').delete().eq('id', productId)
   if (error) {
     await supabase.from('products').update({ status: 'discontinued' }).eq('id', productId)
@@ -583,6 +667,11 @@ export async function removeProduct(formData: FormData) {
       const objectPath = objectPathFromUrl(imageUrl)
       if (objectPath) await supabase.storage.from(IMAGE_BUCKET).remove([objectPath])
     }
+  }
+  // product_images rows are already gone via ON DELETE CASCADE; their storage
+  // objects are namespaced under this product's own id, so nothing else references them.
+  if (galleryStoragePaths.length > 0) {
+    await supabase.storage.from(IMAGE_BUCKET).remove(galleryStoragePaths)
   }
 
   await writeAudit(supabase, {

@@ -484,6 +484,23 @@ create table if not exists public.product_variants (
   material text,
   sku text,
   extra_price numeric(12,2) default 0 not null,
+  created_at timestamp with time zone default now() not null,
+  display_name text,
+  status text default 'active'::text not null,
+  sort_order integer default 0 not null
+);
+
+-- One product can have many photos, optionally scoped to a single colour
+-- variant (variant_id null = shown regardless of colour).
+create table if not exists public.product_images (
+  id uuid default gen_random_uuid() not null,
+  product_id uuid not null,
+  variant_id uuid,
+  image_url text not null,
+  storage_path text,
+  sort_order integer default 0 not null,
+  is_primary boolean default false not null,
+  alt_text text,
   created_at timestamp with time zone default now() not null
 );
 
@@ -708,6 +725,7 @@ alter table public.org_settings add constraint org_settings_pkey PRIMARY KEY (id
 alter table public.payables add constraint payables_pkey PRIMARY KEY (id);
 alter table public.payments add constraint payments_pkey PRIMARY KEY (id);
 alter table public.printing_vendors add constraint printing_vendors_pkey PRIMARY KEY (id);
+alter table public.product_images add constraint product_images_pkey PRIMARY KEY (id);
 alter table public.product_variants add constraint product_variants_pkey PRIMARY KEY (id);
 alter table public.products add constraint products_pkey PRIMARY KEY (id);
 alter table public.profiles add constraint profiles_pkey PRIMARY KEY (id);
@@ -861,6 +879,8 @@ alter table public.payables add constraint payables_created_by_fkey FOREIGN KEY 
 alter table public.payables add constraint payables_order_id_fkey FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL;
 alter table public.payments add constraint payments_created_by_fkey FOREIGN KEY (created_by) REFERENCES profiles(id);
 alter table public.payments add constraint payments_invoice_id_fkey FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE;
+alter table public.product_images add constraint product_images_product_id_fkey FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE;
+alter table public.product_images add constraint product_images_variant_id_fkey FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE;
 alter table public.product_variants add constraint product_variants_product_id_fkey FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE;
 alter table public.products add constraint products_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES brands(id);
 alter table public.products add constraint products_category_id_fkey FOREIGN KEY (category_id) REFERENCES categories(id);
@@ -939,6 +959,8 @@ CREATE INDEX IF NOT EXISTS orders_delivery_idx ON public.orders USING btree (exp
 CREATE INDEX IF NOT EXISTS orders_department_idx ON public.orders USING btree (current_department_id);
 CREATE INDEX IF NOT EXISTS orders_owner_idx ON public.orders USING btree (owner_id);
 CREATE INDEX IF NOT EXISTS orders_status_idx ON public.orders USING btree (status);
+CREATE INDEX IF NOT EXISTS product_images_product_id_idx ON public.product_images USING btree (product_id);
+CREATE INDEX IF NOT EXISTS product_images_variant_id_idx ON public.product_images USING btree (variant_id);
 CREATE INDEX IF NOT EXISTS products_catalogue_browse_idx ON public.products USING btree (status, catalogue_access);
 CREATE INDEX IF NOT EXISTS products_category_idx ON public.products USING btree (category_id);
 CREATE INDEX IF NOT EXISTS products_name_lower_idx ON public.products USING btree (lower(name));
@@ -1912,6 +1934,11 @@ create policy payments_select on public.payments as PERMISSIVE for SELECT to aut
 create policy payments_write on public.payments as PERMISSIVE for ALL to authenticated using (can_finance()) with check (can_finance());
 create policy print_select on public.printing_vendors as PERMISSIVE for SELECT to authenticated using ((can_ops() OR is_admin() OR can_management_read()));
 create policy print_write on public.printing_vendors as PERMISSIVE for ALL to authenticated using (can_ops()) with check (can_ops());
+create policy product_images_select_internal on public.product_images as PERMISSIVE for SELECT to authenticated using (is_internal());
+create policy product_images_public_select on public.product_images as PERMISSIVE for SELECT to anon, authenticated using ((EXISTS ( SELECT 1
+   FROM products p
+  WHERE ((p.id = product_images.product_id) AND (p.status = 'active'::product_status) AND (p.catalogue_access = 'all'::text)))));
+create policy product_images_write on public.product_images as PERMISSIVE for ALL to authenticated using (can_sales()) with check (can_sales());
 create policy variants_select on public.product_variants as PERMISSIVE for SELECT to authenticated using (is_internal());
 create policy variants_write on public.product_variants as PERMISSIVE for ALL to authenticated using (can_sales()) with check (can_sales());
 create policy products_public_catalogue_select on public.products as PERMISSIVE for SELECT to anon, authenticated using (((status = 'active'::product_status) AND (catalogue_access = 'all'::text)));
@@ -2020,6 +2047,25 @@ create or replace view public.client_products as
   WHERE p.status = 'active'::product_status AND p.catalogue_access <> 'none'::text AND (p.catalogue_access = 'all'::text OR (EXISTS ( SELECT 1
            FROM company_product_access cpa
           WHERE cpa.product_id = p.id AND cpa.company_id = client_company_id())));
+
+create or replace view public.client_product_variants as
+ SELECT v.id, v.product_id, v.colour, v.display_name, v.sort_order, v.extra_price, v.sku
+   FROM product_variants v
+     JOIN products p ON p.id = v.product_id
+  WHERE v.status = 'active' AND p.status = 'active'::product_status AND p.catalogue_access <> 'none'::text AND (p.catalogue_access = 'all'::text OR (EXISTS ( SELECT 1
+           FROM company_product_access cpa
+          WHERE cpa.product_id = p.id AND cpa.company_id = client_company_id())));
+
+create or replace view public.client_product_images as
+ SELECT i.id, i.product_id, i.variant_id, i.image_url, i.sort_order, i.is_primary
+   FROM product_images i
+     JOIN products p ON p.id = i.product_id
+  WHERE p.status = 'active'::product_status AND p.catalogue_access <> 'none'::text AND (p.catalogue_access = 'all'::text OR (EXISTS ( SELECT 1
+           FROM company_product_access cpa
+          WHERE cpa.product_id = p.id AND cpa.company_id = client_company_id())));
+
+grant select on public.client_product_variants to anon, authenticated;
+grant select on public.client_product_images to anon, authenticated;
 
 create or replace view public.portal_campaigns as
  SELECT id,

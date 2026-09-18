@@ -40,7 +40,8 @@ export default async function CataloguePage({
         product.name.toLowerCase().includes(needle) ||
         product.sku.toLowerCase().includes(needle) ||
         (product.description || '').toLowerCase().includes(needle) ||
-        (product.category_name || '').toLowerCase().includes(needle),
+        (product.category_name || '').toLowerCase().includes(needle) ||
+        product.variantColours.some((colour) => colour.toLowerCase().includes(needle)),
     )
   }
   if (categoryFilter) {

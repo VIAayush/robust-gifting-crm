@@ -102,3 +102,27 @@ export function splitCompanyNames(value: string) {
     .map((part) => part.trim())
     .filter(Boolean)
 }
+
+/** Splits a delimited cell of image references (comma, semicolon or pipe) into trimmed, non-empty parts, in order. */
+export function splitImageRefs(value: string): string[] {
+  return value
+    .split(/[,;|]/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+}
+
+export type ImageRef = { kind: 'url'; value: string } | { kind: 'filename'; raw: string; basename: string }
+
+/**
+ * Classifies a single image reference. `http(s)://` values are treated as external
+ * URLs without any filename matching. Everything else is normalized to a basename
+ * (path/case/whitespace-insensitive) for matching against uploaded files.
+ */
+export function normalizeImageRef(raw: string): ImageRef | null {
+  const value = raw.trim()
+  if (!value) return null
+  if (/^https?:\/\//i.test(value)) return { kind: 'url', value }
+  const withoutQuery = value.split(/[?#]/)[0]
+  const basename = withoutQuery.split(/[\\/]/).pop() || withoutQuery
+  return { kind: 'filename', raw: value, basename: basename.trim().toLowerCase() }
+}

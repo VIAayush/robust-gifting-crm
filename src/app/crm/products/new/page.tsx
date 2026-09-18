@@ -8,6 +8,7 @@ import { createProduct } from '../actions'
 import { Package, Globe, Lock, EyeOff } from 'lucide-react'
 import { sortProductCategories } from '@/lib/products/categories'
 import { ProductImageField } from '@/components/products/product-image-field'
+import { VariantsField } from '@/components/products/variants-field'
 import { MobileSheetSelect } from '@/components/ui/mobile-filter-sheet'
 
 export default async function NewProductPage({
@@ -193,11 +194,7 @@ export default async function NewProductPage({
             />
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Colour</label>
-              <input name="colour" className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg" />
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">Size</label>
               <input name="size" className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg" />
@@ -211,6 +208,8 @@ export default async function NewProductPage({
               <input name="material" className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg" />
             </div>
           </div>
+
+          <VariantsField />
 
           {profile.role === 'admin' && (
           <div className="border border-purple-100 bg-purple-50/30 p-5 rounded-xl space-y-4">

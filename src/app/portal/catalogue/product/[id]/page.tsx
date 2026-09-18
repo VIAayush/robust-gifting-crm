@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { BackButton } from '@/components/ui/back-button'
 import { formatCurrency } from '@/lib/utils'
-import { ProductImage } from '@/components/ui/product-image'
+import { ProductDetailView } from '@/components/site/product-detail-view'
 import { CatalogueShortlistButton } from '@/components/portal/catalogue-shortlist-button'
 
 export default async function PortalProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -28,13 +28,39 @@ export default async function PortalProductDetailPage({ params }: { params: Prom
 
   if (!product) notFound()
 
+  const [{ data: variantRows }, { data: imageRows }] = await Promise.all([
+    supabase.from('client_product_variants').select('id, colour, display_name').eq('product_id', product.id).order('sort_order'),
+    supabase.from('client_product_images').select('id, variant_id, image_url').eq('product_id', product.id).order('sort_order'),
+  ])
+
+  const imagesByVariant = new Map<string, { url: string; alt: string }[]>()
+  const sharedImages: { url: string; alt: string }[] = []
+  for (const row of imageRows || []) {
+    const image = { url: row.image_url as string, alt: product.name }
+    if (row.variant_id) {
+      const list = imagesByVariant.get(row.variant_id as string) || []
+      list.push(image)
+      imagesByVariant.set(row.variant_id as string, list)
+    } else {
+      sharedImages.push(image)
+    }
+  }
+  if (sharedImages.length === 0 && product.image_url) {
+    sharedImages.push({ url: product.image_url, alt: product.name })
+  }
+  const variants = (variantRows || [])
+    .filter((v) => v.colour)
+    .map((v) => ({ id: v.id as string, colour: (v.display_name || v.colour) as string, images: imagesByVariant.get(v.id as string) || [] }))
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <BackButton href="/portal/catalogue" label="Back to gifts" className="min-h-10" />
 
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
         <div className="grid grid-cols-1 md:grid-cols-2">
-          <ProductImage src={product.image_url} alt={product.name} size="hero" className="h-72 border-b border-gray-100 md:h-full md:border-b-0 md:border-r" />
+          <div className="h-72 border-b border-gray-100 md:h-full md:border-b-0 md:border-r">
+            <ProductDetailView productName={product.name} sharedImages={sharedImages} variants={variants} galleryClassName="h-full" />
+          </div>
 
           <div className="space-y-4 p-5 sm:p-6">
             {product.category_name && (

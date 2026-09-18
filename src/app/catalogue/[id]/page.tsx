@@ -2,16 +2,16 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { SiteShell } from '@/components/site/site-shell'
-import { ProductImage } from '@/components/ui/product-image'
+import { ProductDetailView } from '@/components/site/product-detail-view'
 import { formatCurrency, isUuid } from '@/lib/utils'
-import { getPublicProduct } from '@/lib/catalogue/products'
+import { getPublicProductWithVariants } from '@/lib/catalogue/products'
 
 type Props = { params: Promise<{ id: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
   if (!isUuid(id)) return { title: 'Product' }
-  const product = await getPublicProduct(id)
+  const product = await getPublicProductWithVariants(id)
   if (!product) return { title: 'Product' }
   return {
     title: product.name,
@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PublicProductPage({ params }: Props) {
   const { id } = await params
   if (!isUuid(id)) notFound()
-  const product = await getPublicProduct(id)
+  const product = await getPublicProductWithVariants(id)
   if (!product) notFound()
 
   const quoteHref = `/request-quote?product=${product.id}`
@@ -36,14 +36,11 @@ export default async function PublicProductPage({ params }: Props) {
     <SiteShell>
       <article className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:gap-10 sm:px-6 sm:py-12 lg:grid-cols-2 lg:gap-14 lg:px-8 lg:py-16">
         <div className="overflow-hidden rounded-md catalogue-studio-field">
-          <ProductImage
-            src={product.image_url}
-            alt={product.name}
-            size="hero"
-            fit="contain"
-            fadeEdges
-            className="min-h-[16rem] h-full aspect-square bg-transparent sm:min-h-[22rem]"
-            imgClassName="catalogue-product-img scale-[1.04]"
+          <ProductDetailView
+            productName={product.name}
+            sharedImages={product.sharedImages}
+            variants={product.variants}
+            galleryClassName="min-h-[16rem] h-full aspect-square bg-transparent sm:min-h-[22rem]"
           />
         </div>
         <div className="lg:py-4">

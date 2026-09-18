@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ProductImage } from '@/components/ui/product-image'
 import { formatCurrency } from '@/lib/utils'
 import type { PublicProduct } from '@/lib/catalogue/products'
+import { swatchHex } from '@/lib/products/colours'
 import { cn } from '@/lib/utils'
 
 /**
@@ -49,6 +50,18 @@ export function SiteProductCard({
           {product.name}
         </h3>
         <p className="text-[15px] font-semibold text-[#9C7A33]">{formatCurrency(product.price)}</p>
+        {product.variantColours.length > 1 && (
+          <div className="flex items-center justify-center gap-1 pt-0.5" aria-label={`${product.variantColours.length} colours available`}>
+            {product.variantColours.slice(0, 6).map((colour, i) => (
+              <span
+                key={`${colour}-${i}`}
+                className="h-2.5 w-2.5 rounded-full border border-black/10"
+                style={{ backgroundColor: swatchHex(colour) || '#E2E8F0' }}
+                title={colour}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </Link>
   )

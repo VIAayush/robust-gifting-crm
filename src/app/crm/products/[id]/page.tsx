@@ -9,6 +9,8 @@ import { asFormAction } from '@/lib/form-action'
 import { Globe, Lock, EyeOff } from 'lucide-react'
 import { ProductImageEditor } from '@/components/products/product-image-editor'
 import { CatalogueVisibilityEditor } from '@/components/products/catalogue-visibility-editor'
+import { ProductVariantsManager } from '@/components/products/product-variants-manager'
+import { ProductGalleryManager } from '@/components/products/product-gallery-manager'
 import { requireStaff, canSeeCosts } from '@/lib/auth'
 import { MobileSheetSelect } from '@/components/ui/mobile-filter-sheet'
 
@@ -33,6 +35,8 @@ export default async function ProductDetailPage({
     { data: suppliers },
     { data: allCompanies },
     { data: accessRecords },
+    { data: variants },
+    { data: images },
   ] = await Promise.all([
     supabase.from('products').select('*, category:categories(id, name), brand:brands(id, name), supplier:suppliers(id, name)').eq('id', id).maybeSingle(),
     supabase.from('categories').select('id, name'),
@@ -40,9 +44,21 @@ export default async function ProductDetailPage({
     supabase.from('suppliers').select('id, name').order('name'),
     supabase.from('companies').select('id, name, logo_path').eq('status', 'active').order('name'),
     supabase.from('company_product_access').select('*, company:companies(id, name, city)').eq('product_id', id),
+    supabase.from('product_variants').select('*').eq('product_id', id).eq('status', 'active').order('sort_order'),
+    supabase.from('product_images').select('*').eq('product_id', id).order('sort_order'),
   ])
 
   if (!product) notFound()
+
+  const productVariants = variants || []
+  // Products saved before colour variants/galleries existed have zero
+  // product_images rows but still carry their one photo on image_url.
+  const productImages =
+    images && images.length > 0
+      ? images
+      : product.image_url
+        ? [{ id: 'legacy', variant_id: null, image_url: product.image_url, sort_order: 0, is_primary: true }]
+        : []
 
   const grantedCompanyIds = accessRecords?.map(a => a.company_id) || []
 
@@ -308,6 +324,40 @@ export default async function ProductDetailPage({
           <p className="text-xs text-gray-500">Only admin can change which companies see this product.</p>
         </div>
         )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+          <h2 className="text-base font-bold text-gray-900 pb-3 border-b border-gray-100">Colour variants</h2>
+          <p className="text-[11px] text-gray-500">
+            Add a colour for each way this product comes, then upload that colour&apos;s photos on the right.
+            Shoppers will see one product with a colour switcher instead of separate listings.
+          </p>
+          <ProductVariantsManager
+            productId={product.id}
+            variants={productVariants.map((v) => ({
+              id: v.id,
+              colour: v.colour,
+              display_name: v.display_name,
+              extra_price: v.extra_price,
+            }))}
+          />
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+          <h2 className="text-base font-bold text-gray-900 pb-3 border-b border-gray-100">Photos</h2>
+          <ProductGalleryManager
+            productId={product.id}
+            variants={productVariants.map((v) => ({ id: v.id, label: v.display_name || v.colour || 'Colour' }))}
+            images={productImages.map((img) => ({
+              id: img.id,
+              variant_id: img.variant_id,
+              image_url: img.image_url,
+              sort_order: img.sort_order,
+              is_primary: img.is_primary,
+            }))}
+          />
+        </div>
       </div>
     </div>
   )
