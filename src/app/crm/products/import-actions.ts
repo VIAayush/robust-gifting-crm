@@ -29,6 +29,10 @@ export type ImportWarning = { row?: number; message: string }
 export type ImportSummary = {
   total: number
   imported: number
+  /** Products that will be / were newly created. */
+  created: number
+  /** Existing products (exact SKU match) that will be / were overwritten. */
+  updated: number
   skipped: number
   failed: number
   failures: ImportFailure[]
@@ -82,6 +86,8 @@ type PreparedRow = {
 type ProductGroup = {
   groupSku: string
   rows: PreparedRow[]
+  /** Set when this SKU already exists and the import is allowed to overwrite it. The product id is kept so orders/quotations keep resolving. */
+  existingProductId: string | null
 }
 
 type BuildPlanResult =
@@ -127,11 +133,13 @@ async function buildImportPlan(formData: FormData, supabase: SupabaseClient, pro
     return row
   })
 
+  const overwriteExisting = String(formData.get('overwrite') || '') === '1'
+
   const [{ data: categories }, { data: suppliers }, { data: companies }, { data: existingProducts }] = await Promise.all([
     supabase.from('categories').select('id, name'),
     supabase.from('suppliers').select('id, name'),
     supabase.from('companies').select('id, name'),
-    supabase.from('products').select('sku'),
+    supabase.from('products').select('id, sku'),
   ])
 
   const categoryByName = new Map((categories || []).map((c) => [c.name.trim().toLowerCase(), c.id]))
@@ -141,7 +149,11 @@ async function buildImportPlan(formData: FormData, supabase: SupabaseClient, pro
   }
   const supplierByName = new Map((suppliers || []).map((s) => [s.name.trim().toLowerCase(), s.id]))
   const companyByName = new Map((companies || []).map((c) => [c.name.trim().toLowerCase(), c.id]))
-  const existingSkus = new Set((existingProducts || []).map((p) => p.sku.trim().toUpperCase()))
+  // Exact SKU match only — no normalisation beyond trim/upper, so nothing is
+  // overwritten just because two SKUs look similar.
+  const existingProductIdBySku = new Map(
+    (existingProducts || []).map((p) => [p.sku.trim().toUpperCase(), p.id as string]),
+  )
   const batchSkus = new Set<string>()
 
   const imageFiles = formData.getAll('images').filter((item): item is File => item instanceof File && item.size > 0)
@@ -181,12 +193,21 @@ async function buildImportPlan(formData: FormData, supabase: SupabaseClient, pro
     const existingGroup = groupsBySku.get(groupSku)
     const isJoiningGroup = Boolean(colour) && Boolean(existingGroup)
 
-    // Standalone rows (no colour signal) still need a globally unique SKU, exactly
-    // as before. Rows joining an existing colour group reuse that group's product,
-    // so they must NOT be checked against the "SKU already exists" rule again.
+    // Rows joining an existing colour group reuse that group's product, so they
+    // must NOT be re-checked against the SKU rules.
     if (!isJoiningGroup) {
-      if (existingSkus.has(groupSku) || batchSkus.has(groupSku)) {
-        failures.push({ row: rowNumber, sku: rawSku, reason: 'SKU already exists' })
+      // A SKU repeated inside one file with no colour to tell the rows apart is
+      // genuinely ambiguous — that stays an error whatever the overwrite setting.
+      if (batchSkus.has(groupSku)) {
+        failures.push({ row: rowNumber, sku: rawSku, reason: 'This SKU appears more than once in this file without a colour to tell the rows apart' })
+        return
+      }
+      if (existingProductIdBySku.has(groupSku) && !overwriteExisting) {
+        failures.push({
+          row: rowNumber,
+          sku: rawSku,
+          reason: 'SKU already exists. Tick "Update products that already have this SKU" to overwrite it.',
+        })
         return
       }
     }
@@ -214,8 +235,12 @@ async function buildImportPlan(formData: FormData, supabase: SupabaseClient, pro
 
     const categoryName = cell(row, 'category')
     const supplierName = cell(row, 'supplier')
-    const category_id = categoryName ? categoryByName.get(categoryName.toLowerCase()) || null : null
-    if (categoryName && !category_id) {
+    if (!categoryName) {
+      failures.push({ row: rowNumber, sku: rawSku, reason: 'Category is required' })
+      return
+    }
+    const category_id = categoryByName.get(categoryName.toLowerCase()) || null
+    if (!category_id) {
       failures.push({ row: rowNumber, sku: rawSku, reason: `Category not found: ${categoryName}` })
       return
     }
@@ -272,6 +297,14 @@ async function buildImportPlan(formData: FormData, supabase: SupabaseClient, pro
       })
       return
     }
+    if (images.length === 0) {
+      failures.push({
+        row: rowNumber,
+        sku: rawSku,
+        reason: 'At least one photo is required — fill in image_url or image_filename for this row',
+      })
+      return
+    }
 
     const statusRaw = cell(row, 'status').toLowerCase() || 'active'
     const status = ['active', 'inactive', 'discontinued'].includes(statusRaw) ? statusRaw : 'active'
@@ -310,7 +343,11 @@ async function buildImportPlan(formData: FormData, supabase: SupabaseClient, pro
 
     let group = groupsBySku.get(groupSku)
     if (!group) {
-      group = { groupSku, rows: [] }
+      group = {
+        groupSku,
+        rows: [],
+        existingProductId: overwriteExisting ? existingProductIdBySku.get(groupSku) ?? null : null,
+      }
       groupsBySku.set(groupSku, group)
     } else if (colour) {
       const baseName = group.rows[0].name.trim().toLowerCase()
@@ -338,13 +375,26 @@ async function buildImportPlan(formData: FormData, supabase: SupabaseClient, pro
     return { error: 'No product rows found in the CSV' }
   }
 
+  const overwrittenSkus = groups.filter((g) => g.existingProductId).map((g) => g.groupSku)
+  if (overwrittenSkus.length > 0) {
+    warnings.push({
+      message: `${overwrittenSkus.length} existing product${overwrittenSkus.length === 1 ? '' : 's'} will be overwritten (details, colours and photos replaced from this file, order history kept): ${overwrittenSkus.join(', ')}`,
+    })
+  }
+
   return { total: table.rows.length, skipped, groups, failures, warnings, unusedFiles }
 }
 
-function planToSummary(plan: Exclude<BuildPlanResult, { error: string }>, imported: number, committed: boolean): ImportSummary {
+function planToSummary(
+  plan: Exclude<BuildPlanResult, { error: string }>,
+  counts: { imported: number; created: number; updated: number },
+  committed: boolean,
+): ImportSummary {
   return {
     total: plan.total,
-    imported,
+    imported: counts.imported,
+    created: counts.created,
+    updated: counts.updated,
     skipped: plan.skipped,
     failed: plan.failures.length,
     failures: plan.failures,
@@ -364,7 +414,8 @@ export async function validateCatalogueCsv(formData: FormData): Promise<ImportSu
   const plan = await buildImportPlan(formData, supabase, profile)
   if ('error' in plan) return plan
   const rowCount = plan.groups.reduce((sum, g) => sum + g.rows.length, 0)
-  return planToSummary(plan, rowCount, false)
+  const updated = plan.groups.filter((g) => g.existingProductId).length
+  return planToSummary(plan, { imported: rowCount, created: plan.groups.length - updated, updated }, false)
 }
 
 export async function importCatalogueCsv(formData: FormData): Promise<ImportSummary | { error: string }> {
@@ -381,10 +432,11 @@ export async function importCatalogueCsv(formData: FormData): Promise<ImportSumm
   // Pre-import validation gate: the whole file must be clean before anything is
   // written, so a bad row can never leave behind a broken/partial product.
   if (plan.failures.length > 0) {
-    return planToSummary(plan, 0, false)
+    return planToSummary(plan, { imported: 0, created: 0, updated: 0 }, false)
   }
 
-  let imported = 0
+  let created = 0
+  let updated = 0
   for (const group of plan.groups) {
     const first = group.rows[0]
     const visibility =
@@ -394,35 +446,55 @@ export async function importCatalogueCsv(formData: FormData): Promise<ImportSumm
           ? 'selected_companies'
           : 'internal_only'
 
-    const { data: product, error } = await supabase
-      .from('products')
-      .insert({
-        name: first.name,
-        sku: group.groupSku,
-        description: first.description,
-        category_id: first.category_id,
-        supplier_id: first.supplier_id,
-        price: first.price,
-        supplier_cost: Number.isFinite(first.supplier_cost as number) ? first.supplier_cost : null,
-        moq: first.moq,
-        hsn_code: first.hsn_code,
-        image_url: null,
-        status: first.status,
-        catalogue_access: first.catalogue_access,
-        visibility,
-      })
-      .select('id')
-      .single()
+    const fields = {
+      name: first.name,
+      description: first.description,
+      category_id: first.category_id,
+      supplier_id: first.supplier_id,
+      price: first.price,
+      supplier_cost: Number.isFinite(first.supplier_cost as number) ? first.supplier_cost : null,
+      moq: first.moq,
+      hsn_code: first.hsn_code,
+      status: first.status,
+      catalogue_access: first.catalogue_access,
+      visibility,
+    }
 
-    if (error || !product) {
-      for (const row of group.rows) {
-        plan.failures.push({
-          row: row.rowNumber,
-          sku: row.sku,
-          reason: error?.code === '23505' ? 'SKU already exists' : error?.message || 'Could not save product',
-        })
+    let product: { id: string } | null = null
+    if (group.existingProductId) {
+      // Overwrite in place: the product row keeps its id, so order, quotation,
+      // campaign and sample history all keep pointing at the same product.
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({ ...fields, image_url: null, updated_at: new Date().toISOString() })
+        .eq('id', group.existingProductId)
+      if (updateError) {
+        for (const row of group.rows) {
+          plan.failures.push({ row: row.rowNumber, sku: row.sku, reason: `Could not update product: ${updateError.message}` })
+        }
+        continue
       }
-      continue
+      product = { id: group.existingProductId }
+      await replaceProductVariantsAndImages(supabase, group.existingProductId)
+      await supabase.from('company_product_access').delete().eq('product_id', group.existingProductId)
+    } else {
+      const { data: inserted, error } = await supabase
+        .from('products')
+        .insert({ ...fields, sku: group.groupSku, image_url: null })
+        .select('id')
+        .single()
+
+      if (error || !inserted) {
+        for (const row of group.rows) {
+          plan.failures.push({
+            row: row.rowNumber,
+            sku: row.sku,
+            reason: error?.code === '23505' ? 'SKU already exists' : error?.message || 'Could not save product',
+          })
+        }
+        continue
+      }
+      product = inserted
     }
 
     if (first.catalogue_access === 'selected') {
@@ -430,7 +502,7 @@ export async function importCatalogueCsv(formData: FormData): Promise<ImportSumm
         first.companyIds.map((company_id) => ({ product_id: product.id, company_id })),
       )
       if (accessError) {
-        await supabase.from('products').delete().eq('id', product.id)
+        if (!group.existingProductId) await supabase.from('products').delete().eq('id', product.id)
         plan.failures.push({
           row: first.rowNumber,
           sku: first.sku,
@@ -502,11 +574,27 @@ export async function importCatalogueCsv(formData: FormData): Promise<ImportSumm
       await supabase.from('products').update({ image_url: primaryImageUrl }).eq('id', product.id)
     }
 
-    imported += 1
+    if (group.existingProductId) updated += 1
+    else created += 1
   }
 
   revalidatePath('/crm/products')
   revalidatePath('/portal/catalogue')
+  revalidatePath('/catalogue')
 
-  return planToSummary(plan, imported, true)
+  return planToSummary(plan, { imported: created + updated, created, updated }, true)
+}
+
+/** Clears a product's colours and photos (including their storage objects) so an overwriting import can rebuild them from the CSV. */
+async function replaceProductVariantsAndImages(supabase: SupabaseClient, productId: string) {
+  const { data: images } = await supabase
+    .from('product_images')
+    .select('storage_path')
+    .eq('product_id', productId)
+  const paths = (images || []).map((i) => i.storage_path).filter((p): p is string => Boolean(p))
+
+  // Deleting the variants cascades their product_images rows, so clear images first.
+  await supabase.from('product_images').delete().eq('product_id', productId)
+  await supabase.from('product_variants').delete().eq('product_id', productId)
+  if (paths.length > 0) await supabase.storage.from(IMAGE_BUCKET).remove(paths)
 }

@@ -37,6 +37,7 @@ export function CatalogueCsvImporter() {
   const [images, setImages] = useState<File[]>([])
   const [summary, setSummary] = useState<ImportSummary | null>(null)
   const [validated, setValidated] = useState(false)
+  const [overwrite, setOverwrite] = useState(true)
   const [pending, startTransition] = useTransition()
 
   const mappedRequired = useMemo(
@@ -48,6 +49,7 @@ export function CatalogueCsvImporter() {
     const data = new FormData()
     data.set('csv', csvFile as File)
     data.set('mapping', JSON.stringify(mapping))
+    data.set('overwrite', overwrite ? '1' : '0')
     images.forEach((image) => data.append('images', image))
     return data
   }
@@ -109,7 +111,13 @@ export function CatalogueCsvImporter() {
         setValidated(false)
         return
       }
-      if (result.imported > 0) toast.success(`${result.imported} product${result.imported === 1 ? '' : 's'} imported`)
+      if (result.imported > 0) {
+        const parts = [
+          result.created > 0 ? `${result.created} created` : '',
+          result.updated > 0 ? `${result.updated} overwritten` : '',
+        ].filter(Boolean)
+        toast.success(`Import complete — ${parts.join(', ')}`)
+      }
       if (result.failed > 0) toast.error(`${result.failed} rows failed`)
     })
   }
@@ -126,12 +134,33 @@ export function CatalogueCsvImporter() {
             className="text-xs file:mr-2 file:px-3 file:py-1.5 file:rounded-md file:border file:border-gray-200 file:bg-white file:text-xs"
           />
           <p className="text-[11px] text-gray-500 mt-2">
-            Required columns: product name, SKU, price. Optional: description, category, supplier, MOQ,
-            visibility, companies, image_url, image_filename, colour, size. Give the same colour a row per
-            colour with the same SKU (or a colour-suffixed SKU, e.g. <span className="font-mono">RG-NO-02-BLUE</span>)
+            Every row needs a product name, SKU, price, category and at least one photo
+            (<span className="font-mono">image_url</span> or <span className="font-mono">image_filename</span>) —
+            rows missing any of these fail validation before anything is imported. Optional: description,
+            supplier, MOQ, visibility, companies, colour, size. Give the same product a row per colour with
+            the same SKU (or a colour-suffixed SKU, e.g. <span className="font-mono">RG-NO-02-BLUE</span>)
             and they will import as one product with colour variants, not separate products.
           </p>
         </div>
+
+        <label className="flex items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <input
+            type="checkbox"
+            checked={overwrite}
+            onChange={(e) => {
+              setOverwrite(e.target.checked)
+              resetValidation()
+            }}
+            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#9C7A33] focus:ring-[#9C7A33]"
+          />
+          <span className="text-[11px] text-gray-600">
+            <span className="font-semibold text-gray-800">Update products that already have this SKU</span>
+            <br />
+            On an exact SKU match the existing product is overwritten — details, colours and photos are
+            replaced from this file, while its id and any order, quotation or campaign history stay intact.
+            Untick this to have repeat SKUs fail validation instead.
+          </span>
+        </label>
 
         <div>
           <label className="block text-xs font-semibold text-gray-700 mb-1.5">Product photos (optional)</label>
@@ -242,9 +271,10 @@ export function CatalogueCsvImporter() {
           <h2 className="text-sm font-bold text-gray-900">
             {summary.committed ? 'Import summary' : summary.failed === 0 ? 'Validation passed' : 'Validation found issues'}
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
             <SummaryStat label="Total rows" value={summary.total} />
-            <SummaryStat label={summary.committed ? 'Imported' : 'Ready to import'} value={summary.imported} />
+            <SummaryStat label={summary.committed ? 'New products' : 'To create'} value={summary.created} />
+            <SummaryStat label={summary.committed ? 'Overwritten' : 'To overwrite'} value={summary.updated} />
             <SummaryStat label="Skipped" value={summary.skipped} />
             <SummaryStat label="Failed" value={summary.failed} />
           </div>
