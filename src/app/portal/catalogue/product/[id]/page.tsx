@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { BackButton } from '@/components/ui/back-button'
 import { formatCurrency } from '@/lib/utils'
-import { ProductDetailView } from '@/components/site/product-detail-view'
+import { ProductDetailProvider, ProductGallerySlot, ColorSelectorSlot } from '@/components/site/product-detail-view'
 import { CatalogueShortlistButton } from '@/components/portal/catalogue-shortlist-button'
 
 export default async function PortalProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -56,56 +56,60 @@ export default async function PortalProductDetailPage({ params }: { params: Prom
     <div className="mx-auto max-w-4xl space-y-6">
       <BackButton href="/portal/catalogue" label="Back to gifts" className="min-h-10" />
 
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-        <div className="grid grid-cols-1 md:grid-cols-2">
-          <div className="h-72 border-b border-gray-100 md:h-full md:border-b-0 md:border-r">
-            <ProductDetailView productName={product.name} sharedImages={sharedImages} variants={variants} galleryClassName="h-full" />
-          </div>
-
-          <div className="space-y-4 p-5 sm:p-6">
-            {product.category_name && (
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-primary)]">
-                {product.category_name}
-              </p>
-            )}
-            <h1 className="text-2xl font-bold text-gray-900">{product.name}</h1>
-
-            {product.brand_name && <p className="text-xs text-gray-500">by {product.brand_name}</p>}
-
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-600">
-              {product.description || 'Get in touch and we will share full details, samples and branding options.'}
-            </p>
-
-            <div className="border-t border-gray-100 pt-4">
-              <p className="text-xl font-semibold text-gray-900">{formatCurrency(product.price)}</p>
-              <p className="mt-0.5 text-xs text-gray-400">Minimum order {product.moq || 1} units</p>
+      <ProductDetailProvider productName={product.name} sharedImages={sharedImages} variants={variants}>
+        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            <div className="h-72 border-b border-gray-100 md:h-full md:border-b-0 md:border-r">
+              <ProductGallerySlot className="h-full" />
             </div>
 
-            <div className="space-y-3 border-t border-gray-100 pt-4">
-              <CatalogueShortlistButton
-                variant="detail"
-                product={{
-                  id: product.id,
-                  sku: product.sku,
-                  name: product.name,
-                  price: product.price,
-                  image_url: product.image_url,
-                  category_name: product.category_name,
-                }}
-              />
-              <Link
-                href="/portal/requirements/new"
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-[#E2E8F0] bg-white px-4 text-sm font-semibold text-[#9C7A33] hover:bg-[#F5F7FA]"
-              >
-                Create requirement
-              </Link>
-              <p className="text-xs text-gray-500">
-                Shortlist gifts you like, then share a requirement so your account manager can prepare a quotation with branding and packaging options.
+            <div className="space-y-4 p-5 sm:p-6">
+              {product.category_name && (
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-primary)]">
+                  {product.category_name}
+                </p>
+              )}
+              <h1 className="text-2xl font-bold text-gray-900">{product.name}</h1>
+
+              {product.brand_name && <p className="text-xs text-gray-500">by {product.brand_name}</p>}
+
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-600">
+                {product.description || 'Get in touch and we will share full details, samples and branding options.'}
               </p>
+
+              {variants.length > 1 && <ColorSelectorSlot />}
+
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-xl font-semibold text-gray-900">{formatCurrency(product.price)}</p>
+                <p className="mt-0.5 text-xs text-gray-400">Minimum order {product.moq || 1} units</p>
+              </div>
+
+              <div className="space-y-3 border-t border-gray-100 pt-4">
+                <CatalogueShortlistButton
+                  variant="detail"
+                  product={{
+                    id: product.id,
+                    sku: product.sku,
+                    name: product.name,
+                    price: product.price,
+                    image_url: product.image_url,
+                    category_name: product.category_name,
+                  }}
+                />
+                <Link
+                  href="/portal/requirements/new"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-[#E2E8F0] bg-white px-4 text-sm font-semibold text-[#9C7A33] hover:bg-[#F5F7FA]"
+                >
+                  Create requirement
+                </Link>
+                <p className="text-xs text-gray-500">
+                  Shortlist gifts you like, then share a requirement so your account manager can prepare a quotation with branding and packaging options.
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </ProductDetailProvider>
     </div>
   )
 }
