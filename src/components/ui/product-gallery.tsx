@@ -61,7 +61,7 @@ export function ProductGallery({ images, className }: { images: GalleryImage[]; 
         size="hero"
         fit="contain"
         fadeEdges
-        className="h-full min-h-[16rem] w-full bg-transparent"
+        className="absolute inset-0 h-full w-full bg-transparent"
         imgClassName="catalogue-product-img"
       />
 

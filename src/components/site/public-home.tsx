@@ -114,7 +114,7 @@ export async function PublicHome() {
                     href={`/categories/${slugify(category.name)}`}
                     className="group block overflow-hidden rounded-md bg-white shadow-[0_1px_3px_rgba(27,36,48,0.06)] transition-shadow hover:shadow-[0_8px_24px_rgba(27,36,48,0.08)]"
                   >
-                    <div className="aspect-square catalogue-studio-field">
+                    <div className="relative aspect-square catalogue-studio-field">
                       {sample ? (
                         <ProductImage
                           src={sample.image_url}
@@ -122,7 +122,7 @@ export async function PublicHome() {
                           size="md"
                           fit="contain"
                           fadeEdges
-                          className="h-full w-full bg-transparent"
+                          className="absolute inset-0 h-full w-full bg-transparent"
                           imgClassName="catalogue-product-img scale-[1.04] transition-transform duration-500 group-hover:scale-[1.06]"
                         />
                       ) : null}

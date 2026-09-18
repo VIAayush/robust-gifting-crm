@@ -127,8 +127,8 @@ export function ProductsBrowser({
                   href={`/crm/products/${p.id}`}
                   className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col hover:border-[#9C7A33] hover:shadow-sm transition-all"
                 >
-                  <div className="aspect-square bg-[#F5F7FA] border-b border-gray-100">
-                    <ProductImage src={p.image_url} alt={p.name} size="md" className="min-h-0 h-full" />
+                  <div className="relative aspect-square bg-[#F5F7FA] border-b border-gray-100">
+                    <ProductImage src={p.image_url} alt={p.name} size="md" className="absolute inset-0 h-full w-full" />
                   </div>
                   <div className="p-3.5 flex-1 flex flex-col gap-2">
                     {category?.name && (

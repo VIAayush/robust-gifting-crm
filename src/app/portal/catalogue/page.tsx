@@ -244,8 +244,8 @@ export default async function PortalCataloguePage({
                 className="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white transition-all hover:border-[var(--color-primary)] hover:shadow-sm"
               >
                 <Link href={`/portal/catalogue/product/${product.id}`} className="block">
-                  <div className="aspect-square border-b border-gray-100 bg-[#F5F7FA]">
-                    <ProductImage src={product.image_url} alt={product.name} size="md" className="h-full min-h-0" />
+                  <div className="relative aspect-square border-b border-gray-100 bg-[#F5F7FA]">
+                    <ProductImage src={product.image_url} alt={product.name} size="md" className="absolute inset-0 h-full w-full" />
                   </div>
                 </Link>
                 <div className="flex flex-1 flex-col justify-between space-y-3 p-4 sm:p-5">

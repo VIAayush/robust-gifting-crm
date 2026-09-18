@@ -174,14 +174,14 @@ export function HeroStage({
                   href={`/catalogue/${product.id}`}
                   className="w-[42vw] max-w-[11.5rem] shrink-0 overflow-hidden rounded-md bg-white shadow-[0_10px_28px_rgba(0,0,0,0.22)]"
                 >
-                  <div className="aspect-square catalogue-studio-field">
+                  <div className="relative aspect-square catalogue-studio-field">
                     <ProductImage
                       src={product.image_url}
                       alt={product.name}
                       size="sm"
                       fit="contain"
                       fadeEdges
-                      className="h-full w-full bg-transparent"
+                      className="absolute inset-0 h-full w-full bg-transparent"
                       imgClassName="catalogue-product-img"
                     />
                   </div>
@@ -206,14 +206,14 @@ export function HeroStage({
               className="overflow-hidden rounded-md bg-white shadow-[0_16px_40px_rgba(0,0,0,0.28)]"
             >
               <div className={`transition-opacity duration-700 ease-in-out ${contentClass}`}>
-                <div className="aspect-square catalogue-studio-field">
+                <div className="relative aspect-square catalogue-studio-field">
                   <ProductImage
                     src={product.image_url}
                     alt={product.name}
                     size="md"
                     fit="contain"
                     fadeEdges
-                    className="h-full w-full bg-transparent"
+                    className="absolute inset-0 h-full w-full bg-transparent"
                     imgClassName="catalogue-product-img scale-[1.04]"
                   />
                 </div>
