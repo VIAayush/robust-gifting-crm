@@ -1,6 +1,17 @@
 export const TAB_HEADER = 'x-giffter-tab'
 export const TAB_QUERY = 'giffter_tab'
 export const TAB_STORAGE_KEY = 'giffter.tab-id'
+/** localStorage (survives closing the tab, unlike sessionStorage) — set when "Keep me signed in" is checked at login. */
+export const TAB_REMEMBER_KEY = 'giffter.tab-id.remembered'
+/**
+ * Server-readable counterpart of TAB_REMEMBER_KEY: a real cookie, so a brand
+ * new tab's very first request (before any client JS has run, so there's no
+ * X-Giffter-Tab header or ?giffter_tab= yet) can still resolve which
+ * gf-auth-<tabId> cookie to check, instead of the middleware/page treating it
+ * as logged out. Only ever stores a tab id, never a secret by itself.
+ */
+export const TAB_REMEMBER_COOKIE = 'gf-remember-tab'
+export const TAB_REMEMBER_MAX_AGE = 400 * 24 * 60 * 60 // matches Supabase's own default auth cookie lifetime
 export const AUTH_COOKIE_PREFIX = 'gf-auth-'
 export const RECOVERY_COOKIE_NAME = `${AUTH_COOKIE_PREFIX}recovery`
 

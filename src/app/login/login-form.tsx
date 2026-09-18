@@ -7,6 +7,7 @@ import { signIn } from './actions';
 import { Mail, Loader2 } from 'lucide-react';
 import { PasswordField } from '@/components/auth/password-field';
 import { BrandName } from '@/components/brand/brand-name';
+import { rememberThisTab, forgetRememberedTab } from '@/lib/auth/remember-client';
 
 function isNextRedirect(err: unknown) {
   const digest =
@@ -22,6 +23,7 @@ export function LoginForm({ next = '', resetSuccess = false }: { next?: string; 
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
 
   const authenticate = async (loginEmail: string, loginPassword: string) => {
     if (!loginEmail.trim() || !loginPassword) {
@@ -33,6 +35,7 @@ export function LoginForm({ next = '', resetSuccess = false }: { next?: string; 
     const formData = new FormData();
     formData.set('email', loginEmail);
     formData.set('password', loginPassword);
+    formData.set('remember', rememberMe ? '1' : '0');
     if (next) formData.set('next', next);
     try {
       const res = await signIn(formData);
@@ -42,6 +45,8 @@ export function LoginForm({ next = '', resetSuccess = false }: { next?: string; 
         return;
       }
       if (res?.redirectTo) {
+        if (rememberMe) rememberThisTab();
+        else forgetRememberedTab();
         router.push(res.redirectTo);
         router.refresh();
         return;
@@ -123,6 +128,16 @@ export function LoginForm({ next = '', resetSuccess = false }: { next?: string; 
               </div>
               <PasswordField value={password} onChange={setPassword} />
             </div>
+
+            <label className="flex items-center gap-2 text-xs text-[#4A5568]">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 rounded border-[#CBD5E1] text-[#9C7A33] focus:ring-[#9C7A33]"
+              />
+              Keep me signed in on this device
+            </label>
 
             <button
               type="submit"

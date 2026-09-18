@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useEffect, type ReactNode } from 'react'
 import { recoveryClientDestination } from '@/lib/auth/recovery'
-import { TAB_HEADER, TAB_QUERY, TAB_STORAGE_KEY, createTabId, isAuthCallbackLocation, isLegacySupabaseAuthCookie, isPasswordRecoveryLocation } from '@/lib/auth/tab'
+import { TAB_HEADER, TAB_QUERY, TAB_STORAGE_KEY, TAB_REMEMBER_KEY, createTabId, isAuthCallbackLocation, isLegacySupabaseAuthCookie, isPasswordRecoveryLocation } from '@/lib/auth/tab'
 import { createClient, getTabId } from '@/lib/supabase/client'
 
 function withTabQuery(url: string, tabId: string) {
@@ -82,7 +82,18 @@ export function TabSessionProvider({ children }: { children: ReactNode }) {
       return
     }
     if (!sessionStorage.getItem(TAB_STORAGE_KEY)) {
-      sessionStorage.setItem(TAB_STORAGE_KEY, createTabId())
+      // "Keep me signed in" at login stores the tab id here too. A brand-new
+      // tab reuses it instead of a fresh random id, so it maps to the same
+      // gf-auth-<tabId> cookie and doesn't come up logged out. If another
+      // tab is concurrently using that id, the BroadcastChannel claim below
+      // still kicks this tab to a fresh one, so multi-account tabs stay safe.
+      let remembered: string | null = null
+      try {
+        remembered = localStorage.getItem(TAB_REMEMBER_KEY)
+      } catch {
+        // Storage can be unavailable (private browsing, blocked).
+      }
+      sessionStorage.setItem(TAB_STORAGE_KEY, remembered || createTabId())
     }
     const tabId = getTabId()
     const nonce = `${tabId}:${Math.random().toString(36).slice(2)}`

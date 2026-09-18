@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isSafeNext } from '@/lib/safe-next'
-import { TAB_HEADER, TAB_QUERY, authCookieName, isPublicAuthPath, isPublicSitePath, isTabId } from '@/lib/auth/tab'
+import { TAB_HEADER, TAB_QUERY, TAB_REMEMBER_COOKIE, authCookieName, isPublicAuthPath, isPublicSitePath, isTabId } from '@/lib/auth/tab'
 
 function withTabHeader(request: NextRequest, tabId: string) {
   const requestHeaders = new Headers(request.headers)
@@ -18,7 +18,10 @@ export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl
   const queryTab = request.nextUrl.searchParams.get(TAB_QUERY)
   const headerTab = request.headers.get(TAB_HEADER)
-  const tabId = isTabId(headerTab) ? headerTab : isTabId(queryTab) ? queryTab : null
+  // A brand-new tab's first request carries neither — "Keep me signed in" falls
+  // back to the remembered tab id cookie so it doesn't look logged out.
+  const rememberedTab = request.cookies.get(TAB_REMEMBER_COOKIE)?.value ?? null
+  const tabId = isTabId(headerTab) ? headerTab : isTabId(queryTab) ? queryTab : isTabId(rememberedTab) ? rememberedTab : null
 
   if (pathname.startsWith('/_next') || pathname === '/favicon.ico') {
     return NextResponse.next({ request })

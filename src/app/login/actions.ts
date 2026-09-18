@@ -1,5 +1,6 @@
 'use server'
 
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createRecoveryServerClient } from '@/lib/supabase/recovery-server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -9,6 +10,24 @@ import { requestOrigin, recoveryRedirectTo } from '@/lib/auth/request-origin'
 import { validateNewPassword } from '@/lib/auth/password'
 import { sendEmail } from '@/lib/email/resend'
 import { passwordResetEmail } from '@/lib/email/templates'
+import { getRequestTabId } from '@/lib/auth/tab-server'
+import { TAB_REMEMBER_COOKIE, TAB_REMEMBER_MAX_AGE } from '@/lib/auth/tab'
+
+async function applyRememberChoice(remember: boolean) {
+  const tabId = await getRequestTabId()
+  if (!tabId) return
+  const store = await cookies()
+  if (remember) {
+    store.set(TAB_REMEMBER_COOKIE, tabId, {
+      path: '/',
+      maxAge: TAB_REMEMBER_MAX_AGE,
+      sameSite: 'lax',
+      httpOnly: true,
+    })
+  } else {
+    store.delete(TAB_REMEMBER_COOKIE)
+  }
+}
 
 const RESET_REQUESTED_MESSAGE = 'If an account exists for that email, a password reset link has been sent.'
 
@@ -16,6 +35,7 @@ export async function signIn(formData: FormData): Promise<{ error?: string; redi
   const email = String(formData.get('email') || '').trim()
   const password = String(formData.get('password') || '')
   const next = formData.get('next') as string | null
+  const remember = formData.get('remember') === '1'
 
   if (!email || !password) {
     return { error: 'Email and password are required' }
@@ -43,6 +63,8 @@ export async function signIn(formData: FormData): Promise<{ error?: string; redi
       return { error: 'This account is inactive' }
     }
 
+    await applyRememberChoice(remember)
+
     const home = landingPathForRole(profile?.role)
     if (isSafeNext(next)) {
       const isClient = profile?.role === 'client_admin' || profile?.role === 'client_user'
@@ -61,6 +83,8 @@ export async function signIn(formData: FormData): Promise<{ error?: string; redi
 export async function signOut(): Promise<void> {
   const supabase = await createClient()
   await supabase.auth.signOut()
+  const store = await cookies()
+  store.delete(TAB_REMEMBER_COOKIE)
   redirect('/login')
 }
 

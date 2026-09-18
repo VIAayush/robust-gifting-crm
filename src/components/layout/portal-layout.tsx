@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X, LogOut, PackageSearch, Heart, FileText, ShoppingBag, LayoutDashboard, FolderGit2, Files, ClipboardList } from 'lucide-react';
 import { BrandName } from '@/components/brand/brand-name';
 import { signOut } from '@/app/login/actions';
+import { forgetRememberedTab } from '@/lib/auth/remember-client';
 import { CompanyAvatar } from '../ui/avatar';
 
 interface PortalLayoutProps {
@@ -35,6 +36,14 @@ export function PortalLayout({ children, user }: PortalLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navRef = useRef<HTMLDivElement | null>(null)
   const activeRef = useRef<HTMLAnchorElement | null>(null)
+  const [, startSignOutTransition] = useTransition()
+
+  const handleSignOut = () => {
+    forgetRememberedTab();
+    startSignOutTransition(() => {
+      void signOut();
+    });
+  };
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
@@ -127,7 +136,7 @@ export function PortalLayout({ children, user }: PortalLayoutProps) {
                 </div>
               )}
               <button
-                onClick={() => signOut()}
+                onClick={handleSignOut}
                 className="hidden h-10 w-10 items-center justify-center rounded-lg border border-[#E2E8F0] text-gray-600 transition-colors hover:bg-red-50 hover:text-red-600 xl:inline-flex"
                 title="Logout"
               >
@@ -190,7 +199,7 @@ export function PortalLayout({ children, user }: PortalLayoutProps) {
                 );
               })}
               <button
-                onClick={() => signOut()}
+                onClick={handleSignOut}
                 className="flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2.5 text-base font-medium text-red-600 hover:bg-red-50"
               >
                 <LogOut className="h-5 w-5" />

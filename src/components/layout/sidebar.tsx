@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -11,6 +11,7 @@ import {
   ListTodo, Landmark, BadgeCheck, Megaphone, BookOpen, Target, X
 } from 'lucide-react';
 import { signOut } from '@/app/login/actions';
+import { forgetRememberedTab } from '@/lib/auth/remember-client';
 import { BrandName } from '@/components/brand/brand-name';
 import type { Role } from '@/lib/types';
 
@@ -120,6 +121,7 @@ export function Sidebar({ role, user, onNavigate, showClose, onClose, mobileOpen
   const pathname = usePathname();
   const navRef = useRef<HTMLElement | null>(null)
   const activeRef = useRef<HTMLAnchorElement | null>(null)
+  const [, startSignOutTransition] = useTransition()
 
   const displayName = user?.name?.trim() || 'User';
   const roleName = role === 'admin' ? 'Admin' : role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -233,7 +235,12 @@ export function Sidebar({ role, user, onNavigate, showClose, onClose, mobileOpen
           <p className="text-[11px] text-[#5B6B7A]">{roleName}</p>
         </div>
         <button
-          onClick={() => signOut()}
+          onClick={() => {
+            forgetRememberedTab();
+            startSignOutTransition(() => {
+              void signOut();
+            });
+          }}
           className="flex min-h-10 items-center gap-2 pt-1 text-xs text-[#94A3B8] transition-colors hover:text-white"
         >
           <LogOut className="h-3.5 w-3.5" />
