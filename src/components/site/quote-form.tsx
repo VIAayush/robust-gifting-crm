@@ -7,11 +7,19 @@ import { BrandName } from '@/components/brand/brand-name'
 export function QuoteForm({
   productId,
   productName,
+  variantColour,
   portalHref,
+  showContext = true,
+  onSuccess,
 }: {
   productId?: string
   productName?: string
+  /** Colour the shopper had selected, carried through to the enquiry. */
+  variantColour?: string | null
   portalHref?: string | null
+  /** Off when the surrounding UI (e.g. the modal header) already names the product. */
+  showContext?: boolean
+  onSuccess?: () => void
 }) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -47,6 +55,7 @@ export function QuoteForm({
           return
         }
         setSuccess(true)
+        onSuccess?.()
       }}
     >
       {portalHref ? (
@@ -58,13 +67,15 @@ export function QuoteForm({
           if you prefer.
         </p>
       ) : null}
-      {productName ? (
+      {showContext && productName ? (
         <p className="text-sm text-[#5C6570]">
           Enquiring about <span className="font-medium text-[#1B2430]">{productName}</span>
+          {variantColour ? <span className="font-medium text-[#1B2430]"> — {variantColour}</span> : null}
         </p>
       ) : null}
       {productId ? <input type="hidden" name="product_id" value={productId} /> : null}
       {productName ? <input type="hidden" name="product_name" value={productName} /> : null}
+      {variantColour ? <input type="hidden" name="variant_colour" value={variantColour} /> : null}
       <input type="text" name="fax" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
 
       <label className="block">

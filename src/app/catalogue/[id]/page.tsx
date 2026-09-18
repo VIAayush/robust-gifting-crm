@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { SiteShell } from '@/components/site/site-shell'
-import { ProductDetailProvider, ProductGallerySlot, ColorSelectorSlot } from '@/components/site/product-detail-view'
+import { ProductDetailProvider, ProductGallerySlot, ColorSelectorSlot, QuoteButtonSlot } from '@/components/site/product-detail-view'
 import { formatCurrency, isUuid } from '@/lib/utils'
 import { getPublicProductWithVariants } from '@/lib/catalogue/products'
 
@@ -29,8 +29,6 @@ export default async function PublicProductPage({ params }: Props) {
   if (!isUuid(id)) notFound()
   const product = await getPublicProductWithVariants(id)
   if (!product) notFound()
-
-  const quoteHref = `/request-quote?product=${product.id}`
 
   return (
     <SiteShell>
@@ -71,12 +69,7 @@ export default async function PublicProductPage({ params }: Props) {
             </dl>
 
             <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:items-center sm:gap-4">
-              <Link
-                href={quoteHref}
-                className="inline-flex justify-center bg-[#9C7A33] px-7 py-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white sm:py-3"
-              >
-                Request a Quote
-              </Link>
+              <QuoteButtonSlot productId={product.id} productSku={product.sku} />
               <Link
                 href="/catalogue"
                 className="inline-flex justify-center py-2 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9C7A33]"

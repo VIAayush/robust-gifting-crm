@@ -21,6 +21,7 @@ export async function submitPublicQuote(formData: FormData): Promise<{ error?: s
   const message = clean(formData.get('message'))
   const productId = clean(formData.get('product_id'))
   const productName = clean(formData.get('product_name'))
+  const variantColour = clean(formData.get('variant_colour'))
 
   if (!fullName) return { error: 'Please share your name.' }
   if (!email || !email.includes('@')) return { error: 'Please share a valid work email.' }
@@ -55,6 +56,7 @@ export async function submitPublicQuote(formData: FormData): Promise<{ error?: s
   const notes = [
     'Website catalogue enquiry',
     productLine.trim(),
+    variantColour ? `Colour: ${variantColour}` : '',
     quantity ? `Quantity: ${quantity}` : '',
     message,
   ]

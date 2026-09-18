@@ -3,6 +3,7 @@
 import { createContext, useContext, useState } from 'react'
 import { ProductGallery } from '@/components/ui/product-gallery'
 import { ColorSelector } from '@/components/ui/color-selector'
+import { QuoteRequestModal } from '@/components/site/quote-request-modal'
 
 type ImageLike = { url: string; alt: string }
 type VariantLike = { id: string; colour: string; images: ImageLike[] }
@@ -56,6 +57,20 @@ export function ProductGallerySlot({ className }: { className?: string }) {
     alt: `${productName}${selected ? ` — ${selected.colour}` : ''}`,
   }))
   return <ProductGallery key={selected?.id ?? 'default'} images={galleryImages} className={className} />
+}
+
+/** "Request a Quote" button + modal, carrying whichever colour is currently selected. */
+export function QuoteButtonSlot({ productId, productSku }: { productId: string; productSku: string }) {
+  const { productName, variants, selectedId } = useProductDetail()
+  const selected = variants.find((v) => v.id === selectedId) || variants[0] || null
+  return (
+    <QuoteRequestModal
+      productId={productId}
+      productName={productName}
+      productSku={productSku}
+      variantColour={selected?.colour ?? null}
+    />
+  )
 }
 
 export function ColorSelectorSlot() {
