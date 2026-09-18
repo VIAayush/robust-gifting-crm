@@ -148,7 +148,8 @@ export function CatalogueCsvImporter() {
           <p className="text-[11px] text-gray-500 mt-2">
             Match files to the CSV <span className="font-mono">image_filename</span> column (exact name, any
             case, with or without a folder prefix). Separate multiple photos for one row with a comma,
-            semicolon or pipe. Public <span className="font-mono">image_url</span> values are stored as-is.
+            semicolon or pipe — this works for <span className="font-mono">image_url</span> too, which
+            stores each URL as-is.
           </p>
           {images.length > 0 && (
             <p className="text-[11px] text-gray-600 mt-1">{images.length} image{images.length === 1 ? '' : 's'} ready to match</p>

@@ -225,17 +225,23 @@ async function buildImportPlan(formData: FormData, supabase: SupabaseClient, pro
       return
     }
 
-    // Image references: image_url is a single external URL; image_filename may hold
-    // one or more comma/semicolon/pipe-delimited local filenames or URLs, matched
-    // against the uploaded Product Photos by basename (case/path/whitespace-insensitive).
+    // Image references: both image_url and image_filename may hold one or more
+    // comma/semicolon/pipe-delimited entries. image_filename entries are matched
+    // against the uploaded Product Photos by basename (case/path/whitespace-
+    // insensitive) unless they're themselves an http(s) URL.
     const images: ResolvedImage[] = []
-    const imageUrlCell = cell(row, 'image_url')
-    if (imageUrlCell) {
-      if (!/^https?:\/\//i.test(imageUrlCell)) {
-        failures.push({ row: rowNumber, sku: rawSku, reason: 'image_url must be an http(s) URL' })
-        return
+    const urlRefs = splitImageRefs(cell(row, 'image_url'))
+    let badUrlRef: string | null = null
+    for (const ref of urlRefs) {
+      if (!/^https?:\/\//i.test(ref)) {
+        badUrlRef = ref
+        break
       }
-      images.push({ kind: 'url', url: imageUrlCell })
+      images.push({ kind: 'url', url: ref })
+    }
+    if (badUrlRef) {
+      failures.push({ row: rowNumber, sku: rawSku, reason: `image_url entry "${badUrlRef}" must be an http(s) URL` })
+      return
     }
     const filenameRefs = splitImageRefs(cell(row, 'image_filename'))
     let unresolvedRef: string | null = null
