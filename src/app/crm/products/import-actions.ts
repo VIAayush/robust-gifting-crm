@@ -213,12 +213,10 @@ async function buildImportPlan(formData: FormData, supabase: SupabaseClient, pro
         failures.push({ row: rowNumber, sku: rawSku, reason: 'This SKU appears more than once in this file without a colour to tell the rows apart' })
         return
       }
+      // With overwrite off, an existing SKU is a no-op, not an error — skip it
+      // silently so the rest of the file (genuinely new SKUs) still imports.
       if (existingProductIdBySku.has(groupSku) && !overwriteExisting) {
-        failures.push({
-          row: rowNumber,
-          sku: rawSku,
-          reason: 'SKU already exists. Tick "Update products that already have this SKU" to overwrite it.',
-        })
+        skipped += 1
         return
       }
     }

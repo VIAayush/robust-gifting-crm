@@ -19,8 +19,9 @@ export function RecoveryHashRedirect() {
       if (type === 'signup') {
         // The email was already confirmed server-side when Supabase's own
         // /verify endpoint validated the token, before this hash ever arrived
-        // here — no session needs to be established. Send them to sign in.
-        window.location.replace('/login?confirmed=1')
+        // here — no session needs to be established. Show a confirmation
+        // page first instead of bouncing straight to sign-in.
+        window.location.replace('/auth/confirmed?flow=signup')
         return
       }
 

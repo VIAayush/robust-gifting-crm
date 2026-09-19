@@ -183,6 +183,45 @@ export function CatalogueCsvImporter() {
   }
 
   const readyToImport = validated && summary && summary.failed === 0 && !summary.committed
+  const needsManualMapping = headers.length > 0 && !mappedRequired
+
+  const actionButtons = (
+    <div className="flex flex-wrap items-center gap-3">
+      {!readyToImport ? (
+        <button
+          type="button"
+          disabled={pending || !mappedRequired}
+          onClick={onValidate}
+          className="px-6 py-2 text-xs font-semibold text-white bg-[#9C7A33] hover:bg-[#7C6224] rounded-lg disabled:opacity-50"
+        >
+          {pending ? 'Validating…' : 'Validate'}
+        </button>
+      ) : (
+        <>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={onImport}
+            className="px-6 py-2 text-xs font-semibold text-white bg-green-700 hover:bg-green-800 rounded-lg disabled:opacity-50"
+          >
+            {pending
+              ? progress
+                ? `Importing… ${progress.done} / ${progress.total}`
+                : 'Importing…'
+              : `Import ${summary!.groups.length - skippedSkus.size} product${summary!.groups.length - skippedSkus.size === 1 ? '' : 's'}`}
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={onValidate}
+            className="px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg disabled:opacity-50"
+          >
+            Re-validate
+          </button>
+        </>
+      )}
+    </div>
+  )
 
   return (
     <div className="space-y-6">
@@ -221,7 +260,8 @@ export function CatalogueCsvImporter() {
             <br />
             On an exact SKU match the existing product is overwritten — details, colours and photos are
             replaced from this file, while its id and any order, quotation or campaign history stay intact.
-            Untick this to have repeat SKUs fail validation instead.
+            Untick this to leave existing SKUs untouched and skip them — any genuinely new SKUs in the file
+            still import normally.
           </span>
         </label>
 
@@ -249,9 +289,15 @@ export function CatalogueCsvImporter() {
         </div>
       </div>
 
-      {headers.length > 0 && (
+      {needsManualMapping && (
         <div className="bg-white p-6 rounded-2xl border border-gray-200 space-y-4">
-          <h2 className="text-sm font-bold text-gray-900">Column mapping</h2>
+          <div>
+            <h2 className="text-sm font-bold text-gray-900">Column mapping</h2>
+            <p className="text-[11px] text-gray-500 mt-1">
+              Couldn&apos;t automatically match product name, SKU and price to columns in this file — map them
+              below.
+            </p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {FIELD_LABELS.map((field) => (
               <MobileSheetSelect
@@ -295,41 +341,22 @@ export function CatalogueCsvImporter() {
             </div>
           )}
 
-          <div className="flex flex-wrap items-center gap-3">
-            {!readyToImport ? (
-              <button
-                type="button"
-                disabled={pending || !mappedRequired}
-                onClick={onValidate}
-                className="px-6 py-2 text-xs font-semibold text-white bg-[#9C7A33] hover:bg-[#7C6224] rounded-lg disabled:opacity-50"
-              >
-                {pending ? 'Validating…' : 'Validate'}
-              </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={onImport}
-                  className="px-6 py-2 text-xs font-semibold text-white bg-green-700 hover:bg-green-800 rounded-lg disabled:opacity-50"
-                >
-                  {pending
-                    ? progress
-                      ? `Importing… ${progress.done} / ${progress.total}`
-                      : 'Importing…'
-                    : `Import ${summary!.groups.length - skippedSkus.size} product${summary!.groups.length - skippedSkus.size === 1 ? '' : 's'}`}
-                </button>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={onValidate}
-                  className="px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg disabled:opacity-50"
-                >
-                  Re-validate
-                </button>
-              </>
-            )}
-          </div>
+          {actionButtons}
+
+          {pending && progress && (
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+              <div
+                className="h-full bg-green-700 transition-all"
+                style={{ width: `${Math.min(100, (progress.done / Math.max(1, progress.total)) * 100)}%` }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {headers.length > 0 && !needsManualMapping && (
+        <div className="bg-white p-6 rounded-2xl border border-gray-200 space-y-4">
+          {actionButtons}
 
           {pending && progress && (
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">

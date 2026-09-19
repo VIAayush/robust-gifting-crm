@@ -121,7 +121,7 @@ export function ResetPasswordForm({
       return
     }
     stripRecoveryParams()
-    router.replace('/login?reset=success')
+    router.replace('/auth/confirmed?flow=recovery')
   }
 
   return (

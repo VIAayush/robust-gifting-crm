@@ -59,10 +59,6 @@ export default async function PublicProductPage({ params }: Props) {
 
             <dl className="mt-10 space-y-3 text-sm">
               <div className="flex justify-between border-b border-[#E2E8F0] py-2">
-                <dt className="text-[#5C6570]">SKU</dt>
-                <dd className="font-mono text-xs">{product.sku}</dd>
-              </div>
-              <div className="flex justify-between border-b border-[#E2E8F0] py-2">
                 <dt className="text-[#5C6570]">Availability</dt>
                 <dd className="capitalize">{product.status === 'active' ? 'Available to quote' : product.status}</dd>
               </div>
