@@ -17,7 +17,7 @@ export default async function PortalLayoutWrapper({ children }: { children: Reac
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, full_name, email, role, company_id, is_active')
+    .select('id, full_name, email, role, company_id, is_active, must_change_password')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -34,6 +34,10 @@ export default async function PortalLayoutWrapper({ children }: { children: Reac
     redirect('/crm/dashboard')
   }
 
+  if (profile.must_change_password) {
+    redirect('/set-password')
+  }
+
   // Get company name
   let companyName = 'Your Company'
   if (profile.company_id) {
@@ -48,7 +52,7 @@ export default async function PortalLayoutWrapper({ children }: { children: Reac
   const displayName = profile.full_name || user.email?.split('@')[0] || 'User'
 
   return (
-    <PortalLayout user={{ name: displayName, company_name: companyName }}>
+    <PortalLayout user={{ name: displayName, company_name: companyName }} role={profile.role}>
       {children}
     </PortalLayout>
   )

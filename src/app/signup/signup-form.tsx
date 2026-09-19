@@ -4,7 +4,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Mail, Loader2, User } from 'lucide-react'
+import { Mail, Loader2, User, Building2 } from 'lucide-react'
 import { signUp } from '@/app/login/actions'
 import { AuthShell } from '@/components/auth/auth-shell'
 import { BrandName } from '@/components/brand/brand-name'
@@ -13,6 +13,7 @@ import { PasswordField } from '@/components/auth/password-field'
 export function SignupForm() {
   const router = useRouter()
   const [name, setName] = useState('')
+  const [companyName, setCompanyName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -24,7 +25,7 @@ export function SignupForm() {
     e.preventDefault()
     setError(null)
     setMessage(null)
-    if (!name.trim() || !email.trim() || !password || !confirm) {
+    if (!name.trim() || !companyName.trim() || !email.trim() || !password || !confirm) {
       setError('All fields are required')
       return
     }
@@ -43,6 +44,7 @@ export function SignupForm() {
     setLoading(true)
     const formData = new FormData()
     formData.set('full_name', name.trim())
+    formData.set('company_name', companyName.trim())
     formData.set('email', email.trim())
     formData.set('password', password)
     formData.set('confirm_password', confirm)
@@ -68,7 +70,7 @@ export function SignupForm() {
           Create a <BrandName /> account
         </>
       }
-      subtitle="Public signup creates a client portal login. Staff roles are assigned by an admin."
+      subtitle="Public signup creates a new company and makes you its admin. Invite your team from the portal afterward."
     >
       <form onSubmit={onSubmit} className="space-y-5">
         {error && (
@@ -90,6 +92,22 @@ export function SignupForm() {
               required
               className="block w-full pl-10 pr-3 py-2.5 bg-[#F5F7FA] border border-[#E2E8F0] rounded-xl text-xs text-[#0D1B2A] placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#9C7A33] focus:border-[#9C7A33]"
               placeholder="Your name"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-[#64748B] mb-1.5 uppercase tracking-wider">Company name</label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <Building2 className="h-4 w-4 text-gray-400" />
+            </div>
+            <input
+              name="company_name"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              required
+              className="block w-full pl-10 pr-3 py-2.5 bg-[#F5F7FA] border border-[#E2E8F0] rounded-xl text-xs text-[#0D1B2A] placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#9C7A33] focus:border-[#9C7A33]"
+              placeholder="Your company"
             />
           </div>
         </div>
