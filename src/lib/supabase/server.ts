@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { authCookieName } from '@/lib/auth/tab'
 import { getRequestTabId } from '@/lib/auth/tab-server'
+import { trackAuthCookieAndPruneOld } from '@/lib/auth/cookie-pruning'
 
 export async function createClient() {
   const cookieStore = await cookies()
@@ -19,9 +20,10 @@ export async function createClient() {
         },
         setAll(cookiesToSet: Array<{ name: string; value: string; options?: any }>) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
+            cookiesToSet.forEach(({ name, value, options }) => {
               cookieStore.set(name, value, options)
-            )
+              trackAuthCookieAndPruneOld(cookieStore, name)
+            })
           } catch {
             // Ignored in Server Component
           }

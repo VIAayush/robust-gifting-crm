@@ -4,8 +4,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { RECOVERY_COOKIE_NAME } from '@/lib/auth/tab'
 
 function otpType(value: string | null): EmailOtpType {
-  if (value === 'recovery' || value === 'email' || value === 'magiclink') return value
+  if (value === 'recovery' || value === 'email' || value === 'magiclink' || value === 'signup') return value
   return 'recovery'
+}
+
+/** Where to land once the token/code has been exchanged for a session. Signup confirmations sign a brand-new user in; everything else (recovery, email change) still needs the reset-password form. */
+function destinationFor(type: EmailOtpType) {
+  return type === 'signup' ? '/login?confirmed=1' : '/reset-password'
 }
 
 function redirectWithCookies(
@@ -57,19 +62,22 @@ export async function GET(request: NextRequest) {
     },
   )
 
+  const errorDestination = type === 'signup' ? '/login?error=invalid-link' : '/reset-password?error=invalid'
+  const destination = destinationFor(type)
+
   if (tokenHash) {
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash })
     if (error) {
-      return NextResponse.redirect(new URL('/reset-password?error=invalid', incoming.origin))
+      return NextResponse.redirect(new URL(errorDestination, incoming.origin))
     }
-    return redirectWithCookies(request, '/reset-password', cookiesForRedirect(request, pendingCookies))
+    return redirectWithCookies(request, destination, cookiesForRedirect(request, pendingCookies))
   }
 
   const { error } = await supabase.auth.exchangeCodeForSession(code as string)
   if (error) {
-    return NextResponse.redirect(new URL('/reset-password?error=invalid', incoming.origin))
+    return NextResponse.redirect(new URL(errorDestination, incoming.origin))
   }
-  return redirectWithCookies(request, '/reset-password', cookiesForRedirect(request, pendingCookies))
+  return redirectWithCookies(request, destination, cookiesForRedirect(request, pendingCookies))
 }
 
 function cookiesForRedirect(

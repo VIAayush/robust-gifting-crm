@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isSafeNext } from '@/lib/safe-next'
 import { TAB_HEADER, TAB_QUERY, TAB_REMEMBER_COOKIE, authCookieName, isPublicAuthPath, isPublicSitePath, isTabId } from '@/lib/auth/tab'
+import { trackAuthCookieAndPruneOld } from '@/lib/auth/cookie-pruning'
 
 function withTabHeader(request: NextRequest, tabId: string) {
   const requestHeaders = new Headers(request.headers)
@@ -43,9 +44,19 @@ export async function proxy(request: NextRequest) {
         setAll(cookiesToSet: Array<{ name: string; value: string; options?: any }>) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = withTabHeader(request, tabId)
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookiesToSet.forEach(({ name, value, options }) => {
             supabaseResponse.cookies.set(name, value, options)
-          )
+            // The tracker cookie so far only exists on the incoming request
+            // (nothing has set it on this response yet), so read from there
+            // and write eviction/tracking updates onto the outgoing response.
+            trackAuthCookieAndPruneOld(
+              {
+                get: (n) => request.cookies.get(n),
+                set: (n, v, o) => supabaseResponse.cookies.set(n, v, o),
+              },
+              name,
+            )
+          })
         },
       },
     }

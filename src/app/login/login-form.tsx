@@ -17,9 +17,19 @@ function isNextRedirect(err: unknown) {
   return digest.startsWith('NEXT_REDIRECT')
 }
 
-export function LoginForm({ next = '', resetSuccess = false }: { next?: string; resetSuccess?: boolean }) {
+export function LoginForm({
+  next = '',
+  resetSuccess = false,
+  confirmedSuccess = false,
+  linkError = '',
+}: {
+  next?: string;
+  resetSuccess?: boolean;
+  confirmedSuccess?: boolean;
+  linkError?: string;
+}) {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(linkError || null);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -88,6 +98,11 @@ export function LoginForm({ next = '', resetSuccess = false }: { next?: string; 
             {resetSuccess && !error && (
               <div className="p-3 bg-green-50 text-green-800 text-xs rounded-xl border border-green-200">
                 Password updated successfully. Please sign in with your new password.
+              </div>
+            )}
+            {confirmedSuccess && !error && (
+              <div className="p-3 bg-green-50 text-green-800 text-xs rounded-xl border border-green-200">
+                Email confirmed. Please sign in below.
               </div>
             )}
             {error && (

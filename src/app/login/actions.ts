@@ -9,7 +9,7 @@ import { isSafeNext, landingPathForRole } from '@/lib/safe-next'
 import { requestOrigin, recoveryRedirectTo } from '@/lib/auth/request-origin'
 import { validateNewPassword } from '@/lib/auth/password'
 import { sendEmail } from '@/lib/email/resend'
-import { passwordResetEmail } from '@/lib/email/templates'
+import { passwordResetEmail, confirmSignupEmail } from '@/lib/email/templates'
 import { getRequestTabId } from '@/lib/auth/tab-server'
 import { TAB_REMEMBER_COOKIE, TAB_REMEMBER_MAX_AGE } from '@/lib/auth/tab'
 
@@ -99,8 +99,52 @@ export async function signUp(formData: FormData): Promise<{ error?: string; mess
   const passwordError = validateNewPassword(password, confirm)
   if (passwordError) return { error: passwordError }
 
-  const supabase = await createClient()
   const origin = await requestOrigin()
+  const admin = createAdminClient()
+
+  if (admin) {
+    // Create the user ourselves (email_confirm: false) instead of calling the
+    // interactive supabase.auth.signUp(), which — if email confirmations are
+    // on for this project — sends its own confirmation email via Supabase's
+    // built-in mailer as a side effect, regardless of anything done after.
+    // Creating admin-side has no such side effect, so Resend is the only
+    // email that ever goes out, matching how password resets already work.
+    const { error: createError } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: false,
+      user_metadata: { full_name: fullName, role: 'client_user' },
+    })
+
+    if (createError) {
+      const message = createError.message.toLowerCase()
+      if (message.includes('already') || message.includes('registered')) {
+        return { error: 'An account with this email already exists. Sign in or reset your password.' }
+      }
+      return { error: createError.message }
+    }
+
+    const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+      type: 'signup',
+      email,
+      password,
+      options: { redirectTo: `${origin}/auth/confirm` },
+    })
+
+    const actionLink = linkData?.properties?.action_link
+    if (linkError || !actionLink) {
+      console.error('[auth] generateLink (signup) failed:', linkError?.message)
+    } else {
+      const { subject, html } = confirmSignupEmail({ confirmUrl: actionLink, name: fullName })
+      const sent = await sendEmail({ to: email, subject, html })
+      if (!sent.ok) console.error('[auth] failed to send signup confirmation email:', sent.error)
+    }
+
+    return { message: 'Check your email to confirm your account, then sign in.' }
+  }
+
+  // Resend/service-role not configured yet — fall back to Supabase's own email delivery.
+  const supabase = await createClient()
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
