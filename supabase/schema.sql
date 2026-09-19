@@ -536,8 +536,7 @@ create table if not exists public.profiles (
   created_at timestamp with time zone default now() not null,
   updated_at timestamp with time zone default now() not null,
   company_id uuid,
-  department_id uuid,
-  must_change_password boolean default false not null
+  department_id uuid
 );
 
 create table if not exists public.quotation_history (

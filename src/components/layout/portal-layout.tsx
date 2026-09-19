@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, LogOut, PackageSearch, Heart, FileText, ShoppingBag, LayoutDashboard, FolderGit2, Files, ClipboardList, Users } from 'lucide-react';
+import { Menu, X, LogOut, PackageSearch, Heart, FileText, ShoppingBag, LayoutDashboard, FolderGit2, Files, ClipboardList } from 'lucide-react';
 import { BrandName } from '@/components/brand/brand-name';
 import { signOut } from '@/app/login/actions';
 import { forgetRememberedTab } from '@/lib/auth/remember-client';
@@ -16,10 +16,9 @@ interface PortalLayoutProps {
     company_name: string;
     avatar_url?: string;
   };
-  role?: string;
 }
 
-const baseNavItems = [
+const navItems = [
   { label: 'Dashboard', href: '/portal', icon: LayoutDashboard },
   { label: 'Campaigns', href: '/portal/campaigns', icon: FolderGit2 },
   { label: 'Products', href: '/portal/catalogue', icon: PackageSearch },
@@ -30,12 +29,9 @@ const baseNavItems = [
   { label: 'Documents', href: '/portal/documents', icon: Files },
 ];
 
-const teamNavItem = { label: 'Team', href: '/portal/team', icon: Users };
-
 const SCROLL_KEY = 'giffter.portal.nav.scrollTop'
 
-export function PortalLayout({ children, user, role }: PortalLayoutProps) {
-  const navItems = role === 'client_admin' ? [...baseNavItems, teamNavItem] : baseNavItems;
+export function PortalLayout({ children, user }: PortalLayoutProps) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navRef = useRef<HTMLDivElement | null>(null)

@@ -90,13 +90,11 @@ export async function signOut(): Promise<void> {
 
 export async function signUp(formData: FormData): Promise<{ error?: string; message?: string; redirectTo?: string }> {
   const fullName = String(formData.get('full_name') || '').trim()
-  const companyName = String(formData.get('company_name') || '').trim()
   const email = String(formData.get('email') || '').trim().toLowerCase()
   const password = String(formData.get('password') || '')
   const confirm = String(formData.get('confirm_password') || '')
 
   if (!fullName) return { error: 'Name is required' }
-  if (!companyName) return { error: 'Company name is required' }
   if (!email || !email.includes('@')) return { error: 'A valid email is required' }
   const passwordError = validateNewPassword(password, confirm)
   if (passwordError) return { error: passwordError }
@@ -111,13 +109,11 @@ export async function signUp(formData: FormData): Promise<{ error?: string; mess
     // built-in mailer as a side effect, regardless of anything done after.
     // Creating admin-side has no such side effect, so Resend is the only
     // email that ever goes out, matching how password resets already work.
-    // Public signup makes the signer a client_admin owning a brand-new
-    // company, so they can invite their own team from the portal afterward.
     const { data: createData, error: createError } = await admin.auth.admin.createUser({
       email,
       password,
       email_confirm: false,
-      user_metadata: { full_name: fullName, role: 'client_admin' },
+      user_metadata: { full_name: fullName, role: 'client_user' },
     })
 
     if (createError) {
@@ -129,30 +125,6 @@ export async function signUp(formData: FormData): Promise<{ error?: string; mess
     }
     const userId = createData!.user!.id
 
-    const rollbackUser = async () => {
-      await admin.auth.admin.deleteUser(userId)
-    }
-
-    const { data: company, error: companyError } = await admin
-      .from('companies')
-      .insert({ name: companyName, owner_id: userId })
-      .select('id')
-      .single()
-    if (companyError || !company) {
-      await rollbackUser()
-      return { error: 'Could not set up your company. Please try again.' }
-    }
-
-    const { error: profileError } = await admin
-      .from('profiles')
-      .update({ company_id: company.id, role: 'client_admin' })
-      .eq('id', userId)
-    if (profileError) {
-      await admin.from('companies').delete().eq('id', company.id)
-      await rollbackUser()
-      return { error: 'Could not set up your company. Please try again.' }
-    }
-
     const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
       type: 'signup',
       email,
@@ -162,10 +134,7 @@ export async function signUp(formData: FormData): Promise<{ error?: string; mess
 
     const actionLink = linkData?.properties?.action_link
     const sent = actionLink
-      ? await sendEmail({
-          to: email,
-          ...confirmSignupEmail({ confirmUrl: actionLink, name: fullName }),
-        })
+      ? await sendEmail({ to: email, ...confirmSignupEmail({ confirmUrl: actionLink, name: fullName }) })
       : { ok: false as const, error: linkError?.message || 'Failed to generate confirmation link' }
 
     if (!sent.ok) {
@@ -173,8 +142,7 @@ export async function signUp(formData: FormData): Promise<{ error?: string; mess
       // The account can't be confirmed without this email, and leaving it
       // behind would make every retry fail with "already registered" — so
       // roll it back and let the user try again instead of lying about success.
-      await admin.from('companies').delete().eq('id', company.id)
-      await rollbackUser()
+      await admin.auth.admin.deleteUser(userId)
       return { error: 'Could not send the confirmation email right now. Please try again in a few minutes.' }
     }
 
@@ -240,7 +208,14 @@ export async function requestPasswordReset(formData: FormData): Promise<{ error?
     if (actionLink) {
       const { subject, html } = passwordResetEmail({ resetUrl: actionLink })
       const sent = await sendEmail({ to: email, subject, html })
-      if (!sent.ok) console.error('[auth] failed to send password reset email:', sent.error)
+      if (!sent.ok) {
+        // Unlike the "no such account" case above, we already know this
+        // account exists — the send itself failed (e.g. email misconfigured),
+        // so claiming success here would silently strand the user with no
+        // way to reset their password and no indication anything is wrong.
+        console.error('[auth] failed to send password reset email:', sent.error)
+        return { error: 'Unable to send a reset email right now. Try again later.' }
+      }
     }
     return { message: RESET_REQUESTED_MESSAGE }
   }
@@ -277,23 +252,5 @@ export async function updatePassword(formData: FormData): Promise<{ error?: stri
   if (error) return { error: error.message }
 
   await supabase.auth.signOut({ scope: 'local' })
-  return { success: true }
-}
-
-/** Used when a portal team member (created with a temporary password by their company admin) sets their own password on first sign-in. Unlike updatePassword, this runs on the user's normal signed-in session, not a recovery link. */
-export async function completeForcedPasswordChange(formData: FormData): Promise<{ error?: string; success?: boolean }> {
-  const password = String(formData.get('password') || '')
-  const confirm = String(formData.get('confirm_password') || '')
-  const passwordError = validateNewPassword(password, confirm)
-  if (passwordError) return { error: passwordError }
-
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'You are not signed in.' }
-
-  const { error } = await supabase.auth.updateUser({ password })
-  if (error) return { error: error.message }
-
-  await supabase.from('profiles').update({ must_change_password: false }).eq('id', user.id)
   return { success: true }
 }
