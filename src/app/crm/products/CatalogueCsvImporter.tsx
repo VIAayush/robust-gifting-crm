@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { autoMapHeaders, parseCsv } from '@/lib/csv'
-import { importCatalogueCsv, validateCatalogueCsv, type ImportSummary } from './import-actions'
+import { importCatalogueCsvChunk, validateCatalogueCsv, type ImportFailure, type ImportSummary } from './import-actions'
 import { MobileSheetSelect } from '@/components/ui/mobile-filter-sheet'
 
 const FIELD_LABELS: { key: string; label: string; required?: boolean }[] = [
@@ -29,6 +29,8 @@ const FIELD_LABELS: { key: string; label: string; required?: boolean }[] = [
   { key: 'status', label: 'Status' },
 ]
 
+const CHUNK_SIZE = 25
+
 export function CatalogueCsvImporter() {
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [headers, setHeaders] = useState<string[]>([])
@@ -38,6 +40,8 @@ export function CatalogueCsvImporter() {
   const [summary, setSummary] = useState<ImportSummary | null>(null)
   const [validated, setValidated] = useState(false)
   const [overwrite, setOverwrite] = useState(true)
+  const [skippedSkus, setSkippedSkus] = useState<Set<string>>(new Set())
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [pending, startTransition] = useTransition()
 
   const mappedRequired = useMemo(
@@ -57,6 +61,8 @@ export function CatalogueCsvImporter() {
   const resetValidation = () => {
     setValidated(false)
     setSummary(null)
+    setSkippedSkus(new Set())
+    setProgress(null)
   }
 
   const onCsv = async (file: File | null) => {
@@ -92,35 +98,91 @@ export function CatalogueCsvImporter() {
       }
       setSummary(result)
       setValidated(true)
+      setSkippedSkus(new Set())
       if (result.failed === 0) toast.success('No issues found — ready to import')
       else toast.error(`${result.failed} row${result.failed === 1 ? '' : 's'} need fixing before you can import`)
     })
   }
 
-  const onImport = () => {
-    if (!csvFile || !validated) return
-    startTransition(async () => {
-      const result = await importCatalogueCsv(buildFormData())
-      if ('error' in result) {
-        toast.error(result.error)
-        return
-      }
-      setSummary(result)
-      if (!result.committed) {
-        toast.error('Import blocked — the CSV changed since it was validated. Validate again.')
-        setValidated(false)
-        return
-      }
-      if (result.imported > 0) {
-        const parts = [
-          result.created > 0 ? `${result.created} created` : '',
-          result.updated > 0 ? `${result.updated} overwritten` : '',
-        ].filter(Boolean)
-        toast.success(`Import complete — ${parts.join(', ')}`)
-      }
-      if (result.failed > 0) toast.error(`${result.failed} rows failed`)
+  const toggleSkip = (sku: string) => {
+    setSkippedSkus((prev) => {
+      const next = new Set(prev)
+      if (next.has(sku)) next.delete(sku)
+      else next.add(sku)
+      return next
     })
   }
+
+  const onImport = () => {
+    if (!csvFile || !validated || !summary) return
+    const toCommit = summary.groups.filter((g) => !skippedSkus.has(g.groupSku))
+    if (toCommit.length === 0) {
+      toast.error('Every product is skipped — nothing to import')
+      return
+    }
+
+    startTransition(async () => {
+      let created = 0
+      let updated = 0
+      const failures: ImportFailure[] = []
+      let chunkIndex = 0
+      let totalToCommit = toCommit.length
+      let lastResult: ImportSummary | null = null
+
+      while (true) {
+        const data = buildFormData()
+        data.set('skip_skus', JSON.stringify(Array.from(skippedSkus)))
+        data.set('chunk_index', String(chunkIndex))
+        data.set('chunk_size', String(CHUNK_SIZE))
+
+        const result = await importCatalogueCsvChunk(data)
+        if ('error' in result) {
+          toast.error(result.error)
+          setProgress(null)
+          return
+        }
+        lastResult = result
+
+        if (chunkIndex === 0 && !result.committed && result.failed > 0) {
+          // The file changed since it was validated (a race, not a normal case).
+          setSummary(result)
+          toast.error('Import blocked — the CSV changed since it was validated. Validate again.')
+          setValidated(false)
+          setProgress(null)
+          return
+        }
+
+        created += result.created
+        updated += result.updated
+        failures.push(...result.failures)
+        totalToCommit = result.totalToCommit
+        setProgress({ done: created + updated, total: totalToCommit })
+
+        if (!result.hasMore) break
+        chunkIndex += 1
+      }
+
+      setProgress(null)
+      setSummary(
+        lastResult && {
+          ...lastResult,
+          created,
+          updated,
+          imported: created + updated,
+          failed: failures.length,
+          failures,
+        },
+      )
+
+      if (created + updated > 0) {
+        const parts = [created > 0 ? `${created} created` : '', updated > 0 ? `${updated} overwritten` : ''].filter(Boolean)
+        toast.success(`Import complete — ${parts.join(', ')}`)
+      }
+      if (failures.length > 0) toast.error(`${failures.length} row${failures.length === 1 ? '' : 's'} failed`)
+    })
+  }
+
+  const readyToImport = validated && summary && summary.failed === 0 && !summary.committed
 
   return (
     <div className="space-y-6">
@@ -139,7 +201,8 @@ export function CatalogueCsvImporter() {
             rows missing any of these fail validation before anything is imported. Optional: description,
             supplier, MOQ, visibility, companies, colour, size. Give the same product a row per colour with
             the same SKU (or a colour-suffixed SKU, e.g. <span className="font-mono">RG-NO-02-BLUE</span>)
-            and they will import as one product with colour variants, not separate products.
+            and they will import as one product with colour variants, not separate products. Catalogues of
+            any size are supported — large files import in small batches automatically.
           </p>
         </div>
 
@@ -233,7 +296,7 @@ export function CatalogueCsvImporter() {
           )}
 
           <div className="flex flex-wrap items-center gap-3">
-            {!validated || (summary && summary.failed > 0) ? (
+            {!readyToImport ? (
               <button
                 type="button"
                 disabled={pending || !mappedRequired}
@@ -250,7 +313,11 @@ export function CatalogueCsvImporter() {
                   onClick={onImport}
                   className="px-6 py-2 text-xs font-semibold text-white bg-green-700 hover:bg-green-800 rounded-lg disabled:opacity-50"
                 >
-                  {pending ? 'Importing…' : 'Import products'}
+                  {pending
+                    ? progress
+                      ? `Importing… ${progress.done} / ${progress.total}`
+                      : 'Importing…'
+                    : `Import ${summary!.groups.length - skippedSkus.size} product${summary!.groups.length - skippedSkus.size === 1 ? '' : 's'}`}
                 </button>
                 <button
                   type="button"
@@ -262,6 +329,97 @@ export function CatalogueCsvImporter() {
                 </button>
               </>
             )}
+          </div>
+
+          {pending && progress && (
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+              <div
+                className="h-full bg-green-700 transition-all"
+                style={{ width: `${Math.min(100, (progress.done / Math.max(1, progress.total)) * 100)}%` }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {readyToImport && summary && (
+        <div className="bg-white p-6 rounded-2xl border border-gray-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-900">
+              Products in this file ({summary.groups.length - skippedSkus.size} of {summary.groups.length} selected)
+            </h2>
+            <div className="flex gap-3 text-[11px] font-semibold text-[#9C7A33]">
+              <button type="button" onClick={() => setSkippedSkus(new Set())} className="hover:underline">
+                Select all
+              </button>
+              <button
+                type="button"
+                onClick={() => setSkippedSkus(new Set(summary.groups.map((g) => g.groupSku)))}
+                className="hover:underline"
+              >
+                Deselect all
+              </button>
+              {summary.groups.some((g) => g.isOverwrite) && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSkippedSkus((prev) => {
+                      const next = new Set(prev)
+                      summary.groups.filter((g) => g.isOverwrite).forEach((g) => next.add(g.groupSku))
+                      return next
+                    })
+                  }
+                  className="hover:underline"
+                >
+                  Skip all overwrites
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="max-h-80 overflow-y-auto rounded-lg border border-gray-100">
+            <table className="w-full text-[11px]">
+              <thead className="sticky top-0 bg-gray-50">
+                <tr>
+                  <th className="w-8 px-2 py-2"></th>
+                  <th className="text-left px-2 py-2 font-semibold text-gray-500">SKU</th>
+                  <th className="text-left px-2 py-2 font-semibold text-gray-500">Name</th>
+                  <th className="text-left px-2 py-2 font-semibold text-gray-500">Colours</th>
+                  <th className="text-left px-2 py-2 font-semibold text-gray-500">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.groups.map((group) => {
+                  const skipped = skippedSkus.has(group.groupSku)
+                  return (
+                    <tr key={group.groupSku} className={`border-t border-gray-100 ${skipped ? 'opacity-50' : ''}`}>
+                      <td className="px-2 py-1.5">
+                        <input
+                          type="checkbox"
+                          disabled={pending}
+                          checked={!skipped}
+                          onChange={() => toggleSkip(group.groupSku)}
+                          className="h-3.5 w-3.5 rounded border-gray-300 text-[#9C7A33] focus:ring-[#9C7A33]"
+                        />
+                      </td>
+                      <td className="px-2 py-1.5 font-mono text-gray-700 whitespace-nowrap">{group.groupSku}</td>
+                      <td className="px-2 py-1.5 text-gray-700">{group.name}</td>
+                      <td className="px-2 py-1.5 text-gray-500">{group.colours.join(', ') || '—'}</td>
+                      <td className="px-2 py-1.5">
+                        {group.isOverwrite ? (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                            Overwrite
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">
+                            New
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -275,12 +433,14 @@ export function CatalogueCsvImporter() {
             <SummaryStat label="Total rows" value={summary.total} />
             <SummaryStat label={summary.committed ? 'New products' : 'To create'} value={summary.created} />
             <SummaryStat label={summary.committed ? 'Overwritten' : 'To overwrite'} value={summary.updated} />
-            <SummaryStat label="Skipped" value={summary.skipped} />
+            <SummaryStat label="Skipped" value={summary.skipped + (summary.committed ? skippedSkus.size : 0)} />
             <SummaryStat label="Failed" value={summary.failed} />
           </div>
           {summary.failures.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-red-700 mb-1">Fix these rows before importing:</p>
+              <p className="text-xs font-semibold text-red-700 mb-1">
+                {summary.committed ? 'These rows failed during import:' : 'Fix these rows before importing:'}
+              </p>
               <ul className="text-xs text-red-700 space-y-1">
                 {summary.failures.slice(0, 50).map((failure) => (
                   <li key={`${failure.row}-${failure.sku}`}>

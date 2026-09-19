@@ -6,6 +6,15 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: '*.supabase.co', pathname: '/storage/v1/object/public/**' },
     ],
   },
+  experimental: {
+    serverActions: {
+      // Server Actions default to 1MB, which a large product CSV (or one with
+      // several attached photos) can exceed. The CSV importer also chunks its
+      // commit into small batches so a single request never risks this limit
+      // or the platform's function-timeout on very large catalogues.
+      bodySizeLimit: '8mb',
+    },
+  },
   async headers() {
     return [
       {

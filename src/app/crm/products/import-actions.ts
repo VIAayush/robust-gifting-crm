@@ -26,6 +26,15 @@ function publicImageUrl(objectPath: string) {
 export type ImportFailure = { row: number; sku: string; reason: string }
 export type ImportWarning = { row?: number; message: string }
 
+/** One row per validation-time listing: a canonical product this file will create or overwrite. */
+export type ImportGroupPreview = {
+  groupSku: string
+  name: string
+  colours: string[]
+  rowNumbers: number[]
+  isOverwrite: boolean
+}
+
 export type ImportSummary = {
   total: number
   imported: number
@@ -38,6 +47,8 @@ export type ImportSummary = {
   failures: ImportFailure[]
   warnings: ImportWarning[]
   committed: boolean
+  /** Every product this file would touch, for the "skip this one" checklist. Excludes rows that failed validation. */
+  groups: ImportGroupPreview[]
 }
 
 function cell(row: Record<string, string>, key: string) {
@@ -400,6 +411,13 @@ function planToSummary(
     failures: plan.failures,
     warnings: plan.warnings,
     committed,
+    groups: plan.groups.map((g) => ({
+      groupSku: g.groupSku,
+      name: g.rows[0].name,
+      colours: g.rows.map((r) => r.colour).filter((c): c is string => Boolean(c)),
+      rowNumbers: g.rows.map((r) => r.rowNumber),
+      isOverwrite: Boolean(g.existingProductId),
+    })),
   }
 }
 
@@ -418,7 +436,162 @@ export async function validateCatalogueCsv(formData: FormData): Promise<ImportSu
   return planToSummary(plan, { imported: rowCount, created: plan.groups.length - updated, updated }, false)
 }
 
-export async function importCatalogueCsv(formData: FormData): Promise<ImportSummary | { error: string }> {
+/** Writes one product group (insert or overwrite, its variants, and its photos). Pushes failures onto `plan.failures` instead of throwing. */
+async function commitGroup(supabase: SupabaseClient, group: ProductGroup, plan: { failures: ImportFailure[] }): Promise<'created' | 'updated' | 'failed'> {
+  const first = group.rows[0]
+  const visibility =
+    first.catalogue_access === 'all'
+      ? 'catalogue'
+      : first.catalogue_access === 'selected'
+        ? 'selected_companies'
+        : 'internal_only'
+
+  const fields = {
+    name: first.name,
+    description: first.description,
+    category_id: first.category_id,
+    supplier_id: first.supplier_id,
+    price: first.price,
+    supplier_cost: Number.isFinite(first.supplier_cost as number) ? first.supplier_cost : null,
+    moq: first.moq,
+    hsn_code: first.hsn_code,
+    status: first.status,
+    catalogue_access: first.catalogue_access,
+    visibility,
+  }
+
+  let product: { id: string } | null = null
+  if (group.existingProductId) {
+    // Overwrite in place: the product row keeps its id, so order, quotation,
+    // campaign and sample history all keep pointing at the same product.
+    const { error: updateError } = await supabase
+      .from('products')
+      .update({ ...fields, image_url: null, updated_at: new Date().toISOString() })
+      .eq('id', group.existingProductId)
+    if (updateError) {
+      for (const row of group.rows) {
+        plan.failures.push({ row: row.rowNumber, sku: row.sku, reason: `Could not update product: ${updateError.message}` })
+      }
+      return 'failed'
+    }
+    product = { id: group.existingProductId }
+    await replaceProductVariantsAndImages(supabase, group.existingProductId)
+    await supabase.from('company_product_access').delete().eq('product_id', group.existingProductId)
+  } else {
+    const { data: inserted, error } = await supabase
+      .from('products')
+      .insert({ ...fields, sku: group.groupSku, image_url: null })
+      .select('id')
+      .single()
+
+    if (error || !inserted) {
+      for (const row of group.rows) {
+        plan.failures.push({
+          row: row.rowNumber,
+          sku: row.sku,
+          reason: error?.code === '23505' ? 'SKU already exists' : error?.message || 'Could not save product',
+        })
+      }
+      return 'failed'
+    }
+    product = inserted
+  }
+
+  if (first.catalogue_access === 'selected') {
+    const { error: accessError } = await supabase.from('company_product_access').insert(
+      first.companyIds.map((company_id) => ({ product_id: product.id, company_id })),
+    )
+    if (accessError) {
+      if (!group.existingProductId) await supabase.from('products').delete().eq('id', product.id)
+      plan.failures.push({
+        row: first.rowNumber,
+        sku: first.sku,
+        reason: `Company visibility could not be stored: ${accessError.message}`,
+      })
+      return 'failed'
+    }
+  }
+
+  let primaryImageUrl: string | null = null
+  for (const row of group.rows) {
+    let variantId: string | null = null
+    if (row.colour || row.size || row.gender || row.material) {
+      const { data: variant, error: variantError } = await supabase
+        .from('product_variants')
+        .insert({
+          product_id: product.id,
+          colour: row.colour,
+          display_name: row.colour,
+          size: row.size,
+          gender: row.gender,
+          material: row.material,
+          sku: row.variant_sku,
+          extra_price: row === first ? 0 : row.price !== first.price ? Math.round((row.price - first.price) * 100) / 100 : row.extra_price,
+          sort_order: group.rows.indexOf(row),
+        })
+        .select('id')
+        .single()
+      if (variantError) {
+        plan.failures.push({ row: row.rowNumber, sku: row.sku, reason: `Colour variant could not be saved: ${variantError.message}` })
+        continue
+      }
+      variantId = variant.id
+    }
+
+    for (let i = 0; i < row.images.length; i++) {
+      const image = row.images[i]
+      let imageUrl: string
+      let storagePath: string | null = null
+      if (image.kind === 'url') {
+        imageUrl = image.url
+      } else {
+        const extension = ALLOWED_IMAGE_TYPES[image.file.type]
+        const objectPath = `${product.id}/${variantId || 'shared'}/${Date.now()}-${i}.${extension}`
+        const { error: uploadError } = await supabase.storage
+          .from(IMAGE_BUCKET)
+          .upload(objectPath, image.file, { contentType: image.file.type, upsert: false })
+        if (uploadError) {
+          plan.failures.push({ row: row.rowNumber, sku: row.sku, reason: `Image upload failed: ${uploadError.message}` })
+          continue
+        }
+        storagePath = objectPath
+        imageUrl = publicImageUrl(objectPath)
+      }
+      const isPrimary = !primaryImageUrl
+      await supabase.from('product_images').insert({
+        product_id: product.id,
+        variant_id: variantId,
+        image_url: imageUrl,
+        storage_path: storagePath,
+        sort_order: i,
+        is_primary: isPrimary,
+      })
+      if (isPrimary) primaryImageUrl = imageUrl
+    }
+  }
+
+  if (primaryImageUrl) {
+    await supabase.from('products').update({ image_url: primaryImageUrl }).eq('id', product.id)
+  }
+
+  return group.existingProductId ? 'updated' : 'created'
+}
+
+export type ImportChunkResult = ImportSummary & {
+  /** Call again with the next chunkIndex when true. */
+  hasMore: boolean
+  /** How many products (across all chunks, after skips) this file will commit in total. */
+  totalToCommit: number
+}
+
+/**
+ * Commits one chunk of an already-validated CSV. The whole file is re-parsed and
+ * re-validated on every call (cheap — no writes happen during validation) so a
+ * single request only ever does a small, bounded amount of writing, whatever the
+ * total catalogue size — this is what lets imports of hundreds of products finish
+ * without hitting a request-size or function-timeout limit.
+ */
+export async function importCatalogueCsvChunk(formData: FormData): Promise<ImportChunkResult | { error: string }> {
   const profile = await getProfile()
   if (!profile) return { error: 'Not authenticated' }
   if (!CATALOGUE_ROLES.includes(profile.role as (typeof CATALOGUE_ROLES)[number])) {
@@ -432,157 +605,40 @@ export async function importCatalogueCsv(formData: FormData): Promise<ImportSumm
   // Pre-import validation gate: the whole file must be clean before anything is
   // written, so a bad row can never leave behind a broken/partial product.
   if (plan.failures.length > 0) {
-    return planToSummary(plan, { imported: 0, created: 0, updated: 0 }, false)
+    return { ...planToSummary(plan, { imported: 0, created: 0, updated: 0 }, false), hasMore: false, totalToCommit: 0 }
   }
+
+  let skipSkus: Set<string>
+  try {
+    skipSkus = new Set(JSON.parse(String(formData.get('skip_skus') || '[]')) as string[])
+  } catch {
+    skipSkus = new Set()
+  }
+  const chunkIndex = Math.max(0, parseInt(String(formData.get('chunk_index') || '0'), 10) || 0)
+  const chunkSize = Math.min(100, Math.max(1, parseInt(String(formData.get('chunk_size') || '25'), 10) || 25))
+
+  const eligibleGroups = plan.groups.filter((g) => !skipSkus.has(g.groupSku))
+  const start = chunkIndex * chunkSize
+  const chunk = eligibleGroups.slice(start, start + chunkSize)
+  const hasMore = start + chunkSize < eligibleGroups.length
 
   let created = 0
   let updated = 0
-  for (const group of plan.groups) {
-    const first = group.rows[0]
-    const visibility =
-      first.catalogue_access === 'all'
-        ? 'catalogue'
-        : first.catalogue_access === 'selected'
-          ? 'selected_companies'
-          : 'internal_only'
-
-    const fields = {
-      name: first.name,
-      description: first.description,
-      category_id: first.category_id,
-      supplier_id: first.supplier_id,
-      price: first.price,
-      supplier_cost: Number.isFinite(first.supplier_cost as number) ? first.supplier_cost : null,
-      moq: first.moq,
-      hsn_code: first.hsn_code,
-      status: first.status,
-      catalogue_access: first.catalogue_access,
-      visibility,
-    }
-
-    let product: { id: string } | null = null
-    if (group.existingProductId) {
-      // Overwrite in place: the product row keeps its id, so order, quotation,
-      // campaign and sample history all keep pointing at the same product.
-      const { error: updateError } = await supabase
-        .from('products')
-        .update({ ...fields, image_url: null, updated_at: new Date().toISOString() })
-        .eq('id', group.existingProductId)
-      if (updateError) {
-        for (const row of group.rows) {
-          plan.failures.push({ row: row.rowNumber, sku: row.sku, reason: `Could not update product: ${updateError.message}` })
-        }
-        continue
-      }
-      product = { id: group.existingProductId }
-      await replaceProductVariantsAndImages(supabase, group.existingProductId)
-      await supabase.from('company_product_access').delete().eq('product_id', group.existingProductId)
-    } else {
-      const { data: inserted, error } = await supabase
-        .from('products')
-        .insert({ ...fields, sku: group.groupSku, image_url: null })
-        .select('id')
-        .single()
-
-      if (error || !inserted) {
-        for (const row of group.rows) {
-          plan.failures.push({
-            row: row.rowNumber,
-            sku: row.sku,
-            reason: error?.code === '23505' ? 'SKU already exists' : error?.message || 'Could not save product',
-          })
-        }
-        continue
-      }
-      product = inserted
-    }
-
-    if (first.catalogue_access === 'selected') {
-      const { error: accessError } = await supabase.from('company_product_access').insert(
-        first.companyIds.map((company_id) => ({ product_id: product.id, company_id })),
-      )
-      if (accessError) {
-        if (!group.existingProductId) await supabase.from('products').delete().eq('id', product.id)
-        plan.failures.push({
-          row: first.rowNumber,
-          sku: first.sku,
-          reason: `Company visibility could not be stored: ${accessError.message}`,
-        })
-        continue
-      }
-    }
-
-    let primaryImageUrl: string | null = null
-    for (const row of group.rows) {
-      let variantId: string | null = null
-      if (row.colour || row.size || row.gender || row.material) {
-        const { data: variant, error: variantError } = await supabase
-          .from('product_variants')
-          .insert({
-            product_id: product.id,
-            colour: row.colour,
-            display_name: row.colour,
-            size: row.size,
-            gender: row.gender,
-            material: row.material,
-            sku: row.variant_sku,
-            extra_price: row === first ? 0 : row.price !== first.price ? Math.round((row.price - first.price) * 100) / 100 : row.extra_price,
-            sort_order: group.rows.indexOf(row),
-          })
-          .select('id')
-          .single()
-        if (variantError) {
-          plan.failures.push({ row: row.rowNumber, sku: row.sku, reason: `Colour variant could not be saved: ${variantError.message}` })
-          continue
-        }
-        variantId = variant.id
-      }
-
-      for (let i = 0; i < row.images.length; i++) {
-        const image = row.images[i]
-        let imageUrl: string
-        let storagePath: string | null = null
-        if (image.kind === 'url') {
-          imageUrl = image.url
-        } else {
-          const extension = ALLOWED_IMAGE_TYPES[image.file.type]
-          const objectPath = `${product.id}/${variantId || 'shared'}/${Date.now()}-${i}.${extension}`
-          const { error: uploadError } = await supabase.storage
-            .from(IMAGE_BUCKET)
-            .upload(objectPath, image.file, { contentType: image.file.type, upsert: false })
-          if (uploadError) {
-            plan.failures.push({ row: row.rowNumber, sku: row.sku, reason: `Image upload failed: ${uploadError.message}` })
-            continue
-          }
-          storagePath = objectPath
-          imageUrl = publicImageUrl(objectPath)
-        }
-        const isPrimary = !primaryImageUrl
-        await supabase.from('product_images').insert({
-          product_id: product.id,
-          variant_id: variantId,
-          image_url: imageUrl,
-          storage_path: storagePath,
-          sort_order: i,
-          is_primary: isPrimary,
-        })
-        if (isPrimary) primaryImageUrl = imageUrl
-      }
-    }
-
-    if (primaryImageUrl) {
-      await supabase.from('products').update({ image_url: primaryImageUrl }).eq('id', product.id)
-    }
-
-    if (group.existingProductId) updated += 1
-    else created += 1
+  for (const group of chunk) {
+    const outcome = await commitGroup(supabase, group, plan)
+    if (outcome === 'created') created += 1
+    else if (outcome === 'updated') updated += 1
   }
 
   revalidatePath('/crm/products')
   revalidatePath('/portal/catalogue')
   revalidatePath('/catalogue')
 
-  return planToSummary(plan, { imported: created + updated, created, updated }, true)
+  return {
+    ...planToSummary(plan, { imported: created + updated, created, updated }, chunk.length > 0),
+    hasMore,
+    totalToCommit: eligibleGroups.length,
+  }
 }
 
 /** Clears a product's colours and photos (including their storage objects) so an overwriting import can rebuild them from the CSV. */
