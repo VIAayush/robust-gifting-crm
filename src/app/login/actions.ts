@@ -29,7 +29,10 @@ async function applyRememberChoice(remember: boolean) {
   }
 }
 
-const RESET_REQUESTED_MESSAGE = 'If an account exists for that email, a password reset link has been sent.'
+const RESET_REQUESTED_MESSAGE =
+  'If an account exists for that email, a password reset link has been sent. If you don\'t see it in a minute or two, check your spam or junk folder.'
+const SIGNUP_CONFIRM_MESSAGE =
+  'Check your email to confirm your account, then sign in. If you don\'t see it in a minute or two, check your spam or junk folder.'
 
 export async function signIn(formData: FormData): Promise<{ error?: string; redirectTo?: string } | undefined> {
   const email = String(formData.get('email') || '').trim()
@@ -146,7 +149,7 @@ export async function signUp(formData: FormData): Promise<{ error?: string; mess
       return { error: 'Could not send the confirmation email right now. Please try again in a few minutes.' }
     }
 
-    return { message: 'Check your email to confirm your account, then sign in.' }
+    return { message: SIGNUP_CONFIRM_MESSAGE }
   }
 
   // Resend/service-role not configured yet — fall back to Supabase's own email delivery.
@@ -175,7 +178,7 @@ export async function signUp(formData: FormData): Promise<{ error?: string; mess
     return { redirectTo: '/portal' }
   }
 
-  return { message: 'Check your email to confirm your account, then sign in.' }
+  return { message: SIGNUP_CONFIRM_MESSAGE }
 }
 
 export async function requestPasswordReset(formData: FormData): Promise<{ error?: string; message?: string }> {
