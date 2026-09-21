@@ -34,7 +34,7 @@ function Fallback({ alt, compact }: { alt: string; compact: boolean }) {
       role="img"
       aria-label={alt || 'Product'}
     >
-      <span className={cn('font-serif tracking-tight', compact ? 'text-xs' : 'text-lg')}>S</span>
+      <span className={cn('font-serif tracking-tight', compact ? 'text-xs' : 'text-lg')}>R</span>
       {!compact && <Package className="h-5 w-5 text-[#C9D3E0]" aria-hidden="true" />}
     </div>
   )
