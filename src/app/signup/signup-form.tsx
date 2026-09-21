@@ -9,6 +9,8 @@ import { signUp } from '@/app/login/actions'
 import { AuthShell } from '@/components/auth/auth-shell'
 import { BrandName } from '@/components/brand/brand-name'
 import { PasswordField } from '@/components/auth/password-field'
+import { getTabId } from '@/lib/supabase/client'
+import { TAB_QUERY } from '@/lib/auth/tab'
 
 export function SignupForm() {
   const router = useRouter()
@@ -53,7 +55,11 @@ export function SignupForm() {
       return
     }
     if (result.redirectTo) {
-      router.push(result.redirectTo)
+      // Carry this tab's own id explicitly — see the matching comment in
+      // login-form.tsx for why a bare router.push() isn't reliable here.
+      const dest = new URL(result.redirectTo, window.location.origin)
+      dest.searchParams.set(TAB_QUERY, getTabId())
+      router.push(`${dest.pathname}${dest.search}`)
       router.refresh()
       return
     }

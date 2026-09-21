@@ -8,6 +8,8 @@ import { Mail, Loader2 } from 'lucide-react';
 import { PasswordField } from '@/components/auth/password-field';
 import { BrandName } from '@/components/brand/brand-name';
 import { rememberThisTab, forgetRememberedTab } from '@/lib/auth/remember-client';
+import { getTabId } from '@/lib/supabase/client';
+import { TAB_QUERY } from '@/lib/auth/tab';
 
 function isNextRedirect(err: unknown) {
   const digest =
@@ -57,7 +59,16 @@ export function LoginForm({
       if (res?.redirectTo) {
         if (rememberMe) rememberThisTab();
         else forgetRememberedTab();
-        router.push(res.redirectTo);
+        // Carry this tab's own id explicitly on the destination URL. A plain
+        // router.push() doesn't reliably run through the patched
+        // history.pushState (Next's router can call the native one directly),
+        // so the very next request can arrive with no tab id in the header or
+        // URL — the proxy then falls back to the remembered-tab cookie, which
+        // can point at a stale id from an earlier session in this browser and
+        // miss the session cookie signIn() just wrote under this tab's real id.
+        const dest = new URL(res.redirectTo, window.location.origin);
+        dest.searchParams.set(TAB_QUERY, getTabId());
+        router.push(`${dest.pathname}${dest.search}`);
         router.refresh();
         return;
       }
