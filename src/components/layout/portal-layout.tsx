@@ -95,7 +95,7 @@ export function PortalLayout({ children, user }: PortalLayoutProps) {
             <div className="flex min-w-0 items-center gap-3">
               <div className="flex shrink-0 items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded bg-primary font-serif text-lg font-normal text-white">
-                  S
+                  R
                 </div>
                 <BrandName className="hidden max-w-[14rem] truncate font-serif text-base tracking-tight text-primary xl:block xl:text-lg" />
               </div>
