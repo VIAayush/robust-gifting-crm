@@ -4,9 +4,17 @@ import { authCookieName } from '@/lib/auth/tab'
 import { getRequestTabId } from '@/lib/auth/tab-server'
 import { trackAuthCookieAndPruneOld } from '@/lib/auth/cookie-pruning'
 
-export async function createClient() {
+/**
+ * `explicitTabId`, when given, wins over header/URL sniffing. Server Actions
+ * invoked as a plain async call (not a <form action> binding) go through
+ * Next's own internal action-dispatch transport, which does not reliably
+ * carry a header set via a patched window.fetch or a query param set via a
+ * patched history API — both were observed to go missing in production. A
+ * value read straight from the action's own FormData has no such gap.
+ */
+export async function createClient(explicitTabId?: string) {
   const cookieStore = await cookies()
-  const tabId = await getRequestTabId()
+  const tabId = explicitTabId || (await getRequestTabId())
   const cookieName = authCookieName(tabId || 'none')
 
   return createServerClient(

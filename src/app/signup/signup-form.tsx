@@ -48,6 +48,7 @@ export function SignupForm() {
     formData.set('email', email.trim())
     formData.set('password', password)
     formData.set('confirm_password', confirm)
+    formData.set('tabId', getTabId())
     const result = await signUp(formData)
     if (result.error) {
       setError(result.error)

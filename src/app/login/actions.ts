@@ -11,10 +11,10 @@ import { validateNewPassword } from '@/lib/auth/password'
 import { sendEmail } from '@/lib/email/resend'
 import { passwordResetEmail, confirmSignupEmail } from '@/lib/email/templates'
 import { getRequestTabId } from '@/lib/auth/tab-server'
-import { TAB_REMEMBER_COOKIE, TAB_REMEMBER_MAX_AGE } from '@/lib/auth/tab'
+import { TAB_REMEMBER_COOKIE, TAB_REMEMBER_MAX_AGE, isTabId } from '@/lib/auth/tab'
 
-async function applyRememberChoice(remember: boolean) {
-  const tabId = await getRequestTabId()
+async function applyRememberChoice(remember: boolean, explicitTabId?: string) {
+  const tabId = explicitTabId || (await getRequestTabId())
   if (!tabId) return
   const store = await cookies()
   if (remember) {
@@ -39,12 +39,14 @@ export async function signIn(formData: FormData): Promise<{ error?: string; redi
   const password = String(formData.get('password') || '')
   const next = formData.get('next') as string | null
   const remember = formData.get('remember') === '1'
+  const rawTabId = formData.get('tabId')
+  const tabId = typeof rawTabId === 'string' && isTabId(rawTabId) ? rawTabId : undefined
 
   if (!email || !password) {
     return { error: 'Email and password are required' }
   }
 
-  const supabase = await createClient()
+  const supabase = await createClient(tabId)
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -66,7 +68,7 @@ export async function signIn(formData: FormData): Promise<{ error?: string; redi
       return { error: 'This account is inactive' }
     }
 
-    await applyRememberChoice(remember)
+    await applyRememberChoice(remember, tabId)
 
     const home = landingPathForRole(profile?.role)
     if (isSafeNext(next)) {
@@ -96,6 +98,8 @@ export async function signUp(formData: FormData): Promise<{ error?: string; mess
   const email = String(formData.get('email') || '').trim().toLowerCase()
   const password = String(formData.get('password') || '')
   const confirm = String(formData.get('confirm_password') || '')
+  const rawTabId = formData.get('tabId')
+  const tabId = typeof rawTabId === 'string' && isTabId(rawTabId) ? rawTabId : undefined
 
   if (!fullName) return { error: 'Name is required' }
   if (!email || !email.includes('@')) return { error: 'A valid email is required' }
@@ -153,7 +157,7 @@ export async function signUp(formData: FormData): Promise<{ error?: string; mess
   }
 
   // Resend/service-role not configured yet — fall back to Supabase's own email delivery.
-  const supabase = await createClient()
+  const supabase = await createClient(tabId)
   const { data, error } = await supabase.auth.signUp({
     email,
     password,

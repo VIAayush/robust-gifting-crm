@@ -48,6 +48,9 @@ export function LoginForm({
     formData.set('email', loginEmail);
     formData.set('password', loginPassword);
     formData.set('remember', rememberMe ? '1' : '0');
+    // Sent explicitly rather than relying on the server sniffing a header or
+    // URL query param for it — see the comment on createClient() for why.
+    formData.set('tabId', getTabId());
     if (next) formData.set('next', next);
     try {
       const res = await signIn(formData);
