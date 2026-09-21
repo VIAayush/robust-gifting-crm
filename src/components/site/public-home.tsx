@@ -115,17 +115,15 @@ export async function PublicHome() {
                     className="group block overflow-hidden rounded-md bg-white shadow-[0_1px_3px_rgba(27,36,48,0.06)] transition-shadow hover:shadow-[0_8px_24px_rgba(27,36,48,0.08)]"
                   >
                     <div className="relative aspect-square catalogue-studio-field">
-                      {sample ? (
-                        <ProductImage
-                          src={sample.image_url}
-                          alt={category.name}
-                          size="md"
-                          fit="contain"
-                          fadeEdges
-                          className="absolute inset-0 h-full w-full bg-transparent"
-                          imgClassName="catalogue-product-img scale-[1.04] transition-transform duration-500 group-hover:scale-[1.06]"
-                        />
-                      ) : null}
+                      <ProductImage
+                        src={sample?.image_url ?? null}
+                        alt={category.name}
+                        size="md"
+                        fit="contain"
+                        fadeEdges
+                        className="absolute inset-0 h-full w-full bg-transparent"
+                        imgClassName="catalogue-product-img scale-[1.04] transition-transform duration-500 group-hover:scale-[1.06]"
+                      />
                     </div>
                     <div className="border-t border-[#E2E8F0] px-3 py-3 text-center sm:px-4 sm:py-4">
                       <p className="font-serif text-lg text-[#1B2430] sm:text-xl">{category.name}</p>
@@ -191,17 +189,15 @@ export async function PublicHome() {
                     className="group flex h-full flex-col overflow-hidden rounded-md border border-[#E2E8F0] bg-white transition-shadow hover:shadow-[0_8px_24px_rgba(27,36,48,0.08)]"
                   >
                     <div className="relative aspect-[5/3] catalogue-studio-field">
-                      {sample ? (
-                        <ProductImage
-                          src={sample.image_url}
-                          alt={collection.title}
-                          size="md"
-                          fit="contain"
-                          fadeEdges
-                          className="absolute inset-0 h-full w-full bg-transparent"
-                          imgClassName="catalogue-product-img scale-[1.05]"
-                        />
-                      ) : null}
+                      <ProductImage
+                        src={sample?.image_url ?? null}
+                        alt={collection.title}
+                        size="md"
+                        fit="contain"
+                        fadeEdges
+                        className="absolute inset-0 h-full w-full bg-transparent"
+                        imgClassName="catalogue-product-img scale-[1.05]"
+                      />
                     </div>
                     <div className="flex flex-1 flex-col px-5 py-5">
                       <p className="text-[10px] uppercase tracking-[0.18em] text-[#5C6570]">{collection.kicker}</p>
@@ -234,17 +230,15 @@ export async function PublicHome() {
                   className="group flex gap-4 overflow-hidden rounded-md border border-[#E2E8F0] bg-white p-3 transition-shadow hover:shadow-[0_8px_24px_rgba(27,36,48,0.08)] sm:p-4"
                 >
                   <div className="h-24 w-24 shrink-0 overflow-hidden rounded-md catalogue-studio-field sm:h-28 sm:w-28">
-                    {occasion.sample ? (
-                      <ProductImage
-                        src={occasion.sample.image_url}
-                        alt={occasion.title}
-                        size="sm"
-                        fit="contain"
-                        fadeEdges
-                        className="h-full w-full bg-transparent"
-                        imgClassName="catalogue-product-img"
-                      />
-                    ) : null}
+                    <ProductImage
+                      src={occasion.sample?.image_url ?? null}
+                      alt={occasion.title}
+                      size="sm"
+                      fit="contain"
+                      fadeEdges
+                      className="h-full w-full bg-transparent"
+                      imgClassName="catalogue-product-img"
+                    />
                   </div>
                   <div className="min-w-0 flex-1 py-1">
                     <p className="font-serif text-xl text-[#1B2430]">{occasion.title}</p>

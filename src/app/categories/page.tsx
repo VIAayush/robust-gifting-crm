@@ -38,17 +38,15 @@ export default async function CategoriesPage() {
                 className="group overflow-hidden rounded-md border border-[#E2E8F0] bg-white transition-shadow hover:shadow-[0_8px_24px_rgba(27,36,48,0.08)]"
               >
                 <div className="aspect-[5/4] catalogue-studio-field">
-                  {sample ? (
-                    <ProductImage
-                      src={sample.image_url}
-                      alt={sample.name}
-                      size="md"
-                      fit="contain"
-                      fadeEdges
-                      className="h-full w-full bg-transparent"
-                      imgClassName="catalogue-product-img scale-[1.04]"
-                    />
-                  ) : null}
+                  <ProductImage
+                    src={sample?.image_url ?? null}
+                    alt={category.name}
+                    size="md"
+                    fit="contain"
+                    fadeEdges
+                    className="h-full w-full bg-transparent"
+                    imgClassName="catalogue-product-img scale-[1.04]"
+                  />
                 </div>
                 <div className="border-t border-[#E2E8F0] px-5 py-4">
                   <p className="font-serif text-2xl text-[#1B2430]">{category.name}</p>
