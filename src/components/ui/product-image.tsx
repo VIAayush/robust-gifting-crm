@@ -1,11 +1,30 @@
 'use client'
 
 import React from 'react'
+import Image from 'next/image'
 import { Package } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type Size = 'xs' | 'sm' | 'md' | 'lg' | 'hero'
 type Fit = 'contain' | 'cover'
+
+/**
+ * Roughly how wide this size ever renders on screen, used as the `sizes`
+ * hint for next/image's responsive srcset. Product photos here were coming
+ * straight from Supabase Storage as plain <img> tags - full multi-MB
+ * originals downloaded for every card regardless of its actual display
+ * size, on every page, which was the main cause of the site feeling slow
+ * to load (especially on mobile). Rough per-size bounds are enough; being
+ * exact isn't the point, avoiding "phone downloads a 2MB desktop hero for
+ * an 80px thumbnail" is.
+ */
+const sizeHints: Record<Size, string> = {
+  xs: '32px',
+  sm: '56px',
+  md: '(min-width: 1024px) 220px, (min-width: 640px) 33vw, 45vw',
+  lg: '128px',
+  hero: '(min-width: 1024px) 480px, 100vw',
+}
 
 /** Warm studio field — keep in sync with `.catalogue-studio-field` in globals.css */
 export const STUDIO_FIELD = '#E7EDF4'
@@ -52,6 +71,8 @@ export function ProductImage({
   className = '',
   imgClassName = '',
   fadeEdges = false,
+  priority = false,
+  sizes,
 }: {
   src?: string | null
   alt: string
@@ -61,6 +82,10 @@ export function ProductImage({
   imgClassName?: string
   /** Feather photo edges into the studio field (public catalogue tiles). */
   fadeEdges?: boolean
+  /** Skip lazy-loading for above-the-fold images (e.g. a hero slide). */
+  priority?: boolean
+  /** Override the default per-size responsive-width hint. */
+  sizes?: string
 }) {
   const resolved = usableSrc(src)
   const [failed, setFailed] = React.useState(false)
@@ -89,14 +114,14 @@ export function ProductImage({
       )}
     >
       {showImage ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={resolved as string}
           alt={alt || 'Product'}
-          loading="lazy"
-          decoding="async"
+          fill
+          sizes={sizes || sizeHints[size]}
+          priority={priority}
+          loading={priority ? undefined : 'lazy'}
           className={cn(
-            'h-full w-full',
             fit === 'cover' ? 'object-cover' : 'object-contain',
             fit === 'contain' && compact ? 'p-0.5' : fit === 'contain' ? 'p-0' : '',
             wantsFade && !imgClassName.includes('catalogue-product-img') ? 'catalogue-product-img' : '',

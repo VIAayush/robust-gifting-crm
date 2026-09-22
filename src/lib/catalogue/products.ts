@@ -1,8 +1,21 @@
+import { unstable_cache } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { oneRelation } from '@/lib/utils'
 import { sortProductCategories } from '@/lib/products/categories'
 import type { SupabaseClient } from '@supabase/supabase-js'
+
+/**
+ * Every public page (home, catalogue, categories, collections, product
+ * detail) was re-running these Supabase queries - a 600+ row product fetch
+ * plus a follow-up variant-colours query for the list, on every single
+ * request, with zero caching anywhere in the app. That was the main cause
+ * of pages and their images feeling slow to load. This is a plain
+ * time-based cache (not tied to any user/session - the admin client used
+ * below returns the same public catalogue for everyone), so a fresh import
+ * or price edit shows up within this window rather than instantly.
+ */
+const CATALOGUE_REVALIDATE_SECONDS = 60
 
 const PUBLIC_PRODUCT_SELECT =
   'id, name, sku, description, image_url, price, moq, category_id, brand_id, status, created_at, category:categories(id, name), brand:brands(id, name)'
@@ -116,7 +129,7 @@ function isCatalogueReady(row: {
   )
 }
 
-export async function getPublicCatalogueProducts(): Promise<PublicProduct[]> {
+async function fetchPublicCatalogueProducts(): Promise<PublicProduct[]> {
   const client = await publicDbClient()
   if (!client) return []
   const { data, error } = await client
@@ -134,7 +147,12 @@ export async function getPublicCatalogueProducts(): Promise<PublicProduct[]> {
   return ready.map((row) => toPublicProduct(row, coloursByProduct.get(row.id) || []))
 }
 
-export async function getPublicProduct(id: string): Promise<PublicProduct | null> {
+export const getPublicCatalogueProducts = unstable_cache(fetchPublicCatalogueProducts, ['public-catalogue-products'], {
+  revalidate: CATALOGUE_REVALIDATE_SECONDS,
+  tags: ['catalogue'],
+})
+
+async function fetchPublicProduct(id: string): Promise<PublicProduct | null> {
   const client = await publicDbClient()
   if (!client) return null
   const { data, error } = await client
@@ -149,8 +167,13 @@ export async function getPublicProduct(id: string): Promise<PublicProduct | null
   return toPublicProduct(data, coloursByProduct.get(data.id) || [])
 }
 
+export const getPublicProduct = unstable_cache(fetchPublicProduct, ['public-product'], {
+  revalidate: CATALOGUE_REVALIDATE_SECONDS,
+  tags: ['catalogue'],
+})
+
 /** Full detail-page fetch: the product plus its colour variants and every photo, grouped by colour. */
-export async function getPublicProductWithVariants(id: string): Promise<PublicProductDetail | null> {
+async function fetchPublicProductWithVariants(id: string): Promise<PublicProductDetail | null> {
   const client = await publicDbClient()
   if (!client) return null
   const { data, error } = await client
@@ -199,7 +222,12 @@ export async function getPublicProductWithVariants(id: string): Promise<PublicPr
   return { ...product, sharedImages, variants }
 }
 
-export async function getPublicCategories() {
+export const getPublicProductWithVariants = unstable_cache(fetchPublicProductWithVariants, ['public-product-variants'], {
+  revalidate: CATALOGUE_REVALIDATE_SECONDS,
+  tags: ['catalogue'],
+})
+
+async function fetchPublicCategories() {
   const client = await publicDbClient()
   if (!client) return []
   const { data, error } = await client.from('categories').select('id, name')
@@ -209,6 +237,11 @@ export async function getPublicCategories() {
   }
   return sortProductCategories(data as Named[])
 }
+
+export const getPublicCategories = unstable_cache(fetchPublicCategories, ['public-categories'], {
+  revalidate: CATALOGUE_REVALIDATE_SECONDS,
+  tags: ['catalogue'],
+})
 
 export function sanitiseCatalogueSearch(value: string) {
   return value.replace(/[,()*]/g, ' ').trim().slice(0, 80)
