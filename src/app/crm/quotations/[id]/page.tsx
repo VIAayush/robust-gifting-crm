@@ -157,8 +157,8 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-        <table className="w-full text-left text-xs">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto shadow-sm">
+        <table className="w-full min-w-[640px] text-left text-xs">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="p-3.5 font-semibold text-gray-500">Item</th>

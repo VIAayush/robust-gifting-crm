@@ -80,7 +80,8 @@ export default async function AdminTrackingPage() {
           <h2 className="font-bold text-sm">Orders</h2>
           <Link href="/crm/order-management" className="text-xs text-[#9C7A33] font-semibold">Order management</Link>
         </div>
-        <table className="w-full text-xs">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] text-xs">
           <thead className="bg-gray-50 text-gray-500">
             <tr>
               <th className="text-left px-4 py-2">Order</th>
@@ -118,6 +119,7 @@ export default async function AdminTrackingPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -125,7 +127,8 @@ export default async function AdminTrackingPage() {
           <h2 className="font-bold text-sm">Tasks</h2>
           <Link href="/crm/tasks?tab=all_tasks" className="text-xs text-[#9C7A33] font-semibold">All tasks</Link>
         </div>
-        <table className="w-full text-xs">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] text-xs">
           <thead className="bg-gray-50 text-gray-500">
             <tr>
               <th className="text-left px-4 py-2">Task</th>
@@ -200,13 +203,15 @@ export default async function AdminTrackingPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-4 py-3 border-b">
           <h2 className="font-bold text-sm">Stage assignments</h2>
         </div>
-        <table className="w-full text-xs">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[560px] text-xs">
           <thead className="bg-gray-50 text-gray-500">
             <tr>
               <th className="text-left px-4 py-2">Order</th>
@@ -239,6 +244,7 @@ export default async function AdminTrackingPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-4">

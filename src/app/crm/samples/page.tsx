@@ -104,8 +104,8 @@ export default async function SamplesPage({
         </button>
       </form>
 
-      <div className="bg-white rounded-2xl border overflow-hidden">
-        <table className="w-full text-left text-sm">
+      <div className="bg-white rounded-2xl border overflow-x-auto">
+        <table className="w-full min-w-[780px] text-left text-sm">
           <thead className="bg-[#F5F7FA] text-xs text-[#4A5568]">
             <tr>
               <th className="p-3">Product</th>

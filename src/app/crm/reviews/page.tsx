@@ -63,9 +63,9 @@ export default async function ReviewsPage() {
         <button className="bg-[#9C7A33] text-white rounded-lg font-semibold md:col-span-2 py-2">Log review</button>
       </form>
 
-      <div className="bg-white rounded-lg border overflow-hidden">
+      <div className="bg-white rounded-lg border overflow-x-auto">
         {reviews && reviews.length > 0 ? (
-          <table className="w-full text-left">
+          <table className="w-full min-w-[640px] text-left">
             <thead>
               <tr className="border-b bg-gray-50 text-xs text-gray-500">
                 <th className="p-3">Date</th>

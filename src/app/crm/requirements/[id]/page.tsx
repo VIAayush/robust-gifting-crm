@@ -168,8 +168,8 @@ export default async function RequirementDetailPage({
       )}
 
       {tab === 'products' && (
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-          <table className="w-full text-left text-xs">
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-x-auto shadow-sm">
+          <table className="w-full min-w-[720px] text-left text-xs">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="p-3.5 font-semibold text-gray-500">Shortlisted Product</th>
@@ -199,8 +199,8 @@ export default async function RequirementDetailPage({
       )}
 
       {tab === 'quotations' && (
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-          <table className="w-full text-left text-xs">
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-x-auto shadow-sm">
+          <table className="w-full min-w-[720px] text-left text-xs">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="p-3.5 font-semibold text-gray-500">Quote #</th>

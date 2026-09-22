@@ -169,8 +169,8 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
           })}
         </div>
       ) : (
-        <div className="bg-white border border-[var(--color-border)] rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white border border-[var(--color-border)] rounded-lg overflow-x-auto">
+          <table className="w-full min-w-[720px] text-sm">
             <thead className="bg-[var(--color-muted)]">
               <tr>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-[var(--color-muted-fg)] uppercase tracking-wide">Company</th>

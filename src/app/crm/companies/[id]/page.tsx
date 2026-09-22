@@ -334,8 +334,8 @@ export default async function CompanyDetailPage({
             )}
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-            <table className="w-full text-xs">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto shadow-sm">
+            <table className="w-full min-w-[720px] text-xs">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="text-left px-4 py-3 font-semibold text-gray-500">Personalized Product</th>
@@ -406,8 +406,8 @@ export default async function CompanyDetailPage({
             </div>
             {profile.role === 'admin' && <PortalClientForm companyId={company.id} />}
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <table className="w-full text-xs">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+            <table className="w-full min-w-[640px] text-xs">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="text-left px-4 py-2.5 font-semibold text-gray-500">Name</th>
@@ -472,8 +472,8 @@ export default async function CompanyDetailPage({
             />
             <button className="bg-[#9C7A33] text-white rounded-lg font-semibold py-2">Add contact</button>
           </form>
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-xs">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+          <table className="w-full min-w-[640px] text-xs">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-4 py-2.5 font-semibold text-gray-500">Name</th>
@@ -501,8 +501,8 @@ export default async function CompanyDetailPage({
       )}
 
       {tab === 'leads' && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-xs">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+          <table className="w-full min-w-[640px] text-xs">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-4 py-2.5 font-semibold text-gray-500">Stage</th>
@@ -529,8 +529,8 @@ export default async function CompanyDetailPage({
       )}
 
       {tab === 'requirements' && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-xs">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+          <table className="w-full min-w-[640px] text-xs">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-4 py-2.5 font-semibold text-gray-500">Requirement Name</th>
@@ -561,8 +561,8 @@ export default async function CompanyDetailPage({
       )}
 
       {tab === 'quotations' && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-xs">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+          <table className="w-full min-w-[640px] text-xs">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-4 py-2.5 font-semibold text-gray-500">Quote #</th>
@@ -591,8 +591,8 @@ export default async function CompanyDetailPage({
       )}
 
       {tab === 'orders' && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-xs">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+          <table className="w-full min-w-[640px] text-xs">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-4 py-2.5 font-semibold text-gray-500">Order #</th>
@@ -693,8 +693,8 @@ export default async function CompanyDetailPage({
       )}
 
       {tab === 'invoices' && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-xs">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+          <table className="w-full min-w-[640px] text-xs">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-4 py-2.5 font-semibold text-gray-500">Invoice #</th>

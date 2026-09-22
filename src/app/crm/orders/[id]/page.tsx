@@ -256,8 +256,8 @@ export default async function OrderDetailPage({
             </div>
           ),
           products: (
-            <div className="bg-white rounded-2xl border overflow-hidden">
-              <table className="w-full text-left text-xs">
+            <div className="bg-white rounded-2xl border overflow-x-auto">
+              <table className="w-full min-w-[640px] text-left text-xs">
                 <thead className="bg-gray-50"><tr>
                   <th className="p-3">Item</th><th className="p-3 text-right">Qty</th><th className="p-3 text-right">Unit</th><th className="p-3 text-right">Total</th>
                 </tr></thead>

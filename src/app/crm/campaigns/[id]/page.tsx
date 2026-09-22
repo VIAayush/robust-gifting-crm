@@ -91,8 +91,8 @@ export default async function CampaignDetailPage({
         <button className="bg-[#9C7A33] text-white rounded-lg font-semibold">Add as draft offering</button>
       </form>
 
-      <div className="bg-white border rounded-2xl overflow-hidden">
-        <table className="w-full text-xs">
+      <div className="bg-white border rounded-2xl overflow-x-auto">
+        <table className="w-full min-w-[640px] text-xs">
           <thead className="bg-[#F5F7FA] text-left">
             <tr>
               <th className="p-3">Client offering</th>

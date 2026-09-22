@@ -95,7 +95,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             <span className="text-xs text-gray-400">{payments?.length || 0} recorded</span>
           </div>
 
-          <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[480px] text-left text-xs">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 <th className="p-3 font-semibold text-gray-500">Date</th>
@@ -122,6 +123,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               )}
             </tbody>
           </table>
+          </div>
         </div>
 
         {balanceDue > 0 && (

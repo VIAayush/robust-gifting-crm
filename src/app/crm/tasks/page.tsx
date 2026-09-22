@@ -154,8 +154,8 @@ export default async function TasksPage({
         ))}
       </div>
 
-      <div className="bg-white rounded-lg border overflow-hidden">
-        <table className="w-full text-left text-sm">
+      <div className="bg-white rounded-lg border overflow-x-auto">
+        <table className="w-full min-w-[780px] text-left text-sm">
           <thead>
             <tr className="border-b bg-gray-50 text-xs text-gray-500">
               <th className="p-3">Title</th>

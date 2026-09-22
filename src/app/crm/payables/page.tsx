@@ -12,8 +12,8 @@ export default async function PayablesPage() {
     <div>
       <h1 className="text-2xl font-bold text-[var(--color-primary)] mb-6">Accounts Payable</h1>
       
-      <div className="bg-[var(--color-surface)] rounded-lg border border-[var(--color-border)] overflow-hidden">
-        <table className="w-full text-left border-collapse">
+      <div className="bg-[var(--color-surface)] rounded-lg border border-[var(--color-border)] overflow-x-auto">
+        <table className="w-full min-w-[820px] text-left border-collapse">
           <thead>
             <tr className="border-b border-[var(--color-border)] bg-gray-50">
               <th className="p-3 font-medium text-sm text-[var(--color-text-secondary)]">Vendor Type</th>
