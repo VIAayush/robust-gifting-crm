@@ -1,4 +1,5 @@
 import type { PublicProduct } from '@/lib/catalogue/products'
+import { stableShuffleKey } from '@/lib/utils'
 
 const PRIORITY_CATEGORIES = [
   'Drinkware',
@@ -384,14 +385,18 @@ export function curateStoryProduct(products: PublicProduct[], usage: UsageSets =
 export function homeCategoryTiles<T extends { name: string }>(categories: T[], limit = 6) {
   const byName = new Map(categories.map((category) => [category.name, category]))
   const ordered = HOME_CATEGORY_TILES.map((name) => byName.get(name)).filter(Boolean) as T[]
-  if (ordered.length >= limit) return ordered.slice(0, limit)
-  for (const category of categories) {
-    if (ordered.some((item) => item.name === category.name)) continue
-    if (category.name === 'Watches' || category.name === 'Other') continue
-    ordered.push(category)
-    if (ordered.length >= limit) break
+  if (ordered.length < limit) {
+    for (const category of categories) {
+      if (ordered.some((item) => item.name === category.name)) continue
+      if (category.name === 'Watches' || category.name === 'Other') continue
+      ordered.push(category)
+      if (ordered.length >= limit) break
+    }
   }
-  return ordered.slice(0, limit)
+  const picked = ordered.slice(0, limit)
+  // Same preferred set every time, but shuffled (stably, by name) so the
+  // tile grid doesn't always open with the same 3 categories up top.
+  return [...picked].sort((a, b) => stableShuffleKey(a.name) - stableShuffleKey(b.name))
 }
 
 export function pickCategorySample(products: PublicProduct[], categoryId: string, categoryName?: string) {
