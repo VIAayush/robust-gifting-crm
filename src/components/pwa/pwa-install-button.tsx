@@ -120,6 +120,18 @@ export function PwaInstallButton({
               </p>
             </div>
           )}
+          {/* The instructions send the visitor off to Safari's own share sheet
+              (there's no API a site can call to finish an iOS install), so
+              this dialog has no "do it for me" action - but it still needs an
+              explicit, obvious way to close it. The small X in the corner is
+              easy to miss; this gives it a real button. */}
+          <button
+            type="button"
+            onClick={() => setHintOpen(false)}
+            className="mt-3 w-full rounded-sm bg-[#9C7A33] py-2 text-center text-[11px] font-semibold uppercase tracking-wider text-white transition-opacity hover:opacity-90"
+          >
+            Got it
+          </button>
         </div>
       ) : null}
     </div>
