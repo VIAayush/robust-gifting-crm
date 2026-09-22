@@ -55,7 +55,7 @@ const COLLECTION_TILE_PREFERRED: Record<string, string[]> = {
 }
 
 const CATEGORY_TILE_PREFERRED: Record<string, string[]> = {
-  Drinkware: ['Bamboo-lid glass bottle', 'Brushed steel vacuum flask', 'Ceramic travel mug with sleeve'],
+  Drinkware: ['RG-B143', 'Bamboo-lid glass bottle', 'Brushed steel vacuum flask', 'Ceramic travel mug with sleeve'],
   'Bags & Travel': [
     'RG-K101',
     'Compact nylon sling bag',
@@ -67,6 +67,7 @@ const CATEGORY_TILE_PREFERRED: Record<string, string[]> = {
   'Desk & Stationery': ['Pocket Notebook A6', 'Executive pen set', 'Marble pen cup', 'Softcover dotted journal'],
   Apparel: ['Oxford button-down shirt', 'Performance dri-fit polo', 'Quilted sleeveless gilet'],
   'Hampers & Gift Sets': [
+    'RG-K521',
     'Chocolate truffle tower',
     'Spa bath ritual set',
     'Tea tasting gift crate',
