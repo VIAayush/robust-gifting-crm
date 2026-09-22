@@ -123,6 +123,21 @@ export function isUuid(value: string | null | undefined): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
 }
 
+/**
+ * Deterministic pseudo-random sort key for an id string (FNV-1a hash).
+ * Sorting by this mixes a list into a stable "shuffled" order - the same
+ * input always yields the same order (so pagination and repeat page loads
+ * stay consistent), unlike Math.random() which would reorder every render.
+ */
+export function stableShuffleKey(id: string): number {
+  let hash = 0x811c9dc5
+  for (let i = 0; i < id.length; i++) {
+    hash ^= id.charCodeAt(i)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return hash >>> 0
+}
+
 export const INVOICE_STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
   issued: "Issued",

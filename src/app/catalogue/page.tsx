@@ -6,7 +6,7 @@ import { CatalogueBrowser } from '@/components/site/catalogue-browser'
 import { MobileCatalogueFilters } from '@/components/site/mobile-catalogue-filters'
 import { getPublicCatalogueProducts, getPublicCategories, sanitiseCatalogueSearch } from '@/lib/catalogue/products'
 import { BUDGET_BANDS } from '@/lib/catalogue/collections'
-import { isUuid } from '@/lib/utils'
+import { isUuid, stableShuffleKey } from '@/lib/utils'
 
 export const metadata: Metadata = {
   title: 'Catalogue',
@@ -59,7 +59,15 @@ export default async function CataloguePage({
     filtered = [...filtered].sort(
       (a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')) || a.name.localeCompare(b.name),
     )
-  } else filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name))
+  } else {
+    // Default browse order: alphabetical clustered near-identical names (many
+    // "Elastic Diary A5" etc back to back) so the grid read as repetitive
+    // instead of showing the catalogue's actual variety. A stable shuffle
+    // (seeded by product id, not Math.random) mixes categories together
+    // while still giving the same order on every request/page, so pagination
+    // and repeat visits don't jump around.
+    filtered = [...filtered].sort((a, b) => stableShuffleKey(a.id) - stableShuffleKey(b.id))
+  }
 
   const hrefFor = (overrides: Record<string, string>) => {
     const params = new URLSearchParams()
