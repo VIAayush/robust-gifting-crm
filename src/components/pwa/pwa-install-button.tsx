@@ -82,7 +82,13 @@ export function PwaInstallButton({
       </button>
 
       {hintOpen ? (
-        <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-md border border-[#E2E8F0] bg-white p-3 text-left text-xs leading-relaxed text-[#1B2430] shadow-lg">
+        // Anchored to the viewport (not the button) below `sm`: on mobile this
+        // button sits wherever it falls in the header row — sometimes well
+        // left of center, per the desktop-only nav — so a button-relative
+        // `right-0` popup can run off the opposite edge of a narrow screen.
+        // Pinned to safe insets there; back to normal button-relative
+        // positioning from `sm` up, where there's room for it either way.
+        <div className="fixed inset-x-4 top-16 z-50 rounded-md border border-[#E2E8F0] bg-white p-3 text-left text-xs leading-relaxed text-[#1B2430] shadow-lg sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-72">
           <div className="mb-2 flex items-start justify-between gap-2">
             <p className="font-medium">Install Robust Gifting</p>
             <button type="button" aria-label="Close" onClick={() => setHintOpen(false)} className="text-[#5C6570]">
