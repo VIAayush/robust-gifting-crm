@@ -98,6 +98,24 @@ async function loadVariantColoursByProduct(client: SupabaseClient, productIds: s
   return byProduct
 }
 
+/**
+ * A product missing its price, category, photo, or name isn't fit to show a
+ * customer — a ₹0 or imageless card is either an incomplete import or a bug,
+ * never something intentional to sell. This is the single gate every public
+ * listing/detail fetch below goes through, so a bad row can never reach the
+ * storefront regardless of how it got into `products`.
+ */
+function isCatalogueReady(row: {
+  name: string | null
+  price: number | null
+  image_url: string | null
+  category?: Named | Named[] | null
+}): boolean {
+  return Boolean(
+    row.name?.trim() && row.price !== null && row.price > 0 && row.image_url?.trim() && oneRelation(row.category)?.name,
+  )
+}
+
 export async function getPublicCatalogueProducts(): Promise<PublicProduct[]> {
   const client = await publicDbClient()
   if (!client) return []
@@ -111,8 +129,9 @@ export async function getPublicCatalogueProducts(): Promise<PublicProduct[]> {
     console.error('[catalogue] public products fetch failed:', error?.message || 'no data')
     return []
   }
-  const coloursByProduct = await loadVariantColoursByProduct(client, data.map((p) => p.id))
-  return data.map((row) => toPublicProduct(row, coloursByProduct.get(row.id) || []))
+  const ready = data.filter(isCatalogueReady)
+  const coloursByProduct = await loadVariantColoursByProduct(client, ready.map((p) => p.id))
+  return ready.map((row) => toPublicProduct(row, coloursByProduct.get(row.id) || []))
 }
 
 export async function getPublicProduct(id: string): Promise<PublicProduct | null> {
@@ -125,7 +144,7 @@ export async function getPublicProduct(id: string): Promise<PublicProduct | null
     .eq('status', 'active')
     .eq('catalogue_access', 'all')
     .maybeSingle()
-  if (error || !data) return null
+  if (error || !data || !isCatalogueReady(data)) return null
   const coloursByProduct = await loadVariantColoursByProduct(client, [data.id])
   return toPublicProduct(data, coloursByProduct.get(data.id) || [])
 }
@@ -141,7 +160,7 @@ export async function getPublicProductWithVariants(id: string): Promise<PublicPr
     .eq('status', 'active')
     .eq('catalogue_access', 'all')
     .maybeSingle()
-  if (error || !data) return null
+  if (error || !data || !isCatalogueReady(data)) return null
 
   const [{ data: variantRows }, { data: imageRows }] = await Promise.all([
     client.from('product_variants').select('id, colour, display_name').eq('product_id', id).eq('status', 'active').order('sort_order'),
