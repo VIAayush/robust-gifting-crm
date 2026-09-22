@@ -46,7 +46,7 @@ const OCCASION_TILE_PREFERRED = [
 
 /** Distinct preferred products per collection — no shared names across slugs. */
 const COLLECTION_TILE_PREFERRED: Record<string, string[]> = {
-  'executive-edit': ['Softshell bodywarmer', 'Quilted sleeveless gilet', 'Crystal recognition trophy'],
+  'executive-edit': ['RG-C106', 'Softshell bodywarmer', 'Quilted sleeveless gilet', 'Crystal recognition trophy'],
   'new-joiner-essentials': ['Branded mug welcome set', 'New-hire stationery bundle', 'Onboarding planner kit'],
   'client-appreciation': ['Chocolate truffle tower', 'Spa bath ritual set', 'Herbal wellness tea set'],
   'festival-gifting': ['Festive corporate hamper crate', 'Nuts and honey jar set', 'Tea tasting gift crate'],
