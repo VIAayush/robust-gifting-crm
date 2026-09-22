@@ -64,7 +64,7 @@ const CATEGORY_TILE_PREFERRED: Record<string, string[]> = {
     'Crossbody tablet bag',
   ],
   'Tech & Electronics': ['Slim graphite power bank', 'Aluminium laptop stand', 'USB LED desk lamp'],
-  'Desk & Stationery': ['Executive pen set', 'Marble pen cup', 'Softcover dotted journal'],
+  'Desk & Stationery': ['Pocket Notebook A6', 'Executive pen set', 'Marble pen cup', 'Softcover dotted journal'],
   Apparel: ['Oxford button-down shirt', 'Performance dri-fit polo', 'Quilted sleeveless gilet'],
   'Hampers & Gift Sets': [
     'Chocolate truffle tower',
