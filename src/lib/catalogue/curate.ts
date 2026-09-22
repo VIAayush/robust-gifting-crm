@@ -57,6 +57,7 @@ const COLLECTION_TILE_PREFERRED: Record<string, string[]> = {
 const CATEGORY_TILE_PREFERRED: Record<string, string[]> = {
   Drinkware: ['Bamboo-lid glass bottle', 'Brushed steel vacuum flask', 'Ceramic travel mug with sleeve'],
   'Bags & Travel': [
+    'RG-K101',
     'Compact nylon sling bag',
     'Foldable packable backpack',
     'Expandable toiletry kit',
