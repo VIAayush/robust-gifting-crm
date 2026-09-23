@@ -227,3 +227,13 @@ export function productsInCollection(products: PublicProduct[], slug: string) {
 export function categorySlug(name: string) {
   return slugify(name)
 }
+
+/** Resolves an occasion tile (from CATALOGUE_OCCASIONS/PERSONAL_OCCASIONS) to its real matching products. */
+export function productsForOccasion(
+  products: PublicProduct[],
+  occasion: { href: string },
+): PublicProduct[] {
+  const prefix = '/collections/'
+  if (!occasion.href.startsWith(prefix)) return []
+  return productsInCollection(products, occasion.href.slice(prefix.length))
+}

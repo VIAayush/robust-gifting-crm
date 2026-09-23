@@ -11,6 +11,7 @@ export function QuoteForm({
   portalHref,
   showContext = true,
   onSuccess,
+  defaultQuantity,
 }: {
   productId?: string
   productName?: string
@@ -20,6 +21,8 @@ export function QuoteForm({
   /** Off when the surrounding UI (e.g. the modal header) already names the product. */
   showContext?: boolean
   onSuccess?: () => void
+  /** Pre-fills the quantity field, e.g. from the bulk order estimator. */
+  defaultQuantity?: number
 }) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -96,7 +99,7 @@ export function QuoteForm({
       </label>
       <label className="block">
         <span className={label}>Estimated quantity</span>
-        <input name="quantity" className={field} />
+        <input name="quantity" defaultValue={defaultQuantity} className={field} />
       </label>
       <label className="block">
         <span className={label}>Tell us about the occasion</span>

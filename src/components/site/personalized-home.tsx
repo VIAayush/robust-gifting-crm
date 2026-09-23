@@ -6,8 +6,9 @@ import { SiteProductCard } from '@/components/site/site-product-card'
 import { HeroStage } from '@/components/site/hero-stage'
 import { ProductRail } from '@/components/site/product-rail'
 import { Reveal } from '@/components/site/reveal'
+import { GiftFinder } from '@/components/site/gift-finder'
 import { slugify } from '@/lib/utils'
-import { BUDGET_BANDS, CATALOGUE_COLLECTIONS, PERSONAL_OCCASIONS } from '@/lib/catalogue/collections'
+import { BUDGET_BANDS, CATALOGUE_COLLECTIONS, PERSONAL_OCCASIONS, productsForOccasion } from '@/lib/catalogue/collections'
 import { getPublicCatalogueProducts, getPublicCategories } from '@/lib/catalogue/products'
 import { curatePublicHome, homeCategoryTiles } from '@/lib/catalogue/curate'
 
@@ -71,6 +72,12 @@ export async function PersonalizedHome() {
   const occasionVisuals = PERSONAL_OCCASIONS.map((occasion) => ({
     ...occasion,
     sample: occasionSamples.get(occasion.slug) || null,
+  }))
+
+  const giftFinderOccasions = PERSONAL_OCCASIONS.map((occasion) => ({
+    slug: occasion.slug,
+    title: occasion.title,
+    products: productsForOccasion(products, occasion),
   }))
 
   return (
@@ -190,6 +197,21 @@ export async function PersonalizedHome() {
               )
             })}
           </div>
+        </div>
+      </section>
+
+      {/* Gift finder */}
+      <section className="bg-white py-10 sm:py-14 lg:py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <Reveal>
+            <GiftFinder
+              occasions={giftFinderOccasions}
+              hrefBase="/personalized/product"
+              eyebrow="Instant Matcher"
+              title="Find the Perfect Gift in Seconds"
+              description="Pick an occasion and set a budget to see matching gifts they'll love."
+            />
+          </Reveal>
         </div>
       </section>
 

@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation'
 import { SiteShell } from '@/components/site/site-shell'
 import { ProductDetailProvider, ProductGallerySlot, ColorSelectorSlot, QuoteButtonSlot } from '@/components/site/product-detail-view'
 import { WishlistHeartButton } from '@/components/site/wishlist-heart-button'
+import { BulkOrderEstimator } from '@/components/site/bulk-order-estimator'
+import { BrandingPreviewer } from '@/components/site/branding-previewer'
 import { formatCurrency, formatUnits, isUuid } from '@/lib/utils'
 import { getPublicProductWithVariants } from '@/lib/catalogue/products'
 
@@ -86,6 +88,16 @@ export default async function PublicProductPage({ params }: Props) {
               >
                 Back to catalogue
               </Link>
+            </div>
+
+            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <BulkOrderEstimator
+                productId={product.id}
+                productName={product.name}
+                price={product.price}
+                moq={product.moq ?? 1}
+              />
+              <BrandingPreviewer imageUrl={product.image_url} productName={product.name} />
             </div>
           </div>
         </article>

@@ -6,11 +6,13 @@ import { SiteProductCard } from '@/components/site/site-product-card'
 import { HeroStage } from '@/components/site/hero-stage'
 import { ProductRail } from '@/components/site/product-rail'
 import { Reveal } from '@/components/site/reveal'
+import { GiftFinder } from '@/components/site/gift-finder'
 import { slugify } from '@/lib/utils'
 import {
   BUDGET_BANDS,
   CATALOGUE_COLLECTIONS,
   CATALOGUE_OCCASIONS,
+  productsForOccasion,
 } from '@/lib/catalogue/collections'
 import { getPublicCatalogueProducts, getPublicCategories } from '@/lib/catalogue/products'
 import { curatePublicHome, homeCategoryTiles } from '@/lib/catalogue/curate'
@@ -65,6 +67,12 @@ export async function PublicHome() {
   const occasionVisuals = CATALOGUE_OCCASIONS.map((occasion) => ({
     ...occasion,
     sample: occasionSamples.get(occasion.slug) || null,
+  }))
+
+  const giftFinderOccasions = CATALOGUE_OCCASIONS.map((occasion) => ({
+    slug: occasion.slug,
+    title: occasion.title,
+    products: productsForOccasion(products, occasion),
   }))
 
   return (
@@ -251,6 +259,21 @@ export async function PublicHome() {
               </Reveal>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Gift finder */}
+      <section className="bg-white py-10 sm:py-14 lg:py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <Reveal>
+            <GiftFinder
+              occasions={giftFinderOccasions}
+              hrefBase="/catalogue"
+              eyebrow="Instant Matcher"
+              title="Find the Right Gift in Seconds"
+              description="Pick an occasion and set a budget to see matching gifts from the live catalogue."
+            />
+          </Reveal>
         </div>
       </section>
 
