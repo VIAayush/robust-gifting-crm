@@ -284,7 +284,7 @@ export default async function CompanyDetailPage({
             </button>
           </form>
         ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
           <div className="bg-white p-6 rounded-xl border border-gray-200 text-xs space-y-3">
             <h2 className="font-bold text-sm text-gray-900 pb-2 border-b">Company Information</h2>
             <div><span className="font-semibold text-gray-500 w-24 inline-block">Owner:</span> {(company.owner as any)?.full_name || '—'}</div>

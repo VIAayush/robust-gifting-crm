@@ -236,7 +236,7 @@ export default async function OrderDetailPage({
         initialTab={tabs.includes(tab) ? tab : 'details'}
         panels={{
           details: (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
               <div className="bg-white p-6 rounded-2xl border text-xs space-y-3">
                 <h3 className="font-bold text-sm pb-2 border-b">Fulfillment</h3>
                 <div>PO: {order.po_number || '—'}</div>

@@ -136,7 +136,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
         <div className="bg-white p-5 rounded-xl border border-gray-200 text-xs space-y-2.5">
           <h3 className="font-bold text-gray-900 pb-2 border-b">Client Details</h3>
           <div><span className="text-gray-500 w-20 inline-block">Company:</span> <span className="font-semibold text-gray-900">{company?.name}</span></div>
