@@ -2,30 +2,36 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { SiteShell } from '@/components/site/site-shell'
-import { ProductDetailProvider, ProductGallerySlot, ColorSelectorSlot, QuoteButtonSlot } from '@/components/site/product-detail-view'
+import { ProductDetailProvider, ProductGallerySlot, ColorSelectorSlot } from '@/components/site/product-detail-view'
 import { WishlistHeartButton } from '@/components/site/wishlist-heart-button'
-import { formatCurrency, formatUnits, isUuid } from '@/lib/utils'
+import { AddToCartControl } from '@/components/site/add-to-cart-control'
+import { formatCurrency, isUuid } from '@/lib/utils'
 import { getPublicProductWithVariants } from '@/lib/catalogue/products'
 
 type Props = { params: Promise<{ id: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
-  if (!isUuid(id)) return { title: 'Product' }
+  if (!isUuid(id)) return { title: 'Gift' }
   const product = await getPublicProductWithVariants(id)
-  if (!product) return { title: 'Product' }
+  if (!product) return { title: 'Gift' }
   return {
-    title: product.name,
-    description: product.description || `${product.name} — Robust Gifting corporate gifting catalogue.`,
+    title: `${product.name} — Personalized Gifts`,
+    description: product.description || `${product.name} — a personalized gift from Robust Gifting.`,
     openGraph: {
       title: `${product.name} · Robust Gifting`,
-      description: product.description || 'Corporate gifting from Robust Gifting.',
+      description: product.description || 'Personalized gifts from Robust Gifting.',
       images: product.image_url ? [{ url: product.image_url }] : undefined,
     },
   }
 }
 
-export default async function PublicProductPage({ params }: Props) {
+/**
+ * The personalized (B2C) counterpart to /catalogue/[id] — same product data,
+ * but Add to Cart + Wishlist instead of Request a Quote, and no quantity
+ * selector here (that lives on /cart once the item is already in it).
+ */
+export default async function PersonalizedProductPage({ params }: Props) {
   const { id } = await params
   if (!isUuid(id)) notFound()
   const product = await getPublicProductWithVariants(id)
@@ -45,11 +51,9 @@ export default async function PublicProductPage({ params }: Props) {
             <h1 className="mt-3 font-serif text-3xl tracking-tight sm:text-4xl lg:text-5xl">{product.name}</h1>
             {product.brand_name ? <p className="mt-3 text-sm text-[#5C6570]">{product.brand_name}</p> : null}
             <p className="mt-6 text-2xl font-semibold text-[#9C7A33]">{formatCurrency(product.price)}</p>
-            <p className="mt-2 text-xs text-[#5C6570]">Minimum order {formatUnits(product.moq ?? 1)}</p>
 
             <p className="mt-8 max-w-md text-sm leading-relaxed text-[#5C6570]">
-              {product.description ||
-                'Share a requirement and we will prepare a quotation with branding and packaging options.'}
+              {product.description || 'A thoughtful gift, ready to send.'}
             </p>
 
             {product.variants.length > 1 && (
@@ -61,12 +65,23 @@ export default async function PublicProductPage({ params }: Props) {
             <dl className="mt-10 space-y-3 text-sm">
               <div className="flex justify-between border-b border-[#E2E8F0] py-2">
                 <dt className="text-[#5C6570]">Availability</dt>
-                <dd className="capitalize">{product.status === 'active' ? 'Available to quote' : product.status}</dd>
+                <dd className="capitalize">{product.status === 'active' ? 'In stock' : product.status}</dd>
               </div>
             </dl>
 
             <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:items-center sm:gap-4">
-              <QuoteButtonSlot productId={product.id} productSku={product.sku} />
+              <div className="sm:max-w-xs sm:flex-1">
+                <AddToCartControl
+                  product={{
+                    id: product.id,
+                    sku: product.sku,
+                    name: product.name,
+                    price: product.price,
+                    image_url: product.image_url,
+                    category_name: product.category_name,
+                  }}
+                />
+              </div>
               <div className="sm:w-48">
                 <WishlistHeartButton
                   variant="detail"
@@ -80,13 +95,13 @@ export default async function PublicProductPage({ params }: Props) {
                   }}
                 />
               </div>
-              <Link
-                href="/catalogue"
-                className="inline-flex justify-center py-2 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9C7A33]"
-              >
-                Back to catalogue
-              </Link>
             </div>
+            <Link
+              href="/personalized"
+              className="mt-4 inline-flex justify-center py-2 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9C7A33]"
+            >
+              Back to Personalized Gifts
+            </Link>
           </div>
         </article>
       </ProductDetailProvider>

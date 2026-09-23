@@ -10,7 +10,7 @@ import type { PublicProduct } from '@/lib/catalogue/products'
 
 const VIEW_KEY = 'giffter.public-catalogue.view'
 
-export function CatalogueBrowser({ products }: { products: PublicProduct[] }) {
+export function CatalogueBrowser({ products, hrefBase = '/catalogue' }: { products: PublicProduct[]; hrefBase?: string }) {
   const [view, setView] = useState<'grid' | 'list'>('grid')
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export function CatalogueBrowser({ products }: { products: PublicProduct[] }) {
       {view === 'grid' ? (
         <div className="grid grid-cols-2 gap-x-3 gap-y-7 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-3 xl:grid-cols-4">
           {products.map((product) => (
-            <SiteProductCard key={product.id} product={product} />
+            <SiteProductCard key={product.id} product={product} hrefBase={hrefBase} />
           ))}
         </div>
       ) : (
@@ -73,7 +73,7 @@ export function CatalogueBrowser({ products }: { products: PublicProduct[] }) {
           {products.map((product) => (
             <Link
               key={product.id}
-              href={`/catalogue/${product.id}`}
+              href={`${hrefBase}/${product.id}`}
               className="grid grid-cols-[5rem_1fr_auto] items-center gap-4 py-4 text-inherit hover:text-inherit sm:grid-cols-[6.5rem_1fr_auto] sm:gap-5"
             >
               <div className="relative aspect-square overflow-hidden rounded-md catalogue-studio-field">

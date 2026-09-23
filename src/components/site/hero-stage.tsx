@@ -49,8 +49,20 @@ function preloadImages(urls: string[], timeoutMs = 1200): Promise<void> {
 
 export function HeroStage({
   products,
+  headlineLines = ['Corporate gifting,', 'designed to be remembered.'],
+  subtext = 'Hand-picked gifts for teams, clients and brands — ready to quote and fulfil.',
+  primaryCta = { href: '/catalogue', label: 'Explore Catalogue' },
+  secondaryCta = { href: '/request-quote', label: 'Request a Quote' },
+  productHrefBase = '/catalogue',
 }: {
   products: PublicProduct[]
+  /** Defaults reproduce the corporate homepage copy exactly — pass different lines for other gift modes (e.g. /personalized). */
+  headlineLines?: [string, string]
+  subtext?: string
+  primaryCta?: { href: string; label: string }
+  secondaryCta?: { href: string; label: string }
+  /** Which product-detail route the floating product tiles link to. */
+  productHrefBase?: string
 }) {
   const pool = useMemo(
     () => products.filter((product) => Boolean(product.image_url?.trim())),
@@ -139,27 +151,27 @@ export function HeroStage({
         <div>
           <h1 className="max-w-2xl font-serif leading-[1.2] tracking-tight">
             <span className="block text-[1.75rem] font-semibold italic text-[#F1F4F9] sm:text-[2.1rem] lg:text-[2.5rem] xl:text-[3.3rem]">
-              Corporate gifting,
+              {headlineLines[0]}
             </span>
             <span className="mt-1 block text-[1.75rem] font-semibold italic text-[#F1F4F9] sm:mt-2 sm:text-[2.1rem] lg:text-[2.5rem] xl:text-[3.3rem]">
-              designed to be remembered.
+              {headlineLines[1]}
             </span>
           </h1>
           <p className="mt-5 max-w-md text-sm leading-relaxed text-white/80 sm:mt-6 sm:text-base">
-            Hand-picked gifts for teams, clients and brands — ready to quote and fulfil.
+            {subtext}
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap">
             <Link
-              href="/catalogue"
+              href={primaryCta.href}
               className="inline-flex items-center justify-center bg-gradient-to-br from-[#D9BC7A] via-[#9C7A33] to-[#7C6224] px-6 py-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0D1B2A] shadow-[0_4px_14px_rgba(201,168,76,0.35)] sm:py-3"
             >
-              Explore Catalogue
+              {primaryCta.label}
             </Link>
             <Link
-              href="/request-quote"
+              href={secondaryCta.href}
               className="inline-flex items-center justify-center border border-white/40 px-6 py-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white hover:bg-white/10 sm:py-3"
             >
-              Request a Quote
+              {secondaryCta.label}
             </Link>
           </div>
         </div>
@@ -171,7 +183,7 @@ export function HeroStage({
               {mobilePreview.map((product) => (
                 <Link
                   key={product.id}
-                  href={`/catalogue/${product.id}`}
+                  href={`${productHrefBase}/${product.id}`}
                   className="w-[42vw] max-w-[11.5rem] shrink-0 overflow-hidden rounded-md bg-white shadow-[0_10px_28px_rgba(0,0,0,0.22)]"
                 >
                   <div className="relative aspect-square catalogue-studio-field">
@@ -202,7 +214,7 @@ export function HeroStage({
           {floats.map((product, index) => (
             <Link
               key={`slot-${index}`}
-              href={`/catalogue/${product.id}`}
+              href={`${productHrefBase}/${product.id}`}
               className="overflow-hidden rounded-md bg-white shadow-[0_16px_40px_rgba(0,0,0,0.28)]"
             >
               <div className={`transition-opacity duration-700 ease-in-out ${contentClass}`}>

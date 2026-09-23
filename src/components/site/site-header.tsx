@@ -7,6 +7,10 @@ import { useRouter } from 'next/navigation'
 import { Menu, Search, User, X } from 'lucide-react'
 import { BrandName } from '@/components/brand/brand-name'
 import { PwaInstallButton } from '@/components/pwa/pwa-install-button'
+import { GiftModeToggle } from '@/components/site/gift-mode-toggle'
+import { WishlistHeaderLink } from '@/components/site/wishlist-header-link'
+import { CartHeaderLink } from '@/components/site/cart-header-link'
+import { useGiftMode } from '@/components/site/use-gift-mode'
 
 const PRIMARY_NAV = [
   { href: '/about', label: 'About' },
@@ -35,6 +39,8 @@ export function SiteHeader({
   categoryLinks?: { href: string; label: string }[]
 }) {
   const router = useRouter()
+  const mode = useGiftMode()
+  const isPersonalized = mode === 'personalized'
   const [open, setOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -84,6 +90,13 @@ export function SiteHeader({
 
   return (
     <header className="sticky top-0 z-40">
+      {/* Gift mode: Personalized (B2C) vs Corporate (B2B) */}
+      <div className="border-b border-[#E2E8F0] bg-[#FBF8F2] px-4 py-2 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <GiftModeToggle />
+        </div>
+      </div>
+
       {/* Desktop utility bar */}
       <div className="hidden bg-[#0D1B2A] text-white lg:block">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-2.5 lg:px-8">
@@ -123,6 +136,8 @@ export function SiteHeader({
               <BrandName />
             </Link>
             <PwaInstallButton variant="dark" />
+            <WishlistHeaderLink variant="dark" />
+            {isPersonalized ? <CartHeaderLink variant="dark" /> : null}
             {workspaceHref && workspaceLabel ? (
               <Link href={workspaceHref} className="inline-flex items-center gap-1.5 text-xs text-white/90">
                 <User size={14} />
@@ -134,12 +149,14 @@ export function SiteHeader({
                 Account
               </Link>
             )}
-            <Link
-              href="/request-quote"
-              className="rounded-sm bg-white px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9C7A33]"
-            >
-              Quote
-            </Link>
+            {isPersonalized ? null : (
+              <Link
+                href="/request-quote"
+                className="rounded-sm bg-white px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9C7A33]"
+              >
+                Quote
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -259,12 +276,30 @@ export function SiteHeader({
                 </Link>
               ))}
               <Link
-                href="/request-quote"
+                href="/wishlist"
                 onClick={() => setOpen(false)}
-                className="mt-6 inline-flex items-center justify-center bg-[#9C7A33] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white"
+                className="border-b border-[#EEF1F6] py-3.5 text-base text-[#1B2430]"
               >
-                Request a Quote
+                Wishlist
               </Link>
+              {isPersonalized ? (
+                <Link
+                  href="/cart"
+                  onClick={() => setOpen(false)}
+                  className="border-b border-[#EEF1F6] py-3.5 text-base text-[#1B2430]"
+                >
+                  Cart
+                </Link>
+              ) : null}
+              {isPersonalized ? null : (
+                <Link
+                  href="/request-quote"
+                  onClick={() => setOpen(false)}
+                  className="mt-6 inline-flex items-center justify-center bg-[#9C7A33] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white"
+                >
+                  Request a Quote
+                </Link>
+              )}
               {workspaceHref && workspaceLabel ? (
                 <Link
                   href={workspaceHref}

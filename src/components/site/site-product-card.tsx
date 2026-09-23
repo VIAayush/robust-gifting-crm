@@ -4,6 +4,7 @@ import { formatCurrency } from '@/lib/utils'
 import type { PublicProduct } from '@/lib/catalogue/products'
 import { swatchHex } from '@/lib/products/colours'
 import { cn } from '@/lib/utils'
+import { WishlistHeartButton } from '@/components/site/wishlist-heart-button'
 
 /**
  * Retail product tile inspired by craft storefronts:
@@ -12,14 +13,17 @@ import { cn } from '@/lib/utils'
 export function SiteProductCard({
   product,
   featured = false,
+  hrefBase = '/catalogue',
 }: {
   product: PublicProduct
   featured?: boolean
   showBadge?: boolean
+  /** Which product-detail route to link to — defaults to the corporate /catalogue page. */
+  hrefBase?: string
 }) {
   return (
     <Link
-      href={`/catalogue/${product.id}`}
+      href={`${hrefBase}/${product.id}`}
       className="group block text-inherit hover:text-inherit"
     >
       <div
@@ -37,6 +41,16 @@ export function SiteProductCard({
           fadeEdges
           className="absolute inset-0 h-full w-full bg-transparent"
           imgClassName="catalogue-product-img scale-[1.03]"
+        />
+        <WishlistHeartButton
+          product={{
+            id: product.id,
+            sku: product.sku,
+            name: product.name,
+            price: product.price,
+            image_url: product.image_url,
+            category_name: product.category_name,
+          }}
         />
       </div>
 

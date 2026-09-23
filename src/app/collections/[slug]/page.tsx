@@ -4,6 +4,8 @@ import { SiteShell } from '@/components/site/site-shell'
 import { CatalogueBrowser } from '@/components/site/catalogue-browser'
 import { collectionBySlug, productsInCollection } from '@/lib/catalogue/collections'
 import { getPublicCatalogueProducts } from '@/lib/catalogue/products'
+import { getGiftMode } from '@/lib/site/gift-mode-server'
+import { productHrefBase } from '@/lib/site/gift-mode'
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -20,7 +22,8 @@ export default async function CollectionDetailPage({ params }: Props) {
   const { slug } = await params
   const collection = collectionBySlug(slug)
   if (!collection) notFound()
-  const products = productsInCollection(await getPublicCatalogueProducts(), slug)
+  const [allProducts, mode] = await Promise.all([getPublicCatalogueProducts(), getGiftMode()])
+  const products = productsInCollection(allProducts, slug)
 
   return (
     <SiteShell>
@@ -32,7 +35,7 @@ export default async function CollectionDetailPage({ params }: Props) {
         </div>
       </div>
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <CatalogueBrowser products={products} />
+        <CatalogueBrowser products={products} hrefBase={productHrefBase(mode)} />
       </div>
     </SiteShell>
   )

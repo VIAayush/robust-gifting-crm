@@ -7,6 +7,8 @@ import { MobileCatalogueFilters } from '@/components/site/mobile-catalogue-filte
 import { getPublicCatalogueProducts, getPublicCategories, sanitiseCatalogueSearch } from '@/lib/catalogue/products'
 import { BUDGET_BANDS } from '@/lib/catalogue/collections'
 import { isUuid, stableShuffleKey } from '@/lib/utils'
+import { getGiftMode } from '@/lib/site/gift-mode-server'
+import { productHrefBase } from '@/lib/site/gift-mode'
 
 export const metadata: Metadata = {
   title: 'Catalogue',
@@ -28,7 +30,7 @@ export default async function CataloguePage({
 }) {
   const { q = '', category = '', budget = '', sort = 'name' } = await searchParams
   const search = sanitiseCatalogueSearch(q)
-  const [products, categories] = await Promise.all([getPublicCatalogueProducts(), getPublicCategories()])
+  const [products, categories, mode] = await Promise.all([getPublicCatalogueProducts(), getPublicCategories(), getGiftMode()])
   const categoryFilter = isUuid(category) ? category : ''
   const budgetFilter = parseBudget(budget)
 
@@ -250,7 +252,7 @@ export default async function CataloguePage({
             />
 
             <div className="mt-8">
-              <CatalogueBrowser products={filtered} />
+              <CatalogueBrowser products={filtered} hrefBase={productHrefBase(mode)} />
             </div>
           </div>
         </div>

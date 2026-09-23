@@ -90,6 +90,46 @@ export const CATALOGUE_COLLECTIONS: CatalogueCollection[] = [
     description: 'Smart products for modern teams.',
     match: (product) => product.category_name === 'Tech & Electronics',
   },
+  // Personal-gifting collections — power the /personalized (B2C) rail, reusing the
+  // same catalogue data and the existing /collections/[slug] page, just filtered
+  // for individual occasions instead of corporate programmes.
+  {
+    slug: 'birthday-gifts',
+    title: 'Birthday Gifts',
+    kicker: 'Personalized',
+    description: 'Something they will actually want to unwrap.',
+    match: (product) =>
+      ['Hampers & Gift Sets', 'Wellness', 'Home & Lifestyle'].includes(product.category_name || ''),
+  },
+  {
+    slug: 'anniversary-gifts',
+    title: 'Anniversary Gifts',
+    kicker: 'Personalized',
+    description: 'Keepsakes for the people who matter most.',
+    match: (product) =>
+      ['Home & Lifestyle', 'Hampers & Gift Sets', 'Awards & Recognition'].includes(product.category_name || ''),
+  },
+  {
+    slug: 'housewarming-gifts',
+    title: 'Housewarming Gifts',
+    kicker: 'Personalized',
+    description: 'A warm welcome to a new home.',
+    match: (product) => ['Home & Lifestyle', 'Hampers & Gift Sets'].includes(product.category_name || ''),
+  },
+  {
+    slug: 'thank-you-gifts',
+    title: 'Thank You Gifts',
+    kicker: 'Personalized',
+    description: 'A thoughtful way to say thanks.',
+    match: (product) => ['Hampers & Gift Sets', 'Eco-Friendly Gifts'].includes(product.category_name || ''),
+  },
+  {
+    slug: 'self-care-gifts',
+    title: 'Self-Care & Wellness',
+    kicker: 'Personalized',
+    description: 'A little pause, thoughtfully packaged.',
+    match: (product) => ['Wellness', 'Home & Lifestyle'].includes(product.category_name || ''),
+  },
 ]
 
 /** Occasion discovery maps to existing categories/collections — no fabricated occasion field. */
@@ -129,6 +169,40 @@ export const CATALOGUE_OCCASIONS = [
     title: 'Work Anniversary',
     line: 'Milestone gifts for tenure and loyalty',
     href: '/collections/executive-edit',
+  },
+]
+
+/** Occasion tiles for the /personalized (B2C) rail — same pattern as CATALOGUE_OCCASIONS. */
+export const PERSONAL_OCCASIONS = [
+  {
+    slug: 'birthday',
+    title: 'Birthday Gifts',
+    line: 'Something they will actually want to unwrap',
+    href: '/collections/birthday-gifts',
+  },
+  {
+    slug: 'anniversary',
+    title: 'Anniversary Gifts',
+    line: 'Keepsakes for the people who matter most',
+    href: '/collections/anniversary-gifts',
+  },
+  {
+    slug: 'housewarming',
+    title: 'Housewarming Gifts',
+    line: 'A warm welcome to a new home',
+    href: '/collections/housewarming-gifts',
+  },
+  {
+    slug: 'thank-you',
+    title: 'Thank You Gifts',
+    line: 'A thoughtful way to say thanks',
+    href: '/collections/thank-you-gifts',
+  },
+  {
+    slug: 'self-care',
+    title: 'Self-Care & Wellness',
+    line: 'A little pause, thoughtfully packaged',
+    href: '/collections/self-care-gifts',
   },
 ]
 

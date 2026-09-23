@@ -3,7 +3,7 @@
 import { SiteProductCard } from '@/components/site/site-product-card'
 import type { PublicProduct } from '@/lib/catalogue/products'
 
-export function ProductRail({ products }: { products: PublicProduct[] }) {
+export function ProductRail({ products, hrefBase }: { products: PublicProduct[]; hrefBase?: string }) {
   if (!products.length) return null
 
   return (
@@ -11,7 +11,7 @@ export function ProductRail({ products }: { products: PublicProduct[] }) {
       <div className="flex w-max gap-3 sm:gap-5">
         {products.map((product) => (
           <div key={product.id} className="w-[40vw] max-w-[200px] shrink-0 sm:w-[200px] lg:w-[210px]">
-            <SiteProductCard product={product} />
+            <SiteProductCard product={product} hrefBase={hrefBase} />
           </div>
         ))}
       </div>
