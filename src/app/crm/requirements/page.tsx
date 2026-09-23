@@ -52,9 +52,9 @@ export default async function RequirementsPage(props: { searchParams: Promise<{ 
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-[var(--color-primary)]">Requirements</h1>
-        <button className="bg-[var(--color-primary)] text-white hover:text-white px-4 py-2 rounded-md hover:opacity-90">
+        <Link href="/crm/requirements/new" className="bg-[var(--color-primary)] text-white hover:text-white px-4 py-2 rounded-md hover:opacity-90">
           Add Requirement
-        </button>
+        </Link>
       </div>
 
       <div className="mb-6 md:hidden">
