@@ -96,7 +96,7 @@ export default async function PublicProductPage({ params }: Props) {
             </div>
           </div>
 
-          <div className="mt-10 grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:mt-14">
+          <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:mt-14">
             <BulkOrderEstimator
               productId={product.id}
               productName={product.name}

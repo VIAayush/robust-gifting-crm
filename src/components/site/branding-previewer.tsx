@@ -35,7 +35,7 @@ export function BrandingPreviewer({ imageUrl, productName }: { imageUrl: string 
     <div className="rounded-xl border border-[#E2E8F0] bg-white p-4">
       <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#1B2430]">Preview your branding</p>
 
-      <div className="relative mt-3 aspect-square w-full overflow-hidden rounded-lg catalogue-studio-field">
+      <div className="relative mx-auto mt-3 aspect-square w-full max-w-[220px] overflow-hidden rounded-lg catalogue-studio-field">
         <ProductImage
           src={imageUrl}
           alt={productName}
