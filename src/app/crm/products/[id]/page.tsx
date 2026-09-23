@@ -217,7 +217,7 @@ export default async function ProductDetailPage({
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Retail (?)</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Retail (₹)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -229,7 +229,7 @@ export default async function ProductDetailPage({
               </div>
               {showCost && (
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Cost (?)</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Cost (₹)</label>
                 <input
                   type="number"
                   step="0.01"

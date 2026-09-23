@@ -287,10 +287,10 @@ export default async function CompanyDetailPage({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white p-6 rounded-xl border border-gray-200 text-xs space-y-3">
             <h2 className="font-bold text-sm text-gray-900 pb-2 border-b">Company Information</h2>
-            <div><span className="font-semibold text-gray-500 w-24 inline-block">Owner:</span> {(company.owner as any)?.full_name || '?'}</div>
-            <div><span className="font-semibold text-gray-500 w-24 inline-block">GST:</span> {company.gst_number || '?'}</div>
-            <div><span className="font-semibold text-gray-500 w-24 inline-block">Address:</span> {company.address || '?'}</div>
-            <div><span className="font-semibold text-gray-500 w-24 inline-block">City/State:</span> {company.city || '?'}, {company.state || 'India'}</div>
+            <div><span className="font-semibold text-gray-500 w-24 inline-block">Owner:</span> {(company.owner as any)?.full_name || '—'}</div>
+            <div><span className="font-semibold text-gray-500 w-24 inline-block">GST:</span> {company.gst_number || '—'}</div>
+            <div><span className="font-semibold text-gray-500 w-24 inline-block">Address:</span> {company.address || '—'}</div>
+            <div><span className="font-semibold text-gray-500 w-24 inline-block">City/State:</span> {company.city || '—'}, {company.state || 'India'}</div>
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-gray-200 text-xs space-y-3">
@@ -339,7 +339,7 @@ export default async function CompanyDetailPage({
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="text-left px-4 py-3 font-semibold text-gray-500">Personalized Product</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-500">Price (?)</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-500">Price (₹)</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-500">MOQ</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-500">Assigned On</th>
                   <th className="text-right px-4 py-3 font-semibold text-gray-500">Action</th>
@@ -486,9 +486,9 @@ export default async function CompanyDetailPage({
               {contacts?.map(c => (
                 <tr key={c.id}>
                   <td className="px-4 py-2.5 font-medium">{c.full_name}</td>
-                  <td className="px-4 py-2.5 text-gray-600">{c.designation || '?'}</td>
-                  <td className="px-4 py-2.5 text-gray-600">{c.email || '?'}</td>
-                  <td className="px-4 py-2.5 text-gray-600">{c.phone || '?'}</td>
+                  <td className="px-4 py-2.5 text-gray-600">{c.designation || '—'}</td>
+                  <td className="px-4 py-2.5 text-gray-600">{c.email || '—'}</td>
+                  <td className="px-4 py-2.5 text-gray-600">{c.phone || '—'}</td>
                 </tr>
               ))}
               {(!contacts || contacts.length === 0) && (
@@ -547,7 +547,7 @@ export default async function CompanyDetailPage({
                     <Link href={`/crm/requirements/${r.id}`}>{r.name}</Link>
                   </td>
                   <td className="px-4 py-2.5 font-bold">{formatCurrency(r.budget)}</td>
-                  <td className="px-4 py-2.5 text-gray-600">{r.quantity || '?'}</td>
+                  <td className="px-4 py-2.5 text-gray-600">{r.quantity || '—'}</td>
                   <td className="px-4 py-2.5 text-gray-500">{formatDate(r.deadline)}</td>
                   <td className="px-4 py-2.5 capitalize">{r.status}</td>
                 </tr>

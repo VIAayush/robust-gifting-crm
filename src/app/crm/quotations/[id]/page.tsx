@@ -140,8 +140,8 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
         <div className="bg-white p-5 rounded-xl border border-gray-200 text-xs space-y-2.5">
           <h3 className="font-bold text-gray-900 pb-2 border-b">Client Details</h3>
           <div><span className="text-gray-500 w-20 inline-block">Company:</span> <span className="font-semibold text-gray-900">{company?.name}</span></div>
-          <div><span className="text-gray-500 w-20 inline-block">Contact:</span> {contact?.full_name || '?'}</div>
-          <div><span className="text-gray-500 w-20 inline-block">Email:</span> {contact?.email || '?'}</div>
+          <div><span className="text-gray-500 w-20 inline-block">Contact:</span> {contact?.full_name || '—'}</div>
+          <div><span className="text-gray-500 w-20 inline-block">Email:</span> {contact?.email || '—'}</div>
         </div>
 
         <div className="bg-white p-5 rounded-xl border border-gray-200 text-xs space-y-2.5">
@@ -150,7 +150,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
           <div>
             <span className="text-gray-500 w-20 inline-block">Valid Until:</span> 
             <span className={isExpired ? 'text-red-600 font-bold' : ''}>
-              {quote.valid_until ? formatDate(quote.valid_until) : '?'}
+              {quote.valid_until ? formatDate(quote.valid_until) : '—'}
               {isExpired && ' (Expired)'}
             </span>
           </div>

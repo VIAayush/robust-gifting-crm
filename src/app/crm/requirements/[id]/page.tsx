@@ -80,7 +80,7 @@ export default async function RequirementDetailPage({
           </div>
           <div className="border-l border-purple-200 pl-4">
             <p className="text-[10px] uppercase font-bold text-gray-400">Target Qty</p>
-            <p className="text-xl font-bold text-gray-900">{req.quantity || '?'} units</p>
+            <p className="text-xl font-bold text-gray-900">{req.quantity || '—'} units</p>
           </div>
         </div>
         <ConfirmAction
@@ -148,8 +148,8 @@ export default async function RequirementDetailPage({
             <div className="bg-white p-6 rounded-2xl border border-gray-200 text-xs space-y-3">
               <h3 className="font-bold text-sm text-gray-900 pb-2 border-b">Delivery & Commercial Terms</h3>
               <div className="grid grid-cols-2 gap-4">
-                <div><span className="text-gray-500 block mb-0.5">Purpose / Occasion:</span> <span className="font-semibold text-gray-900">{req.purpose || '?'}</span></div>
-                <div><span className="text-gray-500 block mb-0.5">Delivery City:</span> <span className="font-semibold text-gray-900">{req.delivery_city || '?'}</span></div>
+                <div><span className="text-gray-500 block mb-0.5">Purpose / Occasion:</span> <span className="font-semibold text-gray-900">{req.purpose || '—'}</span></div>
+                <div><span className="text-gray-500 block mb-0.5">Delivery City:</span> <span className="font-semibold text-gray-900">{req.delivery_city || '—'}</span></div>
                 <div><span className="text-gray-500 block mb-0.5">Payment Terms:</span> <span className="font-semibold text-gray-900">{req.payment_terms || 'Standard'}</span></div>
                 <div><span className="text-gray-500 block mb-0.5">Target Deadline:</span> <span className="font-semibold text-red-600">{formatDate(req.deadline)}</span></div>
               </div>
@@ -159,9 +159,9 @@ export default async function RequirementDetailPage({
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-2xl border border-gray-200 text-xs space-y-3">
               <h3 className="font-bold text-sm text-gray-900 pb-2 border-b">Contact Person</h3>
-              <div><span className="text-gray-500 block mb-0.5">Name:</span> <span className="font-semibold text-gray-900">{(req.contact as any)?.full_name || '?'}</span></div>
-              <div><span className="text-gray-500 block mb-0.5">Email:</span> {(req.contact as any)?.email || '?'}</div>
-              <div><span className="text-gray-500 block mb-0.5">Phone:</span> {(req.contact as any)?.phone || '?'}</div>
+              <div><span className="text-gray-500 block mb-0.5">Name:</span> <span className="font-semibold text-gray-900">{(req.contact as any)?.full_name || '—'}</span></div>
+              <div><span className="text-gray-500 block mb-0.5">Email:</span> {(req.contact as any)?.email || '—'}</div>
+              <div><span className="text-gray-500 block mb-0.5">Phone:</span> {(req.contact as any)?.phone || '—'}</div>
             </div>
           </div>
         </div>

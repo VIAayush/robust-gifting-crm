@@ -138,7 +138,7 @@ export function ProductsBrowser({
                     <p className="font-mono text-[10px] text-gray-400">{p.sku}</p>
                     <div className="mt-auto pt-2 space-y-2 border-t border-gray-100">
                       <p className="text-sm font-bold text-gray-900">{formatCurrency(p.price)}</p>
-                      {showCost && (
+                      {showCost && p.supplier_cost != null && (
                         <p className="text-[11px] text-gray-500">Cost {formatCurrency(p.supplier_cost)}</p>
                       )}
                       <div className="flex flex-wrap items-center gap-1.5">

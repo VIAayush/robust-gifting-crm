@@ -111,7 +111,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                   <td className="p-3 font-medium">{formatDate(payment.payment_date)}</td>
                   <td className="p-3 text-right font-bold text-green-700">{formatCurrency(payment.amount)}</td>
                   <td className="p-3 capitalize text-gray-600">{payment.method?.replace(/_/g, ' ')}</td>
-                  <td className="p-3 font-mono text-gray-500">{payment.reference || '?'}</td>
+                  <td className="p-3 font-mono text-gray-500">{payment.reference || '—'}</td>
                 </tr>
               ))}
               {(!payments || payments.length === 0) && (
@@ -143,7 +143,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               />
               
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Amount (?) *</label>
+                <label className="block font-semibold text-gray-700 mb-1">Amount (₹) *</label>
                 <input
                   type="number"
                   name="amount"

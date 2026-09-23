@@ -130,7 +130,7 @@ export default async function NewProductPage({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Supplier Cost (?)</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Supplier Cost (₹)</label>
               <input
                 type="number"
                 name="supplier_cost"
@@ -141,7 +141,7 @@ export default async function NewProductPage({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Internal margin (?)</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Internal margin (₹)</label>
               <input
                 type="number"
                 name="internal_margin"

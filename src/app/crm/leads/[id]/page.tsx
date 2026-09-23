@@ -62,7 +62,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100 text-right">
           <p className="text-[10px] uppercase font-bold text-gray-400">Estimated Pipeline Value</p>
           <p className="text-2xl font-bold text-[#9C7A33]">
-            {lead.estimated_value ? formatCurrency(lead.estimated_value) : '?'}
+            {lead.estimated_value ? formatCurrency(lead.estimated_value) : '—'}
           </p>
           {['admin', 'sales'].includes(profile.role) && (
             <div className="mt-3">
@@ -130,8 +130,8 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             <Building2 size={16} className="text-[#9C7A33]" /> Company Details
           </h2>
           <div><span className="font-semibold text-gray-500 w-24 inline-block">Company:</span> {company?.id ? <Link href={`/crm/companies/${company.id}`} className="text-[#9C7A33] hover:underline font-bold">{company.name}</Link> : '—'}</div>
-          <div><span className="font-semibold text-gray-500 w-24 inline-block">Industry:</span> {company?.industry || '?'}</div>
-          <div><span className="font-semibold text-gray-500 w-24 inline-block">Location:</span> {[company?.city, company?.state].filter(Boolean).join(', ') || '?'}</div>
+          <div><span className="font-semibold text-gray-500 w-24 inline-block">Industry:</span> {company?.industry || '—'}</div>
+          <div><span className="font-semibold text-gray-500 w-24 inline-block">Location:</span> {[company?.city, company?.state].filter(Boolean).join(', ') || '—'}</div>
           <div><span className="font-semibold text-gray-500 w-24 inline-block">Source:</span> {lead.source || 'Direct Outreach'}</div>
           <div><span className="font-semibold text-gray-500 w-24 inline-block">Next Follow-up:</span> {formatDate(lead.next_follow_up_at)}</div>
         </div>
@@ -143,9 +143,9 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           {contact ? (
             <>
               <div><span className="font-semibold text-gray-500 w-24 inline-block">Name:</span> <span className="font-bold text-gray-900">{contact.full_name}</span></div>
-              <div><span className="font-semibold text-gray-500 w-24 inline-block">Designation:</span> {contact.designation || '?'}</div>
-              <div><span className="font-semibold text-gray-500 w-24 inline-block">Email:</span> {contact.email || '?'}</div>
-              <div><span className="font-semibold text-gray-500 w-24 inline-block">Phone:</span> {contact.phone || '?'}</div>
+              <div><span className="font-semibold text-gray-500 w-24 inline-block">Designation:</span> {contact.designation || '—'}</div>
+              <div><span className="font-semibold text-gray-500 w-24 inline-block">Email:</span> {contact.email || '—'}</div>
+              <div><span className="font-semibold text-gray-500 w-24 inline-block">Phone:</span> {contact.phone || '—'}</div>
             </>
           ) : (
             <p className="text-gray-400 italic">No specific contact assigned.</p>
