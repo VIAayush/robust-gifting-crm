@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { receiveSample, moveSample } from './actions'
+import { receiveSample, moveSample, sendSampleToClient } from './actions'
 import { requireStaff, canSeeCosts } from '@/lib/auth'
 import { asFormAction } from '@/lib/form-action'
 import { MobileSheetSelect } from '@/components/ui/mobile-filter-sheet'
@@ -32,15 +32,23 @@ export default async function SamplesPage({
   const totalWithClient = samples?.reduce((acc, curr) => acc + (curr.with_client || 0), 0) || 0
   const totalPending = samples?.reduce((acc, curr) => acc + (curr.pending_supplier || 0), 0) || 0
 
+  // Only products with office stock can actually be sent, so the "Send to client" bar offers just those.
+  const inOfficeSamples = (samples || [])
+    .filter((s) => (s.in_office || 0) > 0)
+    .map((s) => {
+      const product = Array.isArray(s.product) ? s.product[0] : s.product
+      return { product_id: s.product_id, in_office: s.in_office, productName: product?.name || 'Product', productSku: product?.sku || '' }
+    })
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-[var(--color-primary)]">Sample Management</h1>
         <p className="text-xs text-[#4A5568] mt-1">
           Track physical samples in office, with the team, with a client, or pending from a supplier. Receive a product
-          into office stock below, then use{' '}
-          <span className="font-semibold text-[#9C7A33]">Send to client</span> on its row to dispatch samples directly
-          to a company.
+          into office stock, then use{' '}
+          <span className="font-semibold text-[#9C7A33]">Send to client</span> below to dispatch it directly to a
+          company.
         </p>
       </div>
 
@@ -105,6 +113,45 @@ export default async function SamplesPage({
         </button>
       </form>
 
+      <form action={asFormAction(sendSampleToClient)} className="grid items-end gap-3 rounded-2xl border bg-white p-4 text-xs md:grid-cols-4">
+        <MobileSheetSelect
+          name="product_id"
+          label="Product"
+          required
+          showDesktopLabel
+          emptyLabel={inOfficeSamples.length === 0 ? 'No products in office stock yet' : 'Select product to send'}
+          className="md:col-span-2"
+          options={[
+            { value: '', label: inOfficeSamples.length === 0 ? 'No products in office stock yet' : 'Select product to send' },
+            ...inOfficeSamples.map((s) => ({
+              value: s.product_id as string,
+              label: `${s.productName} · ${s.productSku} (${s.in_office} in office)`,
+            })),
+          ]}
+        />
+        <label className="block space-y-1">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#4A5568]">Quantity</span>
+          <input name="quantity" type="number" min="1" defaultValue={1} required className="min-h-11 w-full rounded-lg border px-2 py-2" />
+        </label>
+        <MobileSheetSelect
+          name="company_id"
+          label="Client"
+          required
+          showDesktopLabel
+          emptyLabel="Select client"
+          options={[
+            { value: '', label: 'Select client' },
+            ...(companies || []).map((c) => ({ value: c.id, label: c.name })),
+          ]}
+        />
+        <button
+          type="submit"
+          className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#9C7A33] px-4 py-2.5 font-semibold text-white md:col-span-4"
+        >
+          Send to client
+        </button>
+      </form>
+
       <div className="bg-white rounded-2xl border overflow-x-auto">
         <table className="w-full min-w-[780px] text-left text-sm">
           <thead className="bg-[#F5F7FA] text-xs text-[#4A5568]">
@@ -133,51 +180,12 @@ export default async function SamplesPage({
                   <td className="p-3">{sample.pending_supplier || 0}</td>
                   {showCost && <td className="p-3">{formatCurrency(sample.unit_cost)}</td>}
                   <td className="p-3">
-                    <div className="min-w-[220px] space-y-2">
-                      <form
-                        action={asFormAction(moveSample)}
-                        className="space-y-1.5 rounded-lg border border-[#9C7A33]/25 bg-[#F1F4F9] p-2 text-[11px]"
-                      >
-                        <input type="hidden" name="stock_id" value={sample.id} />
-                        <input type="hidden" name="to_holder" value="client" />
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#9C7A33]">
-                          Send to client
-                        </p>
-                        <MobileSheetSelect
-                          name="from_holder"
-                          label="From"
-                          defaultValue="office"
-                          options={[
-                            { value: 'office', label: 'From office' },
-                            { value: 'team', label: 'From team' },
-                          ]}
-                        />
-                        <MobileSheetSelect
-                          name="company_id"
-                          label="Client"
-                          required
-                          emptyLabel="Select client"
-                          options={[
-                            { value: '', label: 'Select client' },
-                            ...(companies || []).map((c) => ({ value: c.id, label: c.name })),
-                          ]}
-                        />
-                        <div className="grid grid-cols-2 gap-1">
-                          <input
-                            name="quantity"
-                            type="number"
-                            min="1"
-                            defaultValue={1}
-                            required
-                            className="rounded border px-1 py-1"
-                          />
-                          <button className="rounded bg-[#9C7A33] py-1 font-semibold text-white">Send</button>
-                        </div>
-                        <input name="note" placeholder="Note (optional)" className="w-full rounded border px-1 py-1" />
-                      </form>
-
+                    <div className="min-w-[220px]">
                       <details className="text-[11px]">
                         <summary className="cursor-pointer text-[#4A5568]">Other movement</summary>
+                        <p className="mt-1 text-[10px] text-gray-400">
+                          For sending office stock to a client, use the Send to client bar above.
+                        </p>
                         <form action={asFormAction(moveSample)} className="mt-1.5 grid grid-cols-2 gap-1">
                           <input type="hidden" name="stock_id" value={sample.id} />
                           <MobileSheetSelect
@@ -198,6 +206,7 @@ export default async function SamplesPage({
                             options={[
                               { value: 'team', label: 'To team' },
                               { value: 'office', label: 'To office' },
+                              { value: 'client', label: 'To client' },
                               { value: 'supplier', label: 'To supplier' },
                             ]}
                           />

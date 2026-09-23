@@ -91,6 +91,31 @@ export async function receiveSample(formData: FormData) {
   ok('received')
 }
 
+/** Convenience wrapper over moveSample for the top-level "Send to client" bar — resolves a product straight to its (single) stock row, always moving from office. */
+export async function sendSampleToClient(formData: FormData) {
+  const access = await requireSampleAccess()
+  if (!access.ok) fail(access.error)
+
+  const supabase = await createClient()
+  const productId = String(formData.get('product_id') || '').trim()
+  const companyId = String(formData.get('company_id') || '').trim()
+  const quantity = String(formData.get('quantity') || '')
+  if (!productId) fail('Select a product to send.')
+  if (!companyId) fail('Select the client receiving the sample.')
+
+  const { data: stock, error } = await supabase.from('sample_stock').select('id').eq('product_id', productId).maybeSingle()
+  if (error) fail(error.message)
+  if (!stock) fail('No samples in office for this product yet — receive some first.')
+
+  const movementForm = new FormData()
+  movementForm.set('stock_id', stock.id)
+  movementForm.set('from_holder', 'office')
+  movementForm.set('to_holder', 'client')
+  movementForm.set('quantity', quantity)
+  movementForm.set('company_id', companyId)
+  return moveSample(movementForm)
+}
+
 export async function moveSample(formData: FormData) {
   const access = await requireSampleAccess()
   if (!access.ok) fail(access.error)
