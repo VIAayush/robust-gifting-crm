@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { BackButton } from '@/components/ui/back-button'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatUnits } from '@/lib/utils'
 import { ProductDetailProvider, ProductGallerySlot, ColorSelectorSlot } from '@/components/site/product-detail-view'
 import { CatalogueShortlistButton } from '@/components/portal/catalogue-shortlist-button'
 
@@ -81,7 +81,7 @@ export default async function PortalProductDetailPage({ params }: { params: Prom
 
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-xl font-semibold text-gray-900">{formatCurrency(product.price)}</p>
-                <p className="mt-0.5 text-xs text-gray-400">Minimum order {product.moq || 1} units</p>
+                <p className="mt-0.5 text-xs text-gray-400">Minimum order {formatUnits(product.moq ?? 1)}</p>
               </div>
 
               <div className="space-y-3 border-t border-gray-100 pt-4">

@@ -17,6 +17,11 @@ export function formatCurrency(amount: number | null | undefined, currency = "IN
   }).format(amount)
 }
 
+export function formatUnits(count: number | null | undefined) {
+  if (count == null) return "—"
+  return `${count} ${count === 1 ? "unit" : "units"}`
+}
+
 export function formatDate(date: string | null | undefined) {
   if (!date) return "—"
   const parsed = new Date(date)

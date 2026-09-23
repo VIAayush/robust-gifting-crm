@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { SiteShell } from '@/components/site/site-shell'
 import { ProductDetailProvider, ProductGallerySlot, ColorSelectorSlot, QuoteButtonSlot } from '@/components/site/product-detail-view'
-import { formatCurrency, isUuid } from '@/lib/utils'
+import { formatCurrency, formatUnits, isUuid } from '@/lib/utils'
 import { getPublicProductWithVariants } from '@/lib/catalogue/products'
 
 type Props = { params: Promise<{ id: string }> }
@@ -44,7 +44,7 @@ export default async function PublicProductPage({ params }: Props) {
             <h1 className="mt-3 font-serif text-3xl tracking-tight sm:text-4xl lg:text-5xl">{product.name}</h1>
             {product.brand_name ? <p className="mt-3 text-sm text-[#5C6570]">{product.brand_name}</p> : null}
             <p className="mt-6 text-2xl font-semibold text-[#9C7A33]">{formatCurrency(product.price)}</p>
-            <p className="mt-2 text-xs text-[#5C6570]">Minimum order {product.moq || 1} units</p>
+            <p className="mt-2 text-xs text-[#5C6570]">Minimum order {formatUnits(product.moq ?? 1)}</p>
 
             <p className="mt-8 max-w-md text-sm leading-relaxed text-[#5C6570]">
               {product.description ||

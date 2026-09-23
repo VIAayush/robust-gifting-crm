@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { LayoutGrid, List, Globe, Lock, EyeOff } from 'lucide-react'
-import { formatCurrency, oneRelation } from '@/lib/utils'
+import { formatCurrency, formatUnits, oneRelation } from '@/lib/utils'
 import { ProductImage } from '@/components/ui/product-image'
 
 const VIEW_KEY = 'giffter.products.view'
@@ -65,6 +65,12 @@ export function ProductsBrowser({
   showCost: boolean
 }) {
   const [view, setView] = useState<'grid' | 'list'>('grid')
+
+  // Nothing has been imported with a brand or a supplier cost yet, so these
+  // columns would otherwise be a full page of em dashes. They reappear on
+  // their own as soon as any visible row carries a value.
+  const hasCostColumn = showCost && products.some((p) => p.supplier_cost != null)
+  const hasBrandColumn = products.some((p) => oneRelation(p.brand)?.name)
 
   useEffect(() => {
     try {
@@ -159,9 +165,9 @@ export function ProductsBrowser({
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-4 py-3 font-semibold text-gray-500 uppercase">Product</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-500 uppercase">Brand</th>
+                {hasBrandColumn && <th className="text-left px-4 py-3 font-semibold text-gray-500 uppercase">Brand</th>}
                 <th className="text-left px-4 py-3 font-semibold text-gray-500 uppercase">Category</th>
-                {showCost && <th className="text-left px-4 py-3 font-semibold text-gray-500 uppercase">Cost</th>}
+                {hasCostColumn && <th className="text-left px-4 py-3 font-semibold text-gray-500 uppercase">Cost</th>}
                 <th className="text-left px-4 py-3 font-semibold text-gray-500 uppercase">Price</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-500 uppercase">MOQ</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-500 uppercase">Visibility</th>
@@ -186,11 +192,11 @@ export function ProductsBrowser({
                         </div>
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 font-medium">{brand?.name || '—'}</td>
+                    {hasBrandColumn && <td className="px-4 py-3 text-gray-600 font-medium">{brand?.name || '—'}</td>}
                     <td className="px-4 py-3 text-gray-600 font-medium">{category?.name || '—'}</td>
-                    {showCost && <td className="px-4 py-3 text-gray-700">{formatCurrency(p.supplier_cost)}</td>}
+                    {hasCostColumn && <td className="px-4 py-3 text-gray-700">{formatCurrency(p.supplier_cost)}</td>}
                     <td className="px-4 py-3 font-bold text-gray-900">{formatCurrency(p.price)}</td>
-                    <td className="px-4 py-3 text-gray-600">{p.moq || 1} units</td>
+                    <td className="px-4 py-3 text-gray-600">{formatUnits(p.moq ?? 1)}</td>
                     <td className="px-4 py-3">
                       <VisibilityBadge access={p.catalogue_access} companyCount={companyCount} />
                     </td>
@@ -202,7 +208,7 @@ export function ProductsBrowser({
               })}
               {products.length === 0 && (
                 <tr>
-                  <td colSpan={showCost ? 8 : 7} className="p-8 text-center text-gray-400">
+                  <td colSpan={6 + (hasBrandColumn ? 1 : 0) + (hasCostColumn ? 1 : 0)} className="p-8 text-center text-gray-400">
                     No products found matching your filters.
                   </td>
                 </tr>

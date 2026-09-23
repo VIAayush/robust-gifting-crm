@@ -68,7 +68,7 @@ export default async function PortalRequirementsPage() {
                     <p className="mt-0.5 font-medium text-gray-900">
                       {req.deadline && !Number.isNaN(new Date(req.deadline).getTime())
                         ? format(new Date(req.deadline), 'MMM dd, yyyy')
-                        : '-'}
+                        : '—'}
                     </p>
                   </div>
                   <div>
@@ -76,7 +76,7 @@ export default async function PortalRequirementsPage() {
                     <p className="mt-0.5 font-medium text-gray-900">
                       {req.created_at && !Number.isNaN(new Date(req.created_at).getTime())
                         ? format(new Date(req.created_at), 'MMM dd, yyyy')
-                        : '-'}
+                        : '—'}
                     </p>
                   </div>
                 </div>
@@ -114,12 +114,12 @@ export default async function PortalRequirementsPage() {
                       <td className="px-6 py-4">
                         {req.deadline && !Number.isNaN(new Date(req.deadline).getTime())
                           ? format(new Date(req.deadline), 'MMM dd, yyyy')
-                          : '-'}
+                          : '—'}
                       </td>
                       <td className="px-6 py-4">
                         {req.created_at && !Number.isNaN(new Date(req.created_at).getTime())
                           ? format(new Date(req.created_at), 'MMM dd, yyyy')
-                          : '-'}
+                          : '—'}
                       </td>
                     </tr>
                   ))}

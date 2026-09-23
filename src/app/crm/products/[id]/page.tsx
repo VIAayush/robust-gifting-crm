@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { formatCurrency, isUuid } from '@/lib/utils'
+import { formatCurrency, formatUnits, isUuid } from '@/lib/utils'
 import { notFound, redirect } from 'next/navigation'
 import { sortProductCategories } from '@/lib/products/categories'
 import { BackButton } from '@/components/ui/back-button'
@@ -126,8 +126,8 @@ export default async function ProductDetailPage({
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{product.name}</h1>
           <p className="text-xs text-gray-500 mt-1">
             Category: <span className="font-semibold text-gray-700">{(product.category as any)?.name || 'General'}</span>
-            {product.brand && <> ? Brand: <span className="font-semibold text-gray-700">{(product.brand as any)?.name}</span></>}
-            {product.supplier && <> ? Supplier: <span className="font-semibold text-gray-700">{(product.supplier as any)?.name}</span></>}
+            {product.brand && <> · Brand: <span className="font-semibold text-gray-700">{(product.brand as any)?.name}</span></>}
+            {product.supplier && <> · Supplier: <span className="font-semibold text-gray-700">{(product.supplier as any)?.name}</span></>}
           </p>
           {profile.role === 'admin' && (
             <div className="mt-3">
@@ -157,7 +157,7 @@ export default async function ProductDetailPage({
               <p className="text-[10px] text-gray-400 uppercase font-semibold">Retail Price</p>
               <p className="text-xl font-bold text-[#9C7A33]">{formatCurrency(product.price)}</p>
             </div>
-            {showCost && (
+            {showCost && product.supplier_cost != null && (
             <div>
               <p className="text-[10px] text-gray-400 uppercase font-semibold">Supplier Cost</p>
               <p className="text-lg font-semibold text-gray-700">{formatCurrency(product.supplier_cost)}</p>
@@ -165,7 +165,7 @@ export default async function ProductDetailPage({
             )}
             <div>
               <p className="text-[10px] text-gray-400 uppercase font-semibold">Min Order Qty</p>
-              <p className="text-lg font-semibold text-gray-900">{product.moq || 1} units</p>
+              <p className="text-lg font-semibold text-gray-900">{formatUnits(product.moq ?? 1)}</p>
             </div>
           </div>
         </div>

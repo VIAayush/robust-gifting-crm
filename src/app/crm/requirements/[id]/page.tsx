@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { BackButton } from '@/components/ui/back-button'
-import { formatCurrency, formatDate, isUuid } from '@/lib/utils'
+import { formatCurrency, formatDate, formatUnits, isUuid } from '@/lib/utils'
 import { ClipboardList, Building2, User, Calendar, DollarSign, Package } from 'lucide-react'
 import { requireStaff } from '@/lib/auth'
 import { updateRequirementForm, removeRequirement } from '../actions'
@@ -80,7 +80,7 @@ export default async function RequirementDetailPage({
           </div>
           <div className="border-l border-purple-200 pl-4">
             <p className="text-[10px] uppercase font-bold text-gray-400">Target Qty</p>
-            <p className="text-xl font-bold text-gray-900">{req.quantity || '—'} units</p>
+            <p className="text-xl font-bold text-gray-900">{formatUnits(req.quantity)}</p>
           </div>
         </div>
         <ConfirmAction
@@ -187,7 +187,7 @@ export default async function RequirementDetailPage({
                     <div className="text-gray-400 font-mono text-[10px]">{item.product?.sku}</div>
                   </td>
                   <td className="p-3.5 text-right font-bold text-gray-900">{formatCurrency(item.product?.price)}</td>
-                  <td className="p-3.5 text-right text-gray-600">{item.product?.moq || 1} units</td>
+                  <td className="p-3.5 text-right text-gray-600">{formatUnits(item.product?.moq ?? 1)}</td>
                 </tr>
               ))}
               {(!products || products.length === 0) && (

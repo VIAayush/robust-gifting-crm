@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { BackButton } from '@/components/ui/back-button'
 import { OfferingActions } from '../OfferingActions'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatUnits } from '@/lib/utils'
 import { ProductImage } from '@/components/ui/product-image'
 
 export default async function CampaignOfferingDetailPage({ params }: { params: Promise<{ sku: string }> }) {
@@ -43,7 +43,7 @@ export default async function CampaignOfferingDetailPage({ params }: { params: P
             <h1 className="text-2xl font-bold text-gray-900">{offering.display_name}</h1>
             <div className="border-t border-gray-100 pt-3">
               <p className="text-3xl font-bold text-gray-900">{formatCurrency(offering.selling_price)}</p>
-              <p className="mt-1 text-xs text-gray-500">Minimum order quantity: {offering.moq || 1} units</p>
+              <p className="mt-1 text-xs text-gray-500">Minimum order quantity: {formatUnits(offering.moq ?? 1)}</p>
             </div>
             <p className="text-sm leading-relaxed text-gray-600">
               {offering.client_description || 'Custom corporate gifting product with branding options.'}

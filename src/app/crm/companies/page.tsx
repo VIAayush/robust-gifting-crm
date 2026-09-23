@@ -113,8 +113,8 @@ export default async function Companies(props: { searchParams: Promise<{ q?: str
                       <span className="font-medium">{c.name}</span>
                     </Link>
                   </td>
-                  <td className="p-4 text-gray-600">{c.industry || '-'}</td>
-                  <td className="p-4 text-gray-600">{c.city || '-'}</td>
+                  <td className="p-4 text-gray-600">{c.industry || '—'}</td>
+                  <td className="p-4 text-gray-600">{c.city || '—'}</td>
                   <td className="p-4 text-gray-600">{owner?.full_name || '—'}</td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${c.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>

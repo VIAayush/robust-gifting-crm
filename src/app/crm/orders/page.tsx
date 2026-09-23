@@ -121,7 +121,7 @@ export default async function OrdersPage(props: { searchParams: Promise<{ status
                     </Link>
                   </td>
                   <td className="p-4">
-                    {company?.name || '-'}
+                    {company?.name || '—'}
                   </td>
                   <td className="p-4">{formatCurrency(order.order_value || 0)}</td>
                   <td className="p-4">
@@ -133,9 +133,9 @@ export default async function OrdersPage(props: { searchParams: Promise<{ status
                     </div>
                   </td>
                   <td className={`p-4 ${isOverdue ? 'text-red-600 font-medium' : ''}`}>
-                    {order.expected_delivery_date ? formatDate(order.expected_delivery_date) : '-'}
+                    {order.expected_delivery_date ? formatDate(order.expected_delivery_date) : '—'}
                   </td>
-                  <td className="p-4">{owner?.full_name || '-'}</td>
+                  <td className="p-4">{owner?.full_name || '—'}</td>
                 </tr>
               )
             })}

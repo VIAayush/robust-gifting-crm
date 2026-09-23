@@ -7,7 +7,7 @@ import { ProductImage } from '@/components/ui/product-image'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { uploadCompanyLogo, removeCompanyLogo, updateCompany, removeCompany } from '../actions'
 import { ConfirmAction } from '@/components/ui/confirm-action'
-import { formatCurrency, formatDate, isUuid } from '@/lib/utils'
+import { formatCurrency, formatDate, formatUnits, isUuid } from '@/lib/utils'
 import { Plus, Trash2 } from 'lucide-react'
 import { grantCompanyProductAccess, revokeCompanyProductAccess } from '@/app/crm/products/actions'
 import { requireStaff } from '@/lib/auth'
@@ -361,7 +361,7 @@ export default async function CompanyDetailPage({
                       {formatCurrency(cp.product?.price)}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
-                      {cp.product?.moq || 1} units
+                      {formatUnits(cp.product?.moq ?? 1)}
                     </td>
                     <td className="px-4 py-3 text-gray-500">
                       {formatDate(cp.created_at)}

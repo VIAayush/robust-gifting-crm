@@ -110,11 +110,11 @@ export default async function RequirementsPage(props: { searchParams: Promise<{ 
                     {req.title || req.name}
                   </Link>
                 </td>
-                <td className="p-4">{company?.name || '-'}</td>
-                <td className="p-4">{owner?.full_name || '-'}</td>
-                <td className="p-4">{req.budget ? formatCurrency(req.budget) : '-'}</td>
-                <td className="p-4">{req.quantity || '-'}</td>
-                <td className="p-4">{req.deadline ? formatDate(req.deadline) : '-'}</td>
+                <td className="p-4">{company?.name || '—'}</td>
+                <td className="p-4">{owner?.full_name || '—'}</td>
+                <td className="p-4">{req.budget ? formatCurrency(req.budget) : '—'}</td>
+                <td className="p-4">{req.quantity || '—'}</td>
+                <td className="p-4">{req.deadline ? formatDate(req.deadline) : '—'}</td>
                 <td className="p-4">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[req.status || ''] || 'bg-gray-100 text-gray-800'}`}>
                     {req.status || 'unknown'}

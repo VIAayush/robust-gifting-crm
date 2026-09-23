@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { BackButton } from '@/components/ui/back-button'
-import { formatCurrency, formatDate, isUuid, oneRelation } from '@/lib/utils'
+import { formatCurrency, formatDate, formatUnits, isUuid, oneRelation } from '@/lib/utils'
 import { QuotationActions } from './QuotationActions'
 import { FileText, Calendar, CheckCircle2 } from 'lucide-react'
 
@@ -113,7 +113,7 @@ export default async function PortalQuotationDetailPage({ params }: { params: Pr
                         <div className="font-bold text-gray-900">{product?.name}</div>
                         <div className="font-mono text-[10px] text-gray-400">{product?.sku}</div>
                       </td>
-                      <td className="px-4 py-3 text-center font-semibold text-gray-800">{item.quantity} units</td>
+                      <td className="px-4 py-3 text-center font-semibold text-gray-800">{formatUnits(item.quantity)}</td>
                       <td className="px-4 py-3 text-right text-gray-600">{formatCurrency(item.unit_price)}</td>
                       <td className="px-4 py-3 text-right font-bold text-gray-900">{formatCurrency(item.line_total)}</td>
                     </tr>

@@ -233,9 +233,9 @@ export function PartnerDirectory({
             {rows.map((row) => (
               <tr key={row.id} className="align-top border-b border-[var(--color-border)]">
                 <td className="p-3 text-sm font-medium">{row.name}</td>
-                <td className="p-3 text-sm">{row.city || '-'}</td>
-                <td className="p-3 text-sm">{row.contact_person || '-'}</td>
-                <td className="p-3 text-sm">{row.phone || '-'}</td>
+                <td className="p-3 text-sm">{row.city || '—'}</td>
+                <td className="p-3 text-sm">{row.contact_person || '—'}</td>
+                <td className="p-3 text-sm">{row.phone || '—'}</td>
                 <td className="p-3 text-sm">
                   {table === 'suppliers' ? (
                     <>

@@ -79,7 +79,7 @@ export default async function PaymentsPage() {
                     {String(payment.method || '').replace(/_/g, ' ')}
                   </span>
                 </td>
-                <td className="p-3 text-sm text-[var(--color-text-secondary)]">{payment.reference || '-'}</td>
+                <td className="p-3 text-sm text-[var(--color-text-secondary)]">{payment.reference || '—'}</td>
                 <td className="p-3 text-sm">
                   <Link
                     href={`/crm/invoices/${payment.invoice_id}`}

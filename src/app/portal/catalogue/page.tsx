@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { OfferingActions } from './OfferingActions'
-import { formatCurrency, asRows, isUuid } from '@/lib/utils'
+import { formatCurrency, formatUnits, asRows, isUuid } from '@/lib/utils'
 import { ProductImage } from '@/components/ui/product-image'
 import { Package, Search } from 'lucide-react'
 import { sortProductCategories } from '@/lib/products/categories'
@@ -79,7 +79,7 @@ export default async function PortalCataloguePage({
                     <div className="space-y-3 border-t border-gray-100 pt-3">
                       <div>
                         <p className="text-base font-semibold text-gray-900">{formatCurrency(offering.selling_price)}</p>
-                        <p className="text-[10px] text-gray-400">MOQ: {offering.moq || 1} units</p>
+                        <p className="text-[10px] text-gray-400">MOQ: {formatUnits(offering.moq ?? 1)}</p>
                       </div>
                       <OfferingActions
                         campaignId={offering.campaign_id}
@@ -263,7 +263,7 @@ export default async function PortalCataloguePage({
                   <div className="space-y-3 border-t border-gray-100 pt-3">
                     <div>
                       <p className="text-base font-semibold text-gray-900">{formatCurrency(product.price)}</p>
-                      <p className="text-[10px] text-gray-400">MOQ: {product.moq || 1} units</p>
+                      <p className="text-[10px] text-gray-400">MOQ: {formatUnits(product.moq ?? 1)}</p>
                       {(coloursByProduct.get(product.id)?.length || 0) > 1 && (
                         <div className="mt-1.5 flex items-center gap-1">
                           {coloursByProduct.get(product.id)!.slice(0, 6).map((colour, i) => (
