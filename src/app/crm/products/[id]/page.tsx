@@ -329,7 +329,7 @@ export default async function ProductDetailPage({
           </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
               <h2 className="text-base font-bold text-gray-900 pb-3 border-b border-gray-100">Colour variants</h2>
               <p className="text-[11px] text-gray-500">
