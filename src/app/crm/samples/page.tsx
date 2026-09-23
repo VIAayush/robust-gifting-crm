@@ -37,9 +37,10 @@ export default async function SamplesPage({
       <div>
         <h1 className="text-2xl font-bold text-[var(--color-primary)]">Sample Management</h1>
         <p className="text-xs text-[#4A5568] mt-1">
-          Track physical samples in office, with the team, with a client, or pending from a supplier. Use{' '}
-          <span className="font-semibold text-[#9C7A33]">Send to client</span> on any product below to dispatch samples
-          directly to a company.
+          Track physical samples in office, with the team, with a client, or pending from a supplier. Receive a product
+          into office stock below, then use{' '}
+          <span className="font-semibold text-[#9C7A33]">Send to client</span> on its row to dispatch samples directly
+          to a company.
         </p>
       </div>
 
@@ -220,7 +221,7 @@ export default async function SamplesPage({
               )
             })}
             {(!samples || samples.length === 0) && (
-              <tr><td colSpan={7} className="p-6 text-center text-gray-500">No sample stock yet.</td></tr>
+              <tr><td colSpan={7} className="p-6 text-center text-gray-500">No sample stock yet — receive a product above to add it here.</td></tr>
             )}
           </tbody>
         </table>
