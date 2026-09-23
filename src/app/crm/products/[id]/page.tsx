@@ -309,54 +309,59 @@ export default async function ProductDetailPage({
           </form>
         </div>
 
-        {profile.role === 'admin' ? (
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-          <CatalogueVisibilityEditor
-            productId={product.id}
-            initialMode={product.catalogue_access || 'all'}
-            companies={allCompanies || []}
-            grantedIds={grantedCompanyIds}
-          />
-        </div>
-        ) : (
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-          <h2 className="text-base font-bold text-gray-900 mb-2">Catalogue visibility</h2>
-          <p className="text-xs text-gray-500">Only admin can change which companies see this product.</p>
-        </div>
-        )}
-      </div>
+        {/* Catalogue visibility is inherently short (a few radio options), so it shares this
+            column with Colour variants/Photos rather than sitting alone next to the much
+            longer form — otherwise it leaves a large empty gap no matter how it's sized. */}
+        <div className="space-y-6">
+          {profile.role === 'admin' ? (
+          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+            <CatalogueVisibilityEditor
+              productId={product.id}
+              initialMode={product.catalogue_access || 'all'}
+              companies={allCompanies || []}
+              grantedIds={grantedCompanyIds}
+            />
+          </div>
+          ) : (
+          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+            <h2 className="text-base font-bold text-gray-900 mb-2">Catalogue visibility</h2>
+            <p className="text-xs text-gray-500">Only admin can change which companies see this product.</p>
+          </div>
+          )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
-          <h2 className="text-base font-bold text-gray-900 pb-3 border-b border-gray-100">Colour variants</h2>
-          <p className="text-[11px] text-gray-500">
-            Add a colour for each way this product comes, then upload that colour&apos;s photos on the right.
-            Shoppers will see one product with a colour switcher instead of separate listings.
-          </p>
-          <ProductVariantsManager
-            productId={product.id}
-            variants={productVariants.map((v) => ({
-              id: v.id,
-              colour: v.colour,
-              display_name: v.display_name,
-              extra_price: v.extra_price,
-            }))}
-          />
-        </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
+            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+              <h2 className="text-base font-bold text-gray-900 pb-3 border-b border-gray-100">Colour variants</h2>
+              <p className="text-[11px] text-gray-500">
+                Add a colour for each way this product comes, then upload that colour&apos;s photos on the right.
+                Shoppers will see one product with a colour switcher instead of separate listings.
+              </p>
+              <ProductVariantsManager
+                productId={product.id}
+                variants={productVariants.map((v) => ({
+                  id: v.id,
+                  colour: v.colour,
+                  display_name: v.display_name,
+                  extra_price: v.extra_price,
+                }))}
+              />
+            </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
-          <h2 className="text-base font-bold text-gray-900 pb-3 border-b border-gray-100">Photos</h2>
-          <ProductGalleryManager
-            productId={product.id}
-            variants={productVariants.map((v) => ({ id: v.id, label: v.display_name || v.colour || 'Colour' }))}
-            images={productImages.map((img) => ({
-              id: img.id,
-              variant_id: img.variant_id,
-              image_url: img.image_url,
-              sort_order: img.sort_order,
-              is_primary: img.is_primary,
-            }))}
-          />
+            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+              <h2 className="text-base font-bold text-gray-900 pb-3 border-b border-gray-100">Photos</h2>
+              <ProductGalleryManager
+                productId={product.id}
+                variants={productVariants.map((v) => ({ id: v.id, label: v.display_name || v.colour || 'Colour' }))}
+                images={productImages.map((img) => ({
+                  id: img.id,
+                  variant_id: img.variant_id,
+                  image_url: img.image_url,
+                  sort_order: img.sort_order,
+                  is_primary: img.is_primary,
+                }))}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>
