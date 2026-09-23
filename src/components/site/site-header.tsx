@@ -11,6 +11,7 @@ import { GiftModeToggle } from '@/components/site/gift-mode-toggle'
 import { WishlistHeaderLink } from '@/components/site/wishlist-header-link'
 import { CartHeaderLink } from '@/components/site/cart-header-link'
 import { useGiftMode } from '@/components/site/use-gift-mode'
+import type { GiftMode } from '@/lib/site/gift-mode'
 
 const PRIMARY_NAV = [
   { href: '/about', label: 'About' },
@@ -32,14 +33,17 @@ export function SiteHeader({
   workspaceLabel,
   suggestions = [],
   categoryLinks = [],
+  initialMode,
 }: {
   workspaceHref?: string | null
   workspaceLabel?: string | null
   suggestions?: Suggestion[]
   categoryLinks?: { href: string; label: string }[]
+  /** Gift mode already resolved server-side via getGiftMode(), so the first client render matches SSR. */
+  initialMode: GiftMode
 }) {
   const router = useRouter()
-  const mode = useGiftMode()
+  const mode = useGiftMode(initialMode)
   const isPersonalized = mode === 'personalized'
   const [open, setOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -93,7 +97,7 @@ export function SiteHeader({
       {/* Gift mode: Personalized (B2C) vs Corporate (B2B) */}
       <div className="border-b border-[#E2E8F0] bg-[#FBF8F2] px-4 py-2 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          <GiftModeToggle />
+          <GiftModeToggle mode={mode} />
         </div>
       </div>
 

@@ -20,13 +20,21 @@ function writeCookie(mode: GiftMode) {
  * is shared between both, so it remembers whichever mode you last chose via
  * a cookie, so a product click from the catalogue grid doesn't drop you back
  * into the other mode.
+ *
+ * `initialMode` should be the same value the server already resolved via
+ * `getGiftMode()` (next/headers) for this request. Without it, the first
+ * client render falls back to reading `document.cookie` directly, which is
+ * unavailable during SSR and defaults to 'corporate' there — mismatching a
+ * server render that actually saw a 'personalized' cookie and causing a
+ * hydration error. Passing it down keeps the client's first paint identical
+ * to what the server already sent.
  */
-export function useGiftMode(): GiftMode {
+export function useGiftMode(initialMode?: GiftMode): GiftMode {
   const pathname = usePathname()
   const [mode, setMode] = useState<GiftMode>(() => {
     if (pathname?.startsWith('/personalized')) return 'personalized'
     if (pathname === '/' || pathname?.startsWith('/home')) return 'corporate'
-    return readCookie()
+    return initialMode ?? readCookie()
   })
 
   useEffect(() => {

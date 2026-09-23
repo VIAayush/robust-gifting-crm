@@ -32,6 +32,7 @@ export async function SiteShell({ children }: { children: React.ReactNode }) {
         workspaceLabel={workspaceLabel}
         suggestions={suggestions}
         categoryLinks={categoryLinks}
+        initialMode={mode}
       />
       <main>{children}</main>
       <SiteFooter workspaceHref={workspaceHref} workspaceLabel={workspaceLabel} />
