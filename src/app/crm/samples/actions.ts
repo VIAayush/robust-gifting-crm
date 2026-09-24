@@ -116,31 +116,32 @@ export async function sendSampleToClient(formData: FormData) {
   return moveSample(movementForm)
 }
 
-export async function moveSample(formData: FormData) {
-  const access = await requireSampleAccess()
-  if (!access.ok) fail(access.error)
+type Supabase = Awaited<ReturnType<typeof createClient>>
 
-  const supabase = await createClient()
-  const user = { id: access.profile.id }
-  const stockId = String(formData.get('stock_id') || '')
-  const from = String(formData.get('from_holder') || '') as Holder
-  const to = String(formData.get('to_holder') || '') as Holder
-  const quantity = Number(formData.get('quantity') || 0)
-  const companyId = String(formData.get('company_id') || '') || null
-  const note = String(formData.get('note') || '') || null
+/**
+ * Core stock-movement write, shared by moveSample (redirect-based form
+ * action) and fulfillSampleRequest (which also has a sample_requests row to
+ * update afterward, so it can't call a redirect()-throwing action directly).
+ */
+async function performSampleMovement(
+  supabase: Supabase,
+  userId: string | undefined,
+  params: { stockId: string; from: Holder; to: Holder; quantity: number; companyId: string | null; note: string | null }
+): Promise<{ movementId: string } | { error: string }> {
+  const { stockId, from, to, quantity, companyId, note } = params
   if (!stockId || !(from in HOLDERS) || !(to in HOLDERS) || from === to || !Number.isInteger(quantity) || quantity < 1) {
-    fail('Valid movement details are required.')
+    return { error: 'Valid movement details are required.' }
   }
-  if (to === 'client' && !companyId) fail('Select the client receiving the sample.')
+  if (to === 'client' && !companyId) return { error: 'Select the client receiving the sample.' }
 
   const { data: stock, error: stockError } = await supabase.from('sample_stock').select('*').eq('id', stockId).single()
-  if (stockError || !stock) fail(stockError?.message || 'Sample stock not found.')
+  if (stockError || !stock) return { error: stockError?.message || 'Sample stock not found.' }
 
   const stockRow = stock as Record<string, number | string | null>
   const fromCol = HOLDERS[from]
   const toCol = HOLDERS[to]
   const available = Number(stockRow[fromCol] || 0)
-  if (available < quantity) fail(`Only ${available} available at ${from}.`)
+  if (available < quantity) return { error: `Only ${available} available at ${from}.` }
 
   const { error } = await supabase
     .from('sample_stock')
@@ -149,19 +150,118 @@ export async function moveSample(formData: FormData) {
       [toCol]: Number(stockRow[toCol] || 0) + quantity,
     })
     .eq('id', stockId)
-  if (error) fail(error.message)
+  if (error) return { error: error.message }
 
-  const { error: movementError } = await supabase.from('sample_movements').insert({
-    product_id: stock.product_id,
-    quantity,
-    from_holder: from,
-    to_holder: to,
-    company_id: to === 'client' || from === 'client' ? companyId : null,
-    cost: stock.unit_cost || 0,
-    note,
-    created_by: user?.id,
-  })
-  if (movementError) fail(movementError.message)
+  const { data: movement, error: movementError } = await supabase
+    .from('sample_movements')
+    .insert({
+      product_id: stock.product_id,
+      quantity,
+      from_holder: from,
+      to_holder: to,
+      company_id: to === 'client' || from === 'client' ? companyId : null,
+      cost: stock.unit_cost || 0,
+      note,
+      created_by: userId,
+    })
+    .select('id')
+    .single()
+  if (movementError || !movement) return { error: movementError?.message || 'Could not record the movement.' }
+
+  return { movementId: movement.id as string }
+}
+
+export async function moveSample(formData: FormData) {
+  const access = await requireSampleAccess()
+  if (!access.ok) fail(access.error)
+
+  const supabase = await createClient()
+  const stockId = String(formData.get('stock_id') || '')
+  const from = String(formData.get('from_holder') || '') as Holder
+  const to = String(formData.get('to_holder') || '') as Holder
+  const quantity = Number(formData.get('quantity') || 0)
+  const companyId = String(formData.get('company_id') || '') || null
+  const note = String(formData.get('note') || '') || null
+
+  const result = await performSampleMovement(supabase, access.profile.id, { stockId, from, to, quantity, companyId, note })
+  if ('error' in result) fail(result.error)
 
   ok('moved')
+}
+
+function failRequests(message: string): never {
+  redirect(`/crm/samples?tab=requests&error=${encodeURIComponent(message)}`)
+}
+
+function okRequests(flag: 'updated' | 'fulfilled'): never {
+  revalidatePath('/crm/samples')
+  redirect(`/crm/samples?tab=requests&${flag}=1`)
+}
+
+/** Staff approves or rejects an incoming customer sample request — status only, no stock movement yet. */
+export async function updateSampleRequestStatus(formData: FormData) {
+  const access = await requireSampleAccess()
+  if (!access.ok) failRequests(access.error)
+
+  const supabase = await createClient()
+  const requestId = String(formData.get('request_id') || '')
+  const status = String(formData.get('status') || '')
+  if (!requestId) failRequests('Missing sample request.')
+  if (status !== 'approved' && status !== 'rejected') failRequests('Invalid status.')
+
+  const { error } = await supabase
+    .from('sample_requests')
+    .update({ status, assigned_to: access.profile.id })
+    .eq('id', requestId)
+  if (error) failRequests(error.message)
+
+  okRequests('updated')
+}
+
+/**
+ * Ships an approved (or pending) customer sample request: performs the same
+ * office → client stock movement sendSampleToClient does, then marks the
+ * request 'shipped' and links it to the resulting sample_movements row so
+ * the existing Samples page stays the single source of truth for stock.
+ */
+export async function fulfillSampleRequest(formData: FormData) {
+  const access = await requireSampleAccess()
+  if (!access.ok) failRequests(access.error)
+
+  const supabase = await createClient()
+  const requestId = String(formData.get('request_id') || '')
+  if (!requestId) failRequests('Missing sample request.')
+
+  const { data: request, error: requestError } = await supabase
+    .from('sample_requests')
+    .select('id, product_id, company_id, quantity')
+    .eq('id', requestId)
+    .single()
+  if (requestError || !request) failRequests(requestError?.message || 'Sample request not found.')
+
+  const { data: stock, error: stockError } = await supabase
+    .from('sample_stock')
+    .select('id')
+    .eq('product_id', request.product_id)
+    .maybeSingle()
+  if (stockError) failRequests(stockError.message)
+  if (!stock) failRequests('No samples in office for this product yet — receive some first.')
+
+  const result = await performSampleMovement(supabase, access.profile.id, {
+    stockId: stock.id,
+    from: 'office',
+    to: 'client',
+    quantity: request.quantity || 1,
+    companyId: request.company_id,
+    note: 'Fulfilled from customer sample request',
+  })
+  if ('error' in result) failRequests(result.error)
+
+  const { error: updateError } = await supabase
+    .from('sample_requests')
+    .update({ status: 'shipped', assigned_to: access.profile.id, fulfilled_via_movement_id: result.movementId })
+    .eq('id', requestId)
+  if (updateError) failRequests(updateError.message)
+
+  okRequests('fulfilled')
 }

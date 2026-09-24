@@ -7,7 +7,7 @@ import { Package, Search } from 'lucide-react'
 import { sortProductCategories } from '@/lib/products/categories'
 import { swatchHex } from '@/lib/products/colours'
 import { MobileFilterBar } from '@/components/ui/mobile-filter-sheet'
-import { CatalogueShortlistButton } from '@/components/portal/catalogue-shortlist-button'
+import { ProductInterestButton } from '@/components/portal/product-interest-button'
 
 const PAGE_SIZE = 24
 
@@ -155,6 +155,20 @@ export default async function PortalCataloguePage({
     }
   }
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const interestedProductIds = new Set<string>()
+  if (user && productIds.length > 0) {
+    const { data: interestRows } = await supabase
+      .from('company_product_interests')
+      .select('product_id')
+      .eq('user_id', user.id)
+      .is('variant_id', null)
+      .in('product_id', productIds)
+    for (const row of interestRows || []) interestedProductIds.add(row.product_id as string)
+  }
+
   const pageHref = (nextPage: number) => {
     const params = new URLSearchParams()
     if (q) params.set('q', q)
@@ -277,16 +291,7 @@ export default async function PortalCataloguePage({
                         </div>
                       )}
                     </div>
-                    <CatalogueShortlistButton
-                      product={{
-                        id: product.id,
-                        sku: product.sku,
-                        name: product.name,
-                        price: product.price,
-                        image_url: product.image_url,
-                        category_name: product.category_name,
-                      }}
-                    />
+                    <ProductInterestButton productId={product.id} interested={interestedProductIds.has(product.id)} />
                   </div>
                 </div>
               </article>

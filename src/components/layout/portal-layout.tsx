@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, LogOut, PackageSearch, Heart, FileText, ShoppingBag, LayoutDashboard, FolderGit2, Files, ClipboardList } from 'lucide-react';
+import { Menu, X, LogOut, PackageSearch, Heart, Star, FileText, ShoppingBag, LayoutDashboard, FolderGit2, Files, ClipboardList } from 'lucide-react';
 import { BrandName } from '@/components/brand/brand-name';
 import { signOut } from '@/app/login/actions';
 import { forgetRememberedTab } from '@/lib/auth/remember-client';
@@ -22,6 +22,7 @@ const navItems = [
   { label: 'Dashboard', href: '/portal', icon: LayoutDashboard },
   { label: 'Campaigns', href: '/portal/campaigns', icon: FolderGit2 },
   { label: 'Products', href: '/portal/catalogue', icon: PackageSearch },
+  { label: 'Interest List', href: '/portal/interest', icon: Star },
   { label: 'Shortlist', href: '/portal/shortlist', icon: Heart },
   { label: 'Requirements', href: '/portal/requirements', icon: ClipboardList },
   { label: 'Quotations', href: '/portal/quotations', icon: FileText },

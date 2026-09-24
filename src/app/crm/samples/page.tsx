@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { receiveSample, moveSample, sendSampleToClient } from './actions'
+import { receiveSample, moveSample, sendSampleToClient, updateSampleRequestStatus, fulfillSampleRequest } from './actions'
 import { requireStaff, canSeeCosts } from '@/lib/auth'
 import { asFormAction } from '@/lib/form-action'
 import { MobileSheetSelect } from '@/components/ui/mobile-filter-sheet'
@@ -10,7 +10,7 @@ import { MobileSheetSelect } from '@/components/ui/mobile-filter-sheet'
 export default async function SamplesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; received?: string; moved?: string }>
+  searchParams: Promise<{ error?: string; received?: string; moved?: string; updated?: string; fulfilled?: string }>
 }) {
   const profile = await requireStaff()
   const supabase = await createClient()
@@ -19,12 +19,21 @@ export default async function SamplesPage({
   const error = params.error || ''
   const received = params.received === '1'
   const moved = params.moved === '1'
+  const requestUpdated = params.updated === '1'
+  const requestFulfilled = params.fulfilled === '1'
 
-  const [{ data: samples }, { data: movements }, { data: products }, { data: companies }] = await Promise.all([
+  const [{ data: samples }, { data: movements }, { data: products }, { data: companies }, { data: sampleRequests }] = await Promise.all([
     supabase.from('sample_stock').select('*, product:products(name, sku)'),
     supabase.from('sample_movements').select('*, product:products(name), company:companies(name)').order('created_at', { ascending: false }).limit(25),
     supabase.from('products').select('id, name, sku').eq('status', 'active').order('name').limit(200),
     supabase.from('companies').select('id, name').order('name'),
+    supabase
+      .from('sample_requests')
+      .select(
+        '*, product:products(name, sku), variant:product_variants(colour, display_name), company:companies(name), requested_by_profile:profiles!sample_requests_requested_by_fkey(full_name)'
+      )
+      .in('status', ['pending', 'approved'])
+      .order('created_at', { ascending: false }),
   ])
 
   const totalInOffice = samples?.reduce((acc, curr) => acc + (curr.in_office || 0), 0) || 0
@@ -65,6 +74,16 @@ export default async function SamplesPage({
           Sample movement recorded.
         </div>
       ) : null}
+      {requestUpdated ? (
+        <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          Sample request updated.
+        </div>
+      ) : null}
+      {requestFulfilled ? (
+        <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          Sample request fulfilled and shipped to the client.
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
@@ -78,6 +97,99 @@ export default async function SamplesPage({
             <p className="text-xl font-semibold">{value}</p>
           </div>
         ))}
+      </div>
+
+      <div className="rounded-2xl border bg-white p-5">
+        <h2 className="font-serif text-lg mb-1">Customer sample requests</h2>
+        <p className="mb-3 text-xs text-[#4A5568]">
+          Requests submitted by clients from their Interest List in the portal. Fulfilling one ships it from office
+          stock the same way <span className="font-semibold text-[#9C7A33]">Send to client</span> does, and records it below.
+        </p>
+        {(sampleRequests || []).length === 0 ? (
+          <p className="text-sm text-gray-500">No open sample requests.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead className="bg-[#F5F7FA] text-xs text-[#4A5568]">
+                <tr>
+                  <th className="p-2.5">Company</th>
+                  <th className="p-2.5">Product</th>
+                  <th className="p-2.5">Qty</th>
+                  <th className="p-2.5">Requested by</th>
+                  <th className="p-2.5">Notes</th>
+                  <th className="p-2.5">Status</th>
+                  <th className="p-2.5">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(sampleRequests || []).map((request) => {
+                  const product = Array.isArray(request.product) ? request.product[0] : request.product
+                  const variant = Array.isArray(request.variant) ? request.variant[0] : request.variant
+                  const company = Array.isArray(request.company) ? request.company[0] : request.company
+                  const requestedByProfile = Array.isArray(request.requested_by_profile)
+                    ? request.requested_by_profile[0]
+                    : request.requested_by_profile
+                  return (
+                    <tr key={request.id} className="border-t align-top">
+                      <td className="p-2.5 font-medium">{company?.name || '—'}</td>
+                      <td className="p-2.5">
+                        <Link href={`/crm/products/${request.product_id}`} className="hover:underline">
+                          {product?.name}
+                        </Link>
+                        <p className="text-[11px] text-[#4A5568]">
+                          {product?.sku}
+                          {variant?.colour ? ` · ${variant.display_name || variant.colour}` : ''}
+                        </p>
+                      </td>
+                      <td className="p-2.5">{request.quantity}</td>
+                      <td className="p-2.5 text-[11px] text-[#4A5568]">{requestedByProfile?.full_name || '—'}</td>
+                      <td className="p-2.5 max-w-[200px] truncate text-[11px] text-[#4A5568]" title={request.notes || ''}>
+                        {request.notes || '—'}
+                      </td>
+                      <td className="p-2.5">
+                        <span
+                          className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                            request.status === 'approved'
+                              ? 'border-blue-200 bg-blue-50 text-blue-700'
+                              : 'border-amber-200 bg-amber-50 text-amber-700'
+                          }`}
+                        >
+                          {request.status === 'approved' ? 'Approved' : 'Pending review'}
+                        </span>
+                      </td>
+                      <td className="p-2.5">
+                        <div className="flex flex-wrap gap-1.5">
+                          <form action={asFormAction(fulfillSampleRequest)}>
+                            <input type="hidden" name="request_id" value={request.id} />
+                            <button className="rounded-lg bg-[#9C7A33] px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-[#7C6224]">
+                              Fulfil &amp; ship
+                            </button>
+                          </form>
+                          {request.status === 'pending' && (
+                            <form action={asFormAction(updateSampleRequestStatus)}>
+                              <input type="hidden" name="request_id" value={request.id} />
+                              <input type="hidden" name="status" value="approved" />
+                              <button className="rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold text-[#4A5568] hover:bg-[#F5F7FA]">
+                                Approve
+                              </button>
+                            </form>
+                          )}
+                          <form action={asFormAction(updateSampleRequestStatus)}>
+                            <input type="hidden" name="request_id" value={request.id} />
+                            <input type="hidden" name="status" value="rejected" />
+                            <button className="rounded-lg border border-red-200 px-2.5 py-1.5 text-[11px] font-semibold text-red-600 hover:bg-red-50">
+                              Reject
+                            </button>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <form action={asFormAction(receiveSample)} className="grid items-end gap-3 rounded-2xl border bg-white p-4 text-xs md:grid-cols-4">

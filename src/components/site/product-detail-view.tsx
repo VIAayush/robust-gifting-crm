@@ -18,7 +18,7 @@ type ProductDetailState = {
 
 const ProductDetailContext = createContext<ProductDetailState | null>(null)
 
-function useProductDetail() {
+export function useProductDetail() {
   const ctx = useContext(ProductDetailContext)
   if (!ctx) throw new Error('ProductGallerySlot/ColorSelectorSlot must be used inside a ProductDetailProvider')
   return ctx
