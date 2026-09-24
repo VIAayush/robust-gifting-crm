@@ -2,10 +2,21 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { addToCart, type CartItem } from '@/lib/site/cart'
+import { addToCart, type CartItem, type CustomizationData } from '@/lib/site/cart'
+
+type ProductInput = Omit<CartItem, 'quantity' | 'lineId'>
 
 /** Adds one unit to the cart — quantity is adjusted afterwards on /cart, not here. */
-export function AddToCartControl({ product }: { product: Omit<CartItem, 'quantity'> }) {
+export function AddToCartControl({
+  product,
+  customization,
+  customizationFilePath,
+}: {
+  product: Omit<ProductInput, 'customization' | 'customizationFilePath'>
+  /** Current values from ProductCustomizer, if the product has customization enabled. */
+  customization?: CustomizationData | null
+  customizationFilePath?: string | null
+}) {
   const [added, setAdded] = useState(false)
 
   return (
@@ -13,7 +24,7 @@ export function AddToCartControl({ product }: { product: Omit<CartItem, 'quantit
       <button
         type="button"
         onClick={() => {
-          addToCart(product, 1)
+          addToCart({ ...product, customization: customization || null, customizationFilePath: customizationFilePath || null }, 1)
           setAdded(true)
           window.setTimeout(() => setAdded(false), 2200)
         }}

@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { getProfile } from '@/lib/auth'
 import { writeAudit } from '@/lib/audit'
 import { resyncPrimaryImage } from '@/lib/products/gallery'
+import { CUSTOMIZATION_FIELDS } from '@/lib/products/customization'
 
 const CATALOGUE_ROLES = ['admin', 'sales'] as const
 const VISIBILITY_ROLES = ['admin'] as const
@@ -296,6 +297,14 @@ export async function updateProduct(productId: string, formData: FormData) {
       catalogue_access === 'all' ? 'catalogue' : catalogue_access === 'selected' ? 'selected_companies' : 'internal_only'
   }
 
+  if (formData.has('customization_enabled')) {
+    const enabled = formData.get('customization_enabled') === 'on' || formData.get('customization_enabled') === 'true'
+    update.customization_enabled = enabled
+    const validKeys = CUSTOMIZATION_FIELDS.map((f) => f.key) as string[]
+    const fields = formData.getAll('customization_fields').map(String).filter((f) => validKeys.includes(f))
+    update.customization_fields = enabled && fields.length > 0 ? fields : null
+  }
+
   // SKU is the stable product identifier. It is never changed implicitly, and only
   // an admin may change it deliberately. The audit_products trigger records it.
   if (formData.has('sku')) {
@@ -506,6 +515,35 @@ export async function saveCatalogueVisibility(productId: string, mode: string, c
   revalidatePath(`/crm/products/${productId}`)
   revalidatePath('/crm/products')
   revalidatePath('/portal/catalogue')
+  return { success: true }
+}
+
+export async function saveProductCustomization(productId: string, enabled: boolean, fields: string[]) {
+  const profile = await getProfile()
+  if (!profile) return { error: 'Not authenticated' }
+  if (!VISIBILITY_ROLES.includes(profile.role as (typeof VISIBILITY_ROLES)[number])) {
+    return { error: 'Not permitted to change product customization' }
+  }
+
+  const validKeys = CUSTOMIZATION_FIELDS.map((f) => f.key) as string[]
+  const cleanFields = [...new Set(fields)].filter((f) => validKeys.includes(f))
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('products')
+    .update({ customization_enabled: enabled, customization_fields: enabled && cleanFields.length > 0 ? cleanFields : null })
+    .eq('id', productId)
+  if (error) return { error: 'Unable to update customization. Please try again.' }
+
+  await writeAudit(supabase, {
+    action: 'update',
+    entity: 'products',
+    entityId: productId,
+    next: { customization_enabled: enabled, customization_fields: cleanFields },
+    userId: profile.id,
+  })
+
+  revalidatePath(`/crm/products/${productId}`)
   return { success: true }
 }
 

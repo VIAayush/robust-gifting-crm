@@ -9,6 +9,7 @@ import { asFormAction } from '@/lib/form-action'
 import { Globe, Lock, EyeOff } from 'lucide-react'
 import { ProductImageEditor } from '@/components/products/product-image-editor'
 import { CatalogueVisibilityEditor } from '@/components/products/catalogue-visibility-editor'
+import { ProductCustomizationEditor } from '@/components/products/product-customization-editor'
 import { ProductVariantsManager } from '@/components/products/product-variants-manager'
 import { ProductGalleryManager } from '@/components/products/product-gallery-manager'
 import { requireStaff, canSeeCosts } from '@/lib/auth'
@@ -328,6 +329,14 @@ export default async function ProductDetailPage({
             <p className="text-xs text-gray-500">Only admin can change which companies see this product.</p>
           </div>
           )}
+
+          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+            <ProductCustomizationEditor
+              productId={product.id}
+              initialEnabled={Boolean(product.customization_enabled)}
+              initialFields={product.customization_fields || []}
+            />
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">

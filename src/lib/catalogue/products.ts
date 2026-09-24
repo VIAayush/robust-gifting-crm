@@ -18,7 +18,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 const CATALOGUE_REVALIDATE_SECONDS = 60
 
 const PUBLIC_PRODUCT_SELECT =
-  'id, name, sku, description, image_url, price, moq, category_id, brand_id, status, created_at, category:categories(id, name), brand:brands(id, name)'
+  'id, name, sku, description, image_url, price, moq, category_id, brand_id, status, created_at, customization_enabled, customization_fields, category:categories(id, name), brand:brands(id, name)'
 
 export type PublicProduct = {
   id: string
@@ -35,6 +35,8 @@ export type PublicProduct = {
   created_at: string | null
   /** Colour names available for this product, in display order. Empty when it has no colour variants. */
   variantColours: string[]
+  customizationEnabled: boolean
+  customizationFields: string[]
 }
 
 export type PublicProductImage = { id: string; url: string; alt: string }
@@ -60,6 +62,8 @@ function toPublicProduct(
     category_id: string | null
     status: string
     created_at?: string | null
+    customization_enabled?: boolean | null
+    customization_fields?: string[] | null
     category?: Named | Named[] | null
     brand?: Named | Named[] | null
   },
@@ -79,6 +83,8 @@ function toPublicProduct(
     status: row.status,
     created_at: row.created_at || null,
     variantColours,
+    customizationEnabled: Boolean(row.customization_enabled),
+    customizationFields: row.customization_fields || [],
   }
 }
 

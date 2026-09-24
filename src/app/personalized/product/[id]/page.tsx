@@ -4,8 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { SiteShell } from '@/components/site/site-shell'
 import { ProductDetailProvider, ProductGallerySlot, ColorSelectorSlot } from '@/components/site/product-detail-view'
-import { WishlistHeartButton } from '@/components/site/wishlist-heart-button'
-import { AddToCartControl } from '@/components/site/add-to-cart-control'
+import { PersonalizedPurchaseActions } from '@/components/site/personalized-purchase-actions'
 import { formatCurrency, isUuid } from '@/lib/utils'
 import { getPublicProductWithVariants } from '@/lib/catalogue/products'
 
@@ -79,32 +78,19 @@ export default async function PersonalizedProductPage({ params }: Props) {
                 </div>
               </dl>
 
-              <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:items-center sm:gap-4">
-                <div className="sm:max-w-xs sm:flex-1">
-                  <AddToCartControl
-                    product={{
-                      id: product.id,
-                      sku: product.sku,
-                      name: product.name,
-                      price: product.price,
-                      image_url: product.image_url,
-                      category_name: product.category_name,
-                    }}
-                  />
-                </div>
-                <div className="sm:w-48">
-                  <WishlistHeartButton
-                    variant="detail"
-                    product={{
-                      id: product.id,
-                      sku: product.sku,
-                      name: product.name,
-                      price: product.price,
-                      image_url: product.image_url,
-                      category_name: product.category_name,
-                    }}
-                  />
-                </div>
+              <div className="mt-8 sm:mt-10">
+                <PersonalizedPurchaseActions
+                  product={{
+                    id: product.id,
+                    sku: product.sku,
+                    name: product.name,
+                    price: product.price,
+                    image_url: product.image_url,
+                    category_name: product.category_name,
+                  }}
+                  customizationEnabled={product.customizationEnabled}
+                  customizationFields={product.customizationFields}
+                />
               </div>
             </div>
           </div>
