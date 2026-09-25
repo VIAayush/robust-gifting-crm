@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { PRODUCT_CATEGORY_ALIASES } from '@/lib/products/categories'
 import { canonicalColourName, stripColourSuffixFromSku } from '@/lib/products/colours'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { createHash } from 'crypto'
 
 const CATALOGUE_ROLES = ['admin', 'sales'] as const
 const IMAGE_BUCKET = 'product-images'
@@ -434,8 +435,58 @@ export async function validateCatalogueCsv(formData: FormData): Promise<ImportSu
   return planToSummary(plan, { imported: rowCount, created: plan.groups.length - updated, updated }, false)
 }
 
+type UploadedImage = { storagePath: string; url: string; contentHash: string }
+
+/**
+ * Content-hash dedup for uploaded photos: reused across every row/variant in
+ * this import batch (via `batchHashCache`) and against every image Storage
+ * already holds (via the `content_hash` DB column), so the same photo bytes
+ * are never written to Storage twice — whether it's reused by two colour
+ * variants in one file or re-imported later in a different batch.
+ */
+async function resolveUploadedImage(
+  supabase: SupabaseClient,
+  file: File,
+  extension: string,
+  objectPath: string,
+  batchHashCache: Map<string, UploadedImage>,
+): Promise<{ image: UploadedImage; reused: boolean } | { error: string }> {
+  const buf = Buffer.from(await file.arrayBuffer())
+  const contentHash = createHash('sha256').update(buf).digest('hex')
+
+  const cached = batchHashCache.get(contentHash)
+  if (cached) return { image: cached, reused: true }
+
+  const { data: existing } = await supabase
+    .from('product_images')
+    .select('storage_path, image_url')
+    .eq('content_hash', contentHash)
+    .not('storage_path', 'is', null)
+    .limit(1)
+    .maybeSingle()
+  if (existing?.storage_path && existing.image_url) {
+    const image = { storagePath: existing.storage_path, url: existing.image_url, contentHash }
+    batchHashCache.set(contentHash, image)
+    return { image, reused: true }
+  }
+
+  const { error: uploadError } = await supabase.storage
+    .from(IMAGE_BUCKET)
+    .upload(objectPath, buf, { contentType: file.type, upsert: false, cacheControl: '31536000' })
+  if (uploadError) return { error: uploadError.message }
+
+  const image = { storagePath: objectPath, url: publicImageUrl(objectPath), contentHash }
+  batchHashCache.set(contentHash, image)
+  return { image, reused: false }
+}
+
 /** Writes one product group (insert or overwrite, its variants, and its photos). Pushes failures onto `plan.failures` instead of throwing. */
-async function commitGroup(supabase: SupabaseClient, group: ProductGroup, plan: { failures: ImportFailure[] }): Promise<'created' | 'updated' | 'failed'> {
+async function commitGroup(
+  supabase: SupabaseClient,
+  group: ProductGroup,
+  plan: { failures: ImportFailure[] },
+  batchHashCache: Map<string, UploadedImage>,
+): Promise<'created' | 'updated' | 'failed'> {
   const first = group.rows[0]
   const visibility =
     first.catalogue_access === 'all'
@@ -540,20 +591,20 @@ async function commitGroup(supabase: SupabaseClient, group: ProductGroup, plan: 
       const image = row.images[i]
       let imageUrl: string
       let storagePath: string | null = null
+      let contentHash: string | null = null
       if (image.kind === 'url') {
         imageUrl = image.url
       } else {
         const extension = ALLOWED_IMAGE_TYPES[image.file.type]
         const objectPath = `${product.id}/${variantId || 'shared'}/${Date.now()}-${i}.${extension}`
-        const { error: uploadError } = await supabase.storage
-          .from(IMAGE_BUCKET)
-          .upload(objectPath, image.file, { contentType: image.file.type, upsert: false, cacheControl: '31536000' })
-        if (uploadError) {
-          plan.failures.push({ row: row.rowNumber, sku: row.sku, reason: `Image upload failed: ${uploadError.message}` })
+        const resolved = await resolveUploadedImage(supabase, image.file, extension, objectPath, batchHashCache)
+        if ('error' in resolved) {
+          plan.failures.push({ row: row.rowNumber, sku: row.sku, reason: `Image upload failed: ${resolved.error}` })
           continue
         }
-        storagePath = objectPath
-        imageUrl = publicImageUrl(objectPath)
+        storagePath = resolved.image.storagePath
+        imageUrl = resolved.image.url
+        contentHash = resolved.image.contentHash
       }
       const isPrimary = !primaryImageUrl
       await supabase.from('product_images').insert({
@@ -561,6 +612,7 @@ async function commitGroup(supabase: SupabaseClient, group: ProductGroup, plan: 
         variant_id: variantId,
         image_url: imageUrl,
         storage_path: storagePath,
+        content_hash: contentHash,
         sort_order: i,
         is_primary: isPrimary,
       })
@@ -622,8 +674,9 @@ export async function importCatalogueCsvChunk(formData: FormData): Promise<Impor
 
   let created = 0
   let updated = 0
+  const batchHashCache = new Map<string, UploadedImage>()
   for (const group of chunk) {
-    const outcome = await commitGroup(supabase, group, plan)
+    const outcome = await commitGroup(supabase, group, plan, batchHashCache)
     if (outcome === 'created') created += 1
     else if (outcome === 'updated') updated += 1
   }
@@ -650,5 +703,13 @@ async function replaceProductVariantsAndImages(supabase: SupabaseClient, product
   // Deleting the variants cascades their product_images rows, so clear images first.
   await supabase.from('product_images').delete().eq('product_id', productId)
   await supabase.from('product_variants').delete().eq('product_id', productId)
-  if (paths.length > 0) await supabase.storage.from(IMAGE_BUCKET).remove(paths)
+  if (paths.length === 0) return
+
+  // Content-hash dedup (see resolveUploadedImage) means a storage path can be
+  // shared by more than one product's photos, so only remove paths nothing
+  // else references any more.
+  const { data: stillReferenced } = await supabase.from('product_images').select('storage_path').in('storage_path', paths)
+  const stillReferencedSet = new Set((stillReferenced || []).map((r) => r.storage_path))
+  const orphaned = paths.filter((p) => !stillReferencedSet.has(p))
+  if (orphaned.length > 0) await supabase.storage.from(IMAGE_BUCKET).remove(orphaned)
 }

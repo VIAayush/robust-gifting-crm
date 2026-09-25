@@ -46,6 +46,9 @@ write_file.py
 generatePages.js
 scripts/collect-deploy-files.py
 
+# one-off audit/manifest output from scripts/*.mjs runs, not source
+scripts/_*.json
+
 # vercel
 .vercel
 
