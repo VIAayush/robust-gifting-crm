@@ -696,20 +696,25 @@ export async function removeProduct(formData: FormData) {
     }
   }
 
-  if (isStoredProductImage(imageUrl)) {
-    const { count: shared } = await supabase
-      .from('products')
-      .select('id', { count: 'exact', head: true })
-      .eq('image_url', imageUrl)
-    if (!shared) {
-      const objectPath = objectPathFromUrl(imageUrl)
-      if (objectPath) await supabase.storage.from(IMAGE_BUCKET).remove([objectPath])
-    }
-  }
-  // product_images rows are already gone via ON DELETE CASCADE; their storage
-  // objects are namespaced under this product's own id, so nothing else references them.
-  if (galleryStoragePaths.length > 0) {
-    await supabase.storage.from(IMAGE_BUCKET).remove(galleryStoragePaths)
+  // Content-hash dedup (see import-actions.ts's resolveUploadedImage) means a
+  // storage path can be shared by more than one product's photos even though
+  // this product's own product_images rows are already gone via ON DELETE
+  // CASCADE - check every other product/gallery row before removing anything
+  // from Storage, the same way replaceProductVariantsAndImages does for CSV
+  // overwrites.
+  const primaryObjectPath = isStoredProductImage(imageUrl) ? objectPathFromUrl(imageUrl) : null
+  const candidatePaths = [...new Set([...(primaryObjectPath ? [primaryObjectPath] : []), ...galleryStoragePaths])]
+  if (candidatePaths.length > 0) {
+    const [{ data: byGalleryPath }, { count: byProductUrl }] = await Promise.all([
+      supabase.from('product_images').select('storage_path').in('storage_path', candidatePaths),
+      isStoredProductImage(imageUrl)
+        ? supabase.from('products').select('id', { count: 'exact', head: true }).eq('image_url', imageUrl)
+        : Promise.resolve({ count: 0 }),
+    ])
+    const stillReferenced = new Set((byGalleryPath || []).map((r) => r.storage_path))
+    if (byProductUrl && primaryObjectPath) stillReferenced.add(primaryObjectPath)
+    const orphaned = candidatePaths.filter((p) => !stillReferenced.has(p))
+    if (orphaned.length > 0) await supabase.storage.from(IMAGE_BUCKET).remove(orphaned)
   }
 
   await writeAudit(supabase, {
