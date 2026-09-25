@@ -547,7 +547,7 @@ async function commitGroup(supabase: SupabaseClient, group: ProductGroup, plan: 
         const objectPath = `${product.id}/${variantId || 'shared'}/${Date.now()}-${i}.${extension}`
         const { error: uploadError } = await supabase.storage
           .from(IMAGE_BUCKET)
-          .upload(objectPath, image.file, { contentType: image.file.type, upsert: false })
+          .upload(objectPath, image.file, { contentType: image.file.type, upsert: false, cacheControl: '31536000' })
         if (uploadError) {
           plan.failures.push({ row: row.rowNumber, sku: row.sku, reason: `Image upload failed: ${uploadError.message}` })
           continue

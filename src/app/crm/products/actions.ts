@@ -133,7 +133,7 @@ export async function createProduct(formData: FormData) {
       const objectPath = `${product.id}/shared/${Date.now()}.${extension}`
       const { error: uploadError } = await supabase.storage
         .from(IMAGE_BUCKET)
-        .upload(objectPath, imageFile, { contentType: imageFile.type, upsert: false })
+        .upload(objectPath, imageFile, { contentType: imageFile.type, upsert: false, cacheControl: '31536000' })
       if (uploadError) {
         imageHint = 'upload-failed'
       } else {
@@ -195,7 +195,7 @@ export async function createProduct(formData: FormData) {
         const objectPath = `${product.id}/${variant.id}/${Date.now()}-${p}.${extension}`
         const { error: uploadError } = await supabase.storage
           .from(IMAGE_BUCKET)
-          .upload(objectPath, photo, { contentType: photo.type, upsert: false })
+          .upload(objectPath, photo, { contentType: photo.type, upsert: false, cacheControl: '31536000' })
         if (uploadError) continue
         const photoUrl = publicImageUrl(objectPath)
         const isPrimary = !hasPrimaryImage
@@ -397,7 +397,7 @@ export async function uploadProductImage(formData: FormData) {
   const objectPath = `${productId}/shared/${Date.now()}.${extension}`
   const { error: uploadError } = await supabase.storage
     .from(IMAGE_BUCKET)
-    .upload(objectPath, file, { contentType: file.type, upsert: false })
+    .upload(objectPath, file, { contentType: file.type, upsert: false, cacheControl: '31536000' })
   if (uploadError) return { error: 'Unable to upload product image. Please check the file and try again.' }
 
   const nextUrl = publicImageUrl(objectPath)

@@ -41,6 +41,7 @@ async function copyLogoToCompany(
   const { error: uploadError } = await supabase.storage.from(LOGO_BUCKET).upload(objectPath, data, {
     contentType: data.type || 'image/png',
     upsert: false,
+    cacheControl: '31536000',
   })
   if (uploadError) return null
   return objectPath
@@ -105,7 +106,7 @@ export async function createCompany(formData: FormData) {
       const objectPath = `${data.id}/${Date.now()}.${extension}`
       const { error: uploadError } = await supabase.storage
         .from(LOGO_BUCKET)
-        .upload(objectPath, file, { contentType: file.type, upsert: false })
+        .upload(objectPath, file, { contentType: file.type, upsert: false, cacheControl: '31536000' })
       if (!uploadError) {
         await supabase.from('companies').update({ logo_path: objectPath }).eq('id', data.id)
       }
@@ -189,7 +190,7 @@ export async function uploadCompanyLogo(formData: FormData) {
   const objectPath = `${companyId}/${Date.now()}.${extension}`
   const { error: uploadError } = await supabase.storage
     .from(LOGO_BUCKET)
-    .upload(objectPath, file, { contentType: file.type, upsert: false })
+    .upload(objectPath, file, { contentType: file.type, upsert: false, cacheControl: '31536000' })
   if (uploadError) return { error: uploadError.message }
 
   const { error: updateError } = await supabase

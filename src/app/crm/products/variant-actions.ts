@@ -155,7 +155,7 @@ export async function addVariantImages(formData: FormData) {
     const objectPath = `${productId}/${variantId || 'shared'}/${Date.now()}-${nextSort}.${extension}`
     const { error: uploadError } = await supabase.storage
       .from(IMAGE_BUCKET)
-      .upload(objectPath, file, { contentType: file.type, upsert: false })
+      .upload(objectPath, file, { contentType: file.type, upsert: false, cacheControl: '31536000' })
     if (uploadError) continue
     const isPrimary = !hadAnyImages && uploaded === 0
     await supabase.from('product_images').insert({

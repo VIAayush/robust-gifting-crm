@@ -42,6 +42,12 @@ export async function PublicHome() {
     more,
   } = curatePublicHome(products, categories, collections, CATALOGUE_OCCASIONS)
 
+  // Bounded to HERO_POOL_LIMIT (not the full catalogue) so the rotating hero
+  // stops pulling a fresh original from Storage every 3.5s indefinitely -
+  // capping it lets the browser/CDN actually cache the small pool instead of
+  // cycling through hundreds of never-repeated images for as long as the tab
+  // stays open.
+  const HERO_POOL_LIMIT = 24
   const rankedHero = [...products]
     .filter((product) => Boolean(product.image_url?.trim()))
     .sort((a, b) => {
@@ -53,6 +59,7 @@ export async function PublicHome() {
       }
       return rank(b.image_url || '') - rank(a.image_url || '')
     })
+    .slice(0, HERO_POOL_LIMIT)
   const heroOffset = rankedHero.length > 12 ? 10 : 0
   const heroSlideshow = rankedHero.slice(heroOffset).concat(rankedHero.slice(0, heroOffset))
 

@@ -32,7 +32,9 @@ export async function uploadCustomizationFile(formData: FormData): Promise<{ err
   if (!admin) return { error: 'Unable to upload right now. Please try again shortly.' }
 
   const objectPath = `${productId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`
-  const { error } = await admin.storage.from(BUCKET).upload(objectPath, file, { contentType: file.type, upsert: false })
+  const { error } = await admin.storage
+    .from(BUCKET)
+    .upload(objectPath, file, { contentType: file.type, upsert: false, cacheControl: '31536000' })
   if (error) return { error: 'Unable to upload the file. Please try again.' }
 
   return { path: objectPath }

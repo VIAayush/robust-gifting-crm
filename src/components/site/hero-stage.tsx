@@ -31,22 +31,6 @@ function nextBatch(pool: PublicProduct[], start: number, count: number, avoid: s
   return { ids, nextCursor: idx % pool.length }
 }
 
-/** Preloads the next batch so all tiles pop in together instead of trickling in as each image finishes downloading. */
-function preloadImages(urls: string[], timeoutMs = 1200): Promise<void> {
-  if (typeof window === 'undefined' || !urls.length) return Promise.resolve()
-  const loaders = urls.map(
-    (url) =>
-      new Promise<void>((resolve) => {
-        const img = new window.Image()
-        img.onload = () => resolve()
-        img.onerror = () => resolve()
-        img.src = url
-      }),
-  )
-  const timeout = new Promise<void>((resolve) => window.setTimeout(resolve, timeoutMs))
-  return Promise.race([Promise.all(loaders).then(() => undefined), timeout])
-}
-
 export function HeroStage({
   products,
   headlineLines = ['Corporate gifting,', 'designed to be remembered.'],
@@ -103,18 +87,13 @@ export function HeroStage({
       setPhase('out')
       timers.push(
         window.setTimeout(() => {
+          if (cancelled) return
           const current = slotIdsRef.current
           const { ids, nextCursor } = nextBatch(pool, cursorRef.current, current.length, current)
-          const urls = ids
-            .map((id) => pool.find((product) => product.id === id)?.image_url)
-            .filter((url): url is string => Boolean(url))
-          preloadImages(urls).then(() => {
-            if (cancelled) return
-            cursorRef.current = nextCursor
-            setSlotIds(ids)
-            setPhase('in')
-            timers.push(window.setTimeout(() => setPhase('idle'), 40))
-          })
+          cursorRef.current = nextCursor
+          setSlotIds(ids)
+          setPhase('in')
+          timers.push(window.setTimeout(() => setPhase('idle'), 40))
         }, FADE_MS),
       )
     }, SLIDE_MS)
