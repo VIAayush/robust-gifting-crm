@@ -5,6 +5,13 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: '*.supabase.co', pathname: '/storage/v1/object/public/**' },
     ],
+    // Every Storage upload path embeds Date.now() and is written with
+    // upsert:false (see scripts/optimize-active-product-images.mjs and the
+    // product/company upload actions) - a given image URL's bytes never
+    // change after creation, a new upload always gets a new path instead.
+    // Safe to cache aggressively since there's no in-place-mutation case to
+    // go stale against.
+    minimumCacheTTL: 2592000,
   },
   experimental: {
     serverActions: {
