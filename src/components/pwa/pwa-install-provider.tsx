@@ -99,6 +99,22 @@ export function PwaInstallProvider({ children }: { children: ReactNode }) {
         setReady(true)
         return
       }
+      // In development chunk URLs aren't content-hashed, so a caching service
+      // worker would keep serving stale JS and break hot reload. Remove any
+      // worker left over from an earlier session instead of registering one.
+      if (process.env.NODE_ENV !== 'production') {
+        try {
+          const regs = await navigator.serviceWorker.getRegistrations()
+          await Promise.all(regs.map((r) => r.unregister()))
+          const keys = await caches.keys()
+          await Promise.all(keys.filter((k) => k.startsWith('robust-gifting-pwa')).map((k) => caches.delete(k)))
+        } catch {
+          // Best effort only.
+        }
+        setReady(true)
+        syncPrompt()
+        return
+      }
       try {
         const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
         await reg.update().catch(() => {})
