@@ -5,6 +5,7 @@ import type { PublicProduct } from '@/lib/catalogue/products'
 import { swatchHex } from '@/lib/products/colours'
 import { cn } from '@/lib/utils'
 import { WishlistHeartButton } from '@/components/site/wishlist-heart-button'
+import { PriceDisplay } from '@/components/site/price-display'
 
 /**
  * Retail product tile inspired by craft storefronts:
@@ -63,7 +64,12 @@ export function SiteProductCard({
         >
           {product.name}
         </h3>
-        <p className="text-[15px] font-semibold text-[#9C7A33]">{formatCurrency(product.price)}</p>
+        {/* MRP strike-through is a retail (B2C) convention; the corporate catalogue keeps its commercial price only. */}
+        {hrefBase.startsWith('/personalized') ? (
+          <PriceDisplay price={product.price} mrp={product.mrp} className="justify-center" />
+        ) : (
+          <p className="text-[15px] font-semibold text-[#9C7A33]">{formatCurrency(product.price)}</p>
+        )}
         {product.variantColours.length > 1 && (
           <div className="flex items-center justify-center gap-1 pt-0.5" aria-label={`${product.variantColours.length} colours available`}>
             {product.variantColours.slice(0, 6).map((colour, i) => (

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getProfile } from '@/lib/auth'
 import { writeAudit } from '@/lib/audit'
+import { notifyOrderCreated } from '@/lib/notifications'
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {
   draft: ['sent'],
   sent: ['accepted', 'rejected', 'expired'],
@@ -65,6 +66,7 @@ export async function convertToOrder(quotationId: string) {
     next: { quotation_id: quotationId },
     userId: profile.id,
   })
+  await notifyOrderCreated(data)
   redirect(`/crm/orders/${data}`)
 }
 export async function duplicateQuotation(quotationId: string) {

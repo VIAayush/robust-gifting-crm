@@ -13,6 +13,8 @@ import {
   handOffOrder,
 } from '../actions'
 import { getProfile, canSeeCosts, canChangeOrderStage, applyOrderScope } from '@/lib/auth'
+import { hasPermission } from '@/lib/permissions'
+import { OrderItemProcurement } from '@/components/orders/order-item-procurement'
 import {
   ORDER_LIFECYCLE,
   ORDER_STATUS_LABELS,
@@ -53,6 +55,8 @@ export default async function OrderDetailPage({
     { data: courierPartners },
     { data: departments },
     { data: staff },
+    canAssignSupplier,
+    canUpdateProcurement,
   ] = await Promise.all([
     applyOrderScope(
       supabase
@@ -72,7 +76,12 @@ export default async function OrderDetailPage({
         .eq('id', id),
       profile
     ).maybeSingle(),
-    supabase.from('order_items').select('id, description, quantity, unit_price, line_total, product:products(id, name, sku, image_url, status)').eq('order_id', id),
+    supabase
+      .from('order_items')
+      .select(
+        'id, description, quantity, unit_price, line_total, product_id, supplier_id, supplier_sku_snapshot, supplier_cost_snapshot, procurement_status, procurement_notes, product:products(id, name, sku, image_url, status), item_supplier:supplier_id(name)'
+      )
+      .eq('order_id', id),
     supabase.from('order_status_history').select('*, changer:changed_by(id, full_name)').eq('order_id', id).order('changed_at', { ascending: false }),
     supabase.from('order_assignments').select('*, assignee:assigned_to(full_name), department:department_id(name), assigner:assigned_by(full_name)').eq('order_id', id).order('created_at', { ascending: false }),
     supabase.from('suppliers').select('id, name').order('name'),
@@ -80,6 +89,8 @@ export default async function OrderDetailPage({
     supabase.from('courier_partners').select('id, name').order('name'),
     supabase.from('departments').select('id, name, slug, manager_id').order('name'),
     supabase.from('profiles').select('id, full_name, department_id').in('role', ['admin', 'sales', 'operations', 'accounts', 'management']).eq('is_active', true).order('full_name'),
+    hasPermission(supabase, profile, 'orders.assign_supplier'),
+    hasPermission(supabase, profile, 'orders.procurement'),
   ])
 
   const order = orderRes.data
@@ -97,6 +108,30 @@ export default async function OrderDetailPage({
   const printingVendor = oneRelation(order.printing_vendor)
   const courierPartner = oneRelation(order.courier_partner)
   const quotation = oneRelation(order.quotation)
+  const procurementItems = (orderItems || []).map((item: {
+    id: string
+    description?: string | null
+    product?: { id?: string; name?: string } | { id?: string; name?: string }[] | null
+    supplier_id?: string | null
+    supplier_sku_snapshot?: string | null
+    supplier_cost_snapshot?: number | null
+    procurement_status?: string | null
+    procurement_notes?: string | null
+    item_supplier?: { name?: string } | { name?: string }[] | null
+  }) => {
+    const product = oneRelation(item.product)
+    const itemSupplier = oneRelation(item.item_supplier)
+    return {
+      id: item.id,
+      productName: product?.name || item.description || 'Product',
+      supplierId: item.supplier_id || null,
+      supplierName: itemSupplier?.name || null,
+      supplierCostSnapshot: item.supplier_cost_snapshot ?? null,
+      supplierSkuSnapshot: item.supplier_sku_snapshot || null,
+      procurementStatus: item.procurement_status || 'not_assigned',
+      procurementNotes: item.procurement_notes || null,
+    }
+  })
   const tabs = showCosts
     ? ['details', 'products', 'vendors', 'financials', 'history']
     : ['details', 'products', 'vendors', 'history']
@@ -256,6 +291,7 @@ export default async function OrderDetailPage({
             </div>
           ),
           products: (
+            <div className="space-y-6">
             <div className="bg-white rounded-2xl border overflow-x-auto">
               <table className="w-full min-w-[640px] text-left text-xs">
                 <thead className="bg-gray-50"><tr>
@@ -318,6 +354,15 @@ export default async function OrderDetailPage({
                   )}
                 </tbody>
               </table>
+            </div>
+            <OrderItemProcurement
+              orderId={order.id}
+              items={procurementItems}
+              suppliers={suppliers || []}
+              canAssign={canAssignSupplier}
+              canUpdateStatus={canUpdateProcurement}
+              canSeeCost={showCosts}
+            />
             </div>
           ),
           vendors: (

@@ -26,6 +26,11 @@ function publicImageUrl(objectPath: string) {
   return `${base.replace(/\/$/, '')}/storage/v1/object/public/${IMAGE_BUCKET}/${objectPath.replace(/^\/+/, '')}`
 }
 
+function normalizeProductStatus(raw: string | null | undefined) {
+  const value = (raw || '').trim().toLowerCase()
+  return value === 'discontinued' || value === 'inactive' ? 'discontinued' : 'active'
+}
+
 export async function createProduct(formData: FormData) {
   const profile = await getProfile()
   if (!profile) return { error: 'Not authenticated' }
@@ -41,12 +46,14 @@ export async function createProduct(formData: FormData) {
   const supplier_id = (formData.get('supplier_id') as string) || null
   const description = (formData.get('description') as string) || null
   const price = parseFloat(formData.get('price') as string) || 0
+  const mrp = formData.get('mrp') ? parseFloat(formData.get('mrp') as string) : null
   const supplier_cost = formData.get('supplier_cost') ? parseFloat(formData.get('supplier_cost') as string) : null
   const internal_margin = formData.get('internal_margin') ? parseFloat(formData.get('internal_margin') as string) : null
   const moq = parseInt(formData.get('moq') as string, 10) || 1
   const image_url = ((formData.get('image_url') as string) || '').trim() || null
   const hsn_code = ((formData.get('hsn_code') as string) || '').trim() || null
-  const status = (formData.get('status') as string) || 'active'
+  // product_status is only active | discontinued; "inactive" maps to discontinued.
+  const status = normalizeProductStatus(formData.get('status') as string)
   const catalogue_access =
     profile.role === 'admin' ? ((formData.get('catalogue_access') as string) || 'all') : 'all'
   const selectedCompanies = [
@@ -64,6 +71,8 @@ export async function createProduct(formData: FormData) {
   if (!category_id) {
     return { error: 'Please select a category' }
   }
+  if (mrp != null && (!Number.isFinite(mrp) || mrp < 0)) return { error: 'MRP must be a positive number' }
+  if (mrp != null && mrp < price) return { error: 'MRP cannot be lower than the selling price' }
   if (image_url && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\b/i.test(image_url)) {
     return { error: 'Image URLs cannot point to localhost. Upload a product photo instead.' }
   }
@@ -94,6 +103,8 @@ export async function createProduct(formData: FormData) {
       supplier_id,
       description,
       price,
+      mrp,
+      price_updated_at: new Date().toISOString(),
       supplier_cost,
       internal_margin,
       moq,
@@ -243,7 +254,7 @@ export async function updateProduct(productId: string, formData: FormData) {
   const supabase = await createClient()
   const { data: existing } = await supabase
     .from('products')
-    .select('sku')
+    .select('sku, price, mrp')
     .eq('id', productId)
     .maybeSingle()
   if (!existing) return { error: 'Product not found' }
@@ -279,12 +290,22 @@ export async function updateProduct(productId: string, formData: FormData) {
   text('supplier_id')
   text('hsn_code')
   number('price', 'price', 0)
+  number('mrp')
   number('supplier_cost')
   number('internal_margin')
   number('moq', 'moq', 1)
 
+  const nextPrice = 'price' in update ? Number(update.price) : Number(existing.price)
+  const nextMrp = 'mrp' in update ? (update.mrp as number | null) : existing.mrp
+  if (nextMrp != null && (nextMrp < 0 || nextMrp < nextPrice)) {
+    return { error: 'MRP cannot be lower than the selling price' }
+  }
+  const priceChanged = 'price' in update && Number(update.price) !== Number(existing.price)
+  const mrpChanged = 'mrp' in update && (update.mrp ?? null) !== (existing.mrp ?? null)
+  if (priceChanged || mrpChanged) update.price_updated_at = new Date().toISOString()
+
   if (formData.has('status')) {
-    update.status = (formData.get('status') as string) || 'active'
+    update.status = normalizeProductStatus(formData.get('status') as string)
   }
 
   if (formData.has('catalogue_access')) {
@@ -332,6 +353,18 @@ export async function updateProduct(productId: string, formData: FormData) {
 
   if (update.status && update.status !== 'active') {
     await hideDiscontinuedProductFromClients(supabase, productId)
+  }
+
+  if (priceChanged || mrpChanged) {
+    await supabase.from('product_price_history').insert({
+      product_id: productId,
+      old_price: existing.price,
+      new_price: nextPrice,
+      old_mrp: existing.mrp,
+      new_mrp: nextMrp,
+      source: 'manual',
+      changed_by: profile.id,
+    })
   }
 
   revalidatePath('/crm/products/' + productId)

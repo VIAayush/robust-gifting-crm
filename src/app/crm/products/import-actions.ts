@@ -78,6 +78,7 @@ type PreparedRow = {
   category_id: string | null
   supplier_id: string | null
   price: number
+  mrp: number | null
   supplier_cost: number | null
   moq: number
   hsn_code: string | null
@@ -227,6 +228,16 @@ async function buildImportPlan(formData: FormData, supabase: SupabaseClient, pro
       failures.push({ row: rowNumber, sku: rawSku, reason: 'Price must be a number 0 or greater' })
       return
     }
+    const mrpRaw = cell(row, 'mrp')
+    const mrp = mrpRaw ? Number(mrpRaw) : null
+    if (mrpRaw && (!Number.isFinite(mrp as number) || (mrp as number) < 0)) {
+      failures.push({ row: rowNumber, sku: rawSku, reason: 'MRP must be a number 0 or greater' })
+      return
+    }
+    if (mrp != null && mrp < price) {
+      failures.push({ row: rowNumber, sku: rawSku, reason: 'MRP cannot be lower than the selling price' })
+      return
+    }
     const companyNames = splitCompanyNames(cell(row, 'companies'))
     const companyIds: string[] = []
     for (const companyName of companyNames) {
@@ -317,7 +328,9 @@ async function buildImportPlan(formData: FormData, supabase: SupabaseClient, pro
     }
 
     const statusRaw = cell(row, 'status').toLowerCase() || 'active'
-    const status = ['active', 'inactive', 'discontinued'].includes(statusRaw) ? statusRaw : 'active'
+    // product_status only has active/discontinued - "inactive" is accepted as a
+    // spreadsheet synonym for discontinued rather than failing the whole row.
+    const status = statusRaw === 'discontinued' || statusRaw === 'inactive' ? 'discontinued' : 'active'
     const supplierCostRaw = cell(row, 'supplier_cost')
     const supplier_cost = supplierCostRaw ? Number(supplierCostRaw) : null
     if (supplierCostRaw && !Number.isFinite(supplier_cost as number)) {
@@ -335,6 +348,7 @@ async function buildImportPlan(formData: FormData, supabase: SupabaseClient, pro
       category_id,
       supplier_id,
       price,
+      mrp,
       supplier_cost,
       moq: Math.max(1, parseInt(cell(row, 'moq') || '1', 10) || 1),
       hsn_code: cell(row, 'hsn_code') || null,
@@ -501,6 +515,8 @@ async function commitGroup(
     category_id: first.category_id,
     supplier_id: first.supplier_id,
     price: first.price,
+    ...(first.mrp != null ? { mrp: first.mrp } : {}),
+    price_updated_at: new Date().toISOString(),
     supplier_cost: Number.isFinite(first.supplier_cost as number) ? first.supplier_cost : null,
     moq: first.moq,
     hsn_code: first.hsn_code,

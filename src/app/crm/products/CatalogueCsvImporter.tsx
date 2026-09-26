@@ -9,7 +9,8 @@ import { MobileSheetSelect } from '@/components/ui/mobile-filter-sheet'
 const FIELD_LABELS: { key: string; label: string; required?: boolean }[] = [
   { key: 'name', label: 'Product name', required: true },
   { key: 'sku', label: 'SKU', required: true },
-  { key: 'price', label: 'Price', required: true },
+  { key: 'price', label: 'Selling price', required: true },
+  { key: 'mrp', label: 'MRP' },
   { key: 'description', label: 'Description' },
   { key: 'category', label: 'Category' },
   { key: 'supplier', label: 'Supplier' },

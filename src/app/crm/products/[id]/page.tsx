@@ -14,6 +14,8 @@ import { ProductVariantsManager } from '@/components/products/product-variants-m
 import { ProductGalleryManager } from '@/components/products/product-gallery-manager'
 import { requireStaff, canSeeCosts } from '@/lib/auth'
 import { MobileSheetSelect } from '@/components/ui/mobile-filter-sheet'
+import { hasPermission } from '@/lib/permissions'
+import { ProductSuppliersManager } from '@/components/products/product-suppliers-manager'
 
 export default async function ProductDetailPage({
   params,
@@ -38,18 +40,44 @@ export default async function ProductDetailPage({
     { data: accessRecords },
     { data: variants },
     { data: images },
+    { data: productSuppliers },
+    canManageSuppliers,
+    canSeeSupplierCost,
   ] = await Promise.all([
     supabase.from('products').select('*, category:categories(id, name), brand:brands(id, name), supplier:suppliers(id, name)').eq('id', id).maybeSingle(),
     supabase.from('categories').select('id, name'),
     supabase.from('brands').select('id, name').order('name'),
-    supabase.from('suppliers').select('id, name').order('name'),
+    supabase.from('suppliers').select('id, name').eq('status', 'active').order('name'),
     supabase.from('companies').select('id, name, logo_path').eq('status', 'active').order('name'),
     supabase.from('company_product_access').select('*, company:companies(id, name, city)').eq('product_id', id),
     supabase.from('product_variants').select('*').eq('product_id', id).eq('status', 'active').order('sort_order'),
     supabase.from('product_images').select('*').eq('product_id', id).order('sort_order'),
+    supabase
+      .from('product_suppliers')
+      .select('id, supplier_id, variant_id, supplier_sku, supplier_cost, moq, lead_time_days, is_preferred, status, supplier:suppliers(name)')
+      .eq('product_id', id)
+      .order('is_preferred', { ascending: false }),
+    hasPermission(supabase, profile, 'products.supplier_manage'),
+    hasPermission(supabase, profile, 'suppliers.cost_view'),
   ])
 
   if (!product) notFound()
+
+  const supplierMappings = (productSuppliers || []).map((m) => {
+    const s = Array.isArray(m.supplier) ? m.supplier[0] : m.supplier
+    return {
+      id: m.id,
+      supplier_id: m.supplier_id,
+      variant_id: m.variant_id,
+      supplier_name: s?.name || 'Unknown supplier',
+      supplier_sku: m.supplier_sku,
+      supplier_cost: m.supplier_cost,
+      moq: m.moq,
+      lead_time_days: m.lead_time_days,
+      is_preferred: m.is_preferred,
+      status: m.status,
+    }
+  })
 
   const productVariants = variants || []
   // Products saved before colour variants/galleries existed have zero
@@ -155,9 +183,15 @@ export default async function ProductDetailPage({
 
           <div className="flex items-center gap-6 mt-4 pt-4 border-t border-gray-100">
             <div>
-              <p className="text-[10px] text-gray-400 uppercase font-semibold">Retail Price</p>
+              <p className="text-[10px] text-gray-400 uppercase font-semibold">Selling Price</p>
               <p className="text-xl font-bold text-[#9C7A33]">{formatCurrency(product.price)}</p>
             </div>
+            {product.mrp != null && (
+            <div>
+              <p className="text-[10px] text-gray-400 uppercase font-semibold">MRP</p>
+              <p className="text-lg font-semibold text-gray-700">{formatCurrency(product.mrp)}</p>
+            </div>
+            )}
             {showCost && product.supplier_cost != null && (
             <div>
               <p className="text-[10px] text-gray-400 uppercase font-semibold">Supplier Cost</p>
@@ -210,21 +244,35 @@ export default async function ProductDetailPage({
                 defaultValue={product.status}
                 options={[
                   { value: 'active', label: 'Active' },
-                  { value: 'inactive', label: 'Inactive' },
                   { value: 'discontinued', label: 'Discontinued' },
                 ]}
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Retail (₹)</label>
+                <label htmlFor="product-price" className="block text-xs font-semibold text-gray-700 mb-1">Selling price (₹)</label>
                 <input
+                  id="product-price"
                   type="number"
                   step="0.01"
+                  min={0}
                   name="price"
                   defaultValue={product.price}
                   required
+                  className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg"
+                />
+              </div>
+              <div>
+                <label htmlFor="product-mrp" className="block text-xs font-semibold text-gray-700 mb-1">MRP (₹)</label>
+                <input
+                  id="product-mrp"
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  name="mrp"
+                  defaultValue={product.mrp ?? ''}
+                  placeholder="Optional"
                   className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg"
                 />
               </div>
@@ -370,6 +418,17 @@ export default async function ProductDetailPage({
                 }))}
               />
             </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+            <ProductSuppliersManager
+              productId={product.id}
+              mappings={supplierMappings}
+              suppliers={suppliers || []}
+              variants={productVariants.map((v) => ({ id: v.id, label: v.display_name || v.colour || 'Colour' }))}
+              canManage={canManageSuppliers}
+              canSeeCost={canSeeSupplierCost}
+            />
           </div>
         </div>
       </div>

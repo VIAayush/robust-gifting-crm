@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { notifySampleRequested } from '@/lib/notifications'
 
 /**
  * Persistent, DB-backed replacement for the browser-localStorage-only
@@ -100,19 +101,27 @@ export async function submitSampleRequest(formData: FormData): Promise<{ error?:
   const variantId = String(formData.get('variant_id') || '') || null
   const quantity = Number(formData.get('quantity') || 1)
   const notes = String(formData.get('notes') || '').trim() || null
+  const customizationNotes = String(formData.get('customization_notes') || '').trim().slice(0, 1000) || null
 
   if (!productId) return { error: 'Missing product' }
 
-  const { error } = await supabase.from('sample_requests').insert({
-    company_id: companyId,
-    requested_by: user.id,
-    product_id: productId,
-    variant_id: variantId,
-    quantity: quantity > 0 ? quantity : 1,
-    notes,
-    requested_date: new Date().toISOString().slice(0, 10),
-  })
+  const { data: inserted, error } = await supabase
+    .from('sample_requests')
+    .insert({
+      company_id: companyId,
+      requested_by: user.id,
+      product_id: productId,
+      variant_id: variantId,
+      quantity: Number.isFinite(quantity) && quantity > 0 ? Math.min(Math.round(quantity), 999) : 1,
+      notes,
+      customization_notes: customizationNotes,
+      requested_date: new Date().toISOString().slice(0, 10),
+    })
+    .select('id')
+    .single()
   if (error) return { error: error.message }
+
+  if (inserted?.id) await notifySampleRequested(inserted.id)
 
   revalidatePath('/portal/interest')
   revalidatePath('/crm/samples')

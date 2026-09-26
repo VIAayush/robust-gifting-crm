@@ -8,7 +8,7 @@ import {
   Package, Image as ImageIcon, FileText, ShoppingBag, KanbanSquare,
   Truck, Printer, Package2, Receipt, CreditCard, ArrowDownToLine,
   BarChart3, Activity, UserCog, Settings, ShieldCheck, LogOut,
-  ListTodo, Landmark, BadgeCheck, Megaphone, BookOpen, Target, X
+  ListTodo, Landmark, BadgeCheck, Megaphone, BookOpen, Target, X, Tags, MessageCircle, KeyRound
 } from 'lucide-react';
 import { signOut } from '@/app/login/actions';
 import { forgetRememberedTab } from '@/lib/auth/remember-client';
@@ -54,6 +54,7 @@ const navGroups: NavGroup[] = [
       { label: 'Goal Tracker', href: '/crm/goals', matchPrefix: '/crm/goals', icon: Target },
       { label: 'Requirements', href: '/crm/requirements', matchPrefix: '/crm/requirements', icon: ClipboardList },
       { label: 'Products', href: '/crm/products', matchPrefix: '/crm/products', icon: Package },
+      { label: 'Pricing & MRP', href: '/crm/products/pricing', matchPrefix: '/crm/products/pricing', icon: Tags },
       { label: 'Mockup Storage', href: '/crm/mockups', matchPrefix: '/crm/mockups', icon: ImageIcon },
       { label: 'Quotations', href: '/crm/quotations', matchPrefix: '/crm/quotations', icon: FileText },
       { label: 'Orders', href: '/crm/orders', matchPrefix: '/crm/orders', icon: ShoppingBag },
@@ -68,8 +69,10 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Order Management', href: '/crm/order-management', matchPrefix: '/crm/order-management', icon: KanbanSquare },
       { label: 'Orders', href: '/crm/orders', matchPrefix: '/crm/orders', icon: ShoppingBag },
+      { label: 'Products', href: '/crm/products', matchPrefix: '/crm/products', icon: Package },
       { label: 'Department', href: '/crm/department', matchPrefix: '/crm/department', icon: BadgeCheck },
       { label: 'Suppliers', href: '/crm/suppliers', matchPrefix: '/crm/suppliers', icon: Truck },
+      { label: 'Notifications', href: '/crm/notifications', matchPrefix: '/crm/notifications', icon: MessageCircle },
       { label: 'Printing', href: '/crm/printing-vendors', matchPrefix: '/crm/printing-vendors', icon: Printer },
       { label: 'Delivery', href: '/crm/courier-partners', matchPrefix: '/crm/courier-partners', icon: Package2 },
       { label: 'Samples', href: '/crm/samples', matchPrefix: '/crm/samples', icon: Package },
@@ -110,6 +113,7 @@ const navGroups: NavGroup[] = [
     roles: ['admin'],
     items: [
       { label: 'My Team', href: '/crm/team', matchPrefix: '/crm/team', icon: UserCog },
+      { label: 'Role Permissions', href: '/crm/settings/permissions', matchPrefix: '/crm/settings/permissions', icon: KeyRound },
       { label: 'Settings', href: '/crm/settings', matchPrefix: '/crm/settings', icon: Settings },
     ]
   }
@@ -135,6 +139,13 @@ export function Sidebar({ role, user, onNavigate, showClose, onClose, mobileOpen
     })
     return items.length ? [{ ...group, items }] : []
   })
+
+  // Only the most specific matching item is active, so /crm/products/pricing
+  // highlights "Pricing & MRP" and not also "Products".
+  const activeHref = visibleGroups
+    .flatMap((g) => g.items)
+    .filter((item) => pathname === item.href || (item.matchPrefix !== '/crm/dashboard' && pathname.startsWith(item.matchPrefix)))
+    .sort((a, b) => b.matchPrefix.length - a.matchPrefix.length)[0]?.href
 
   // Restore last scroll, then ensure the current page link is visible when the drawer opens.
   useEffect(() => {
@@ -205,7 +216,7 @@ export function Sidebar({ role, user, onNavigate, showClose, onClose, mobileOpen
               </div>
               <div className="space-y-0.5">
                 {group.items.map((item) => {
-                  const isActive = pathname === item.href || (item.matchPrefix !== '/crm/dashboard' && pathname.startsWith(item.matchPrefix));
+                  const isActive = item.href === activeHref;
                   return (
                     <Link
                       key={`${item.href}-${item.label}`}

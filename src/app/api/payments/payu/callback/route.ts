@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PayuPaymentProvider } from '@/lib/payments'
 import { createOrderFromCheckout } from '@/app/checkout/order'
+import { notifyPaymentResult } from '@/lib/notifications'
 
 /**
  * PayU's surl AND furl both point here (same fields either way,
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
   const checkoutUrl = new URL(`/checkout/${payment.checkout_id}/confirmation`, request.url)
 
   // Already resolved (a duplicate callback delivery) — don't reprocess.
-  if (payment.status === 'paid' || payment.status === 'failed') {
+  if (payment.status === 'paid' || payment.status === 'failed' || payment.status === 'cancelled') {
     return NextResponse.redirect(checkoutUrl, 303)
   }
 
@@ -54,8 +55,11 @@ export async function POST(request: Request) {
     return NextResponse.redirect(checkoutUrl, 303)
   }
 
+  // Atomic claim: only the caller whose conditional update actually flips the
+  // row out of pending/processing proceeds. Two concurrent duplicate
+  // callbacks can both pass the status check above, but only one wins here.
   if (verification.status === 'paid') {
-    await admin
+    const { data: claimed } = await admin
       .from('storefront_payments')
       .update({
         status: 'paid',
@@ -64,17 +68,28 @@ export async function POST(request: Request) {
         verified_at: new Date().toISOString(),
       })
       .eq('id', payment.id)
-    const orderResult = await createOrderFromCheckout(payment.checkout_id)
+      .in('status', ['pending', 'processing'])
+      .select('id')
+      .maybeSingle()
+    if (!claimed) return NextResponse.redirect(checkoutUrl, 303)
+
+    const orderResult = await createOrderFromCheckout(payment.checkout_id, { reference: verification.providerReference })
     if ('error' in orderResult) {
       // Payment is genuinely verified paid even if order creation hit a snag — don't lose that fact.
       await admin.from('storefront_payments').update({ failure_reason: `Paid but order creation failed: ${orderResult.error}` }).eq('id', payment.id)
     }
+    await notifyPaymentResult(payment.id)
   } else {
-    await admin
+    const { data: claimed } = await admin
       .from('storefront_payments')
       .update({ status: 'failed', failure_reason: verification.failureReason, raw_response: verification.raw as object })
       .eq('id', payment.id)
+      .in('status', ['pending', 'processing'])
+      .select('id')
+      .maybeSingle()
+    if (!claimed) return NextResponse.redirect(checkoutUrl, 303)
     await admin.from('storefront_checkouts').update({ status: 'failed' }).eq('id', payment.checkout_id)
+    await notifyPaymentResult(payment.id)
   }
 
   return NextResponse.redirect(checkoutUrl, 303)

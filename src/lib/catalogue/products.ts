@@ -18,7 +18,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 const CATALOGUE_REVALIDATE_SECONDS = 60
 
 const PUBLIC_PRODUCT_SELECT =
-  'id, name, sku, description, image_url, price, moq, category_id, brand_id, status, created_at, customization_enabled, customization_fields, category:categories(id, name), brand:brands(id, name)'
+  'id, name, sku, description, image_url, price, mrp, moq, category_id, brand_id, status, created_at, customization_enabled, customization_fields, category:categories(id, name), brand:brands(id, name)'
 
 export type PublicProduct = {
   id: string
@@ -27,6 +27,8 @@ export type PublicProduct = {
   description: string | null
   image_url: string | null
   price: number | null
+  /** Maximum retail price. Only meaningful (and only displayed) when greater than price. */
+  mrp: number | null
   moq: number | null
   category_id: string | null
   category_name: string | null
@@ -58,6 +60,7 @@ function toPublicProduct(
     description: string | null
     image_url: string | null
     price: number | null
+    mrp?: number | null
     moq: number | null
     category_id: string | null
     status: string
@@ -76,6 +79,7 @@ function toPublicProduct(
     description: row.description,
     image_url: row.image_url,
     price: row.price,
+    mrp: row.mrp ?? null,
     moq: row.moq,
     category_id: row.category_id,
     category_name: oneRelation(row.category)?.name || null,

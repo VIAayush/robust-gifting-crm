@@ -17,9 +17,18 @@ function SubmitButton() {
   )
 }
 
-export function RequestSampleForm({ productId, variantId }: { productId: string; variantId?: string | null }) {
+export function RequestSampleForm({
+  productId,
+  variantId,
+  customizationEnabled = false,
+}: {
+  productId: string
+  variantId?: string | null
+  customizationEnabled?: boolean
+}) {
   const [open, setOpen] = useState(false)
   const [done, setDone] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   if (done) {
     return <p className="text-xs font-medium text-green-700">Sample requested — we&apos;ll follow up shortly.</p>
@@ -40,19 +49,24 @@ export function RequestSampleForm({ productId, variantId }: { productId: string;
   return (
     <form
       action={async (formData) => {
+        setError(null)
         const result = await submitSampleRequest(formData)
-        if (!result?.error) setDone(true)
+        if (result?.error) setError('We could not send your sample request. Please try again.')
+        else setDone(true)
       }}
       className="space-y-2 rounded-lg border border-[#E2E8F0] bg-[#F5F7FA] p-2.5"
     >
       <input type="hidden" name="product_id" value={productId} />
       {variantId ? <input type="hidden" name="variant_id" value={variantId} /> : null}
+      {error ? <p role="alert" className="rounded-md bg-red-50 px-2 py-1.5 text-[11px] text-red-700">{error}</p> : null}
       <div className="flex items-center gap-2">
-        <label className="text-[11px] font-medium text-gray-600">Qty</label>
+        <label htmlFor={`sample-qty-${productId}`} className="text-[11px] font-medium text-gray-600">Qty</label>
         <input
+          id={`sample-qty-${productId}`}
           type="number"
           name="quantity"
           min={1}
+          max={999}
           defaultValue={1}
           className="min-h-8 w-16 rounded-md border border-[#E2E8F0] bg-white px-2 text-xs outline-none focus:border-[#9C7A33]"
         />
@@ -60,9 +74,20 @@ export function RequestSampleForm({ productId, variantId }: { productId: string;
       <textarea
         name="notes"
         rows={2}
+        aria-label="Delivery contact or notes"
         placeholder="Delivery contact / notes (optional)"
         className="w-full rounded-md border border-[#E2E8F0] bg-white px-2 py-1.5 text-xs outline-none focus:border-[#9C7A33]"
       />
+      {customizationEnabled ? (
+        <textarea
+          name="customization_notes"
+          rows={2}
+          maxLength={1000}
+          aria-label="Customization requirements"
+          placeholder="Customization: logo, name, message, colours (optional)"
+          className="w-full rounded-md border border-[#E2E8F0] bg-white px-2 py-1.5 text-xs outline-none focus:border-[#9C7A33]"
+        />
+      ) : null}
       <div className="flex gap-2">
         <SubmitButton />
         <button

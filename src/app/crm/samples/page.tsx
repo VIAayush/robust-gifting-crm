@@ -143,8 +143,13 @@ export default async function SamplesPage({
                       </td>
                       <td className="p-2.5">{request.quantity}</td>
                       <td className="p-2.5 text-[11px] text-[#4A5568]">{requestedByProfile?.full_name || '—'}</td>
-                      <td className="p-2.5 max-w-[200px] truncate text-[11px] text-[#4A5568]" title={request.notes || ''}>
-                        {request.notes || '—'}
+                      <td className="p-2.5 max-w-[220px] text-[11px] text-[#4A5568]">
+                        <p className="truncate" title={request.notes || ''}>{request.notes || '—'}</p>
+                        {request.customization_notes ? (
+                          <p className="mt-0.5 truncate text-[#9C7A33]" title={request.customization_notes}>
+                            Customization: {request.customization_notes}
+                          </p>
+                        ) : null}
                       </td>
                       <td className="p-2.5">
                         <span

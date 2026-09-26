@@ -13,14 +13,25 @@ type Profile = {
   department_id: string | null
   is_active: boolean | null
   created_at: string
+  phone?: string | null
 }
 
 type Department = { id: string; name: string }
 
-const ROLE_OPTIONS = ['admin', 'sales', 'operations', 'accounts', 'management'].map((r) => ({
-  value: r,
-  label: r,
-}))
+// Existing roles already cover the job functions: operations = procurement &
+// fulfilment, accounts = finance, management = oversight/reporting. Exact
+// module access per role is configured in Settings > Role Permissions.
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'Admin',
+  sales: 'Sales',
+  operations: 'Operations / Procurement',
+  accounts: 'Accounts / Finance',
+  management: 'Management',
+}
+
+const ROLE_OPTIONS = Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label }))
+
+const phoneClass = 'min-h-9 w-40 rounded-lg border border-[#E2E8F0] bg-white px-2.5 text-xs'
 
 const STATUS_OPTIONS = [
   { value: 'true', label: 'Active' },
@@ -60,16 +71,20 @@ export function TeamDirectory({
               <p className="text-sm font-semibold text-[#0D1B2A]">{p.full_name}</p>
               <p className="mt-0.5 text-xs text-gray-500">{p.email}</p>
               <span
-                className={`mt-2 inline-block rounded px-2 py-1 text-[11px] font-medium uppercase ${
+                className={`mt-2 inline-block rounded px-2 py-1 text-[11px] font-medium ${
                   roleColors[p.role] || 'bg-gray-100'
                 }`}
               >
-                {p.role}
+                {ROLE_LABELS[p.role] || p.role}
               </span>
             </div>
             <form action={asFormAction(updateTeamMember)} className="grid gap-2 border-t border-[#E7ECF3] pt-3">
               <input type="hidden" name="id" value={p.id} />
               <MobileSheetSelect name="role" label="Role" defaultValue={p.role} options={ROLE_OPTIONS} />
+              <label className="text-[11px] font-medium text-gray-600">
+                WhatsApp number (for alerts)
+                <input name="phone" type="tel" defaultValue={p.phone || ''} placeholder="e.g. 9876543210" className={`${phoneClass} mt-1 w-full`} />
+              </label>
               <MobileSheetSelect
                 name="department_id"
                 label="Department"
@@ -115,17 +130,25 @@ export function TeamDirectory({
                 <td className="p-3">{p.email}</td>
                 <td className="p-3">
                   <span
-                    className={`rounded px-2 py-1 text-xs font-medium uppercase ${
+                    className={`rounded px-2 py-1 text-xs font-medium ${
                       roleColors[p.role] || 'bg-gray-100'
                     }`}
                   >
-                    {p.role}
+                    {ROLE_LABELS[p.role] || p.role}
                   </span>
                 </td>
                 <td className="p-3" colSpan={4}>
                   <form action={asFormAction(updateTeamMember)} className="flex flex-wrap items-center gap-2 text-xs">
                     <input type="hidden" name="id" value={p.id} />
                     <MobileSheetSelect name="role" label="Role" defaultValue={p.role} options={ROLE_OPTIONS} />
+                    <input
+                      name="phone"
+                      type="tel"
+                      aria-label={`WhatsApp number for ${p.full_name || 'team member'}`}
+                      defaultValue={p.phone || ''}
+                      placeholder="WhatsApp no."
+                      className={phoneClass}
+                    />
                     <MobileSheetSelect
                       name="department_id"
                       label="Department"

@@ -185,3 +185,60 @@ export async function submitCartOrder(formData: FormData): Promise<{ error?: str
 
   return { success: true }
 }
+
+export type CartPriceCheck = {
+  lines: { lineId: string; available: boolean; unitPrice: number | null; mrp: number | null }[]
+  deliveryCharge: number
+  freeDeliveryAbove: number | null
+}
+
+/**
+ * Re-resolves every cart line against the database (price + variant extra,
+ * active status) so the cart never shows a stale localStorage price and a
+ * discontinued item is flagged before checkout, not at payment time.
+ * Read-only: checkout still re-prices everything itself (see checkout/actions.ts).
+ */
+export async function refreshCartPrices(
+  lines: { lineId: string; id: string; variantId?: string | null }[],
+): Promise<CartPriceCheck> {
+  const empty: CartPriceCheck = { lines: [], deliveryCharge: 0, freeDeliveryAbove: null }
+  const admin = createAdminClient()
+  if (!admin || !Array.isArray(lines) || lines.length === 0) return empty
+
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const productIds = Array.from(new Set(lines.map((l) => l.id).filter((id) => uuid.test(id)))).slice(0, 100)
+  if (productIds.length === 0) return empty
+
+  const [{ data: products }, { data: variants }, { data: settings }] = await Promise.all([
+    admin.from('products').select('id, price, mrp, status').in('id', productIds),
+    admin.from('product_variants').select('id, product_id, extra_price, status').in('product_id', productIds),
+    admin.from('org_settings').select('delivery_charge, free_delivery_above').limit(1).maybeSingle(),
+  ])
+  const productById = new Map((products || []).map((p) => [p.id, p]))
+  const variantById = new Map((variants || []).map((v) => [v.id, v]))
+
+  return {
+    deliveryCharge: Number(settings?.delivery_charge) || 0,
+    freeDeliveryAbove: settings?.free_delivery_above != null ? Number(settings.free_delivery_above) : null,
+    lines: lines.map((line) => {
+      const product = productById.get(line.id)
+      if (!product || product.status !== 'active' || !(Number(product.price) > 0)) {
+        return { lineId: line.lineId, available: false, unitPrice: null, mrp: null }
+      }
+      let extra = 0
+      if (line.variantId) {
+        const variant = variantById.get(line.variantId)
+        if (!variant || variant.product_id !== line.id || (variant.status && variant.status !== 'active')) {
+          return { lineId: line.lineId, available: false, unitPrice: null, mrp: null }
+        }
+        extra = Number(variant.extra_price) || 0
+      }
+      return {
+        lineId: line.lineId,
+        available: true,
+        unitPrice: Number(product.price) + extra,
+        mrp: product.mrp != null ? Number(product.mrp) + extra : null,
+      }
+    }),
+  }
+}

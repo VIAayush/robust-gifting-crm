@@ -43,6 +43,7 @@ export default function CheckoutPage() {
   }
 
   const subtotal = cartSubtotal()
+  const unitCount = items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:py-14">
@@ -51,7 +52,7 @@ export default function CheckoutPage() {
       </Link>
       <h1 className="mt-4 font-serif text-2xl text-[#1B2430] sm:text-3xl">Checkout</h1>
       <p className="mt-2 text-sm text-[#5C6570]">
-        Estimated subtotal {formatCurrency(subtotal)} for {items.length} item{items.length === 1 ? '' : 's'} — the
+        Estimated subtotal {formatCurrency(subtotal)} for {unitCount} item{unitCount === 1 ? '' : 's'} — the
         final amount is confirmed on the next page before payment.
       </p>
 

@@ -78,7 +78,7 @@ export function ProductCustomizer({
             return (
               <label key={field.key} className="block">
                 <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#5C6570]">{field.label}</span>
-                <textarea rows={2} className={inputClass} onChange={(event) => setValue(field.key, event.target.value)} />
+                <textarea rows={2} maxLength={500} className={inputClass} onChange={(event) => setValue(field.key, event.target.value)} />
               </label>
             )
           }

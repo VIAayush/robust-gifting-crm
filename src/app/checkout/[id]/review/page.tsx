@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { formatCurrency, isUuid } from '@/lib/utils'
 import { asFormAction } from '@/lib/form-action'
 import { initiatePayment } from '../actions'
+import { formatCustomization } from '@/lib/products/customization'
 
 export default async function CheckoutReviewPage({
   params,
@@ -52,12 +53,7 @@ export default async function CheckoutReviewPage({
               </div>
               {variant?.colour ? <p className="mt-1 text-xs text-[#5C6570]">Colour: {variant.display_name || variant.colour}</p> : null}
               {customization && Object.keys(customization).length > 0 ? (
-                <p className="mt-1 text-xs text-[#5C6570]">
-                  {Object.entries(customization)
-                    .filter(([, v]) => v)
-                    .map(([k, v]) => `${k}: ${v}`)
-                    .join(' · ')}
-                </p>
+                <p className="mt-1 text-xs text-[#5C6570]">{formatCustomization(customization)}</p>
               ) : null}
               <p className="mt-1 text-right text-sm font-semibold text-[#1B2430]">{formatCurrency(item.line_total)}</p>
             </div>

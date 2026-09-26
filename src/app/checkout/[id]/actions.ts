@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getActiveProviderName } from '@/lib/payments'
 import { createOrderFromCheckout } from '@/app/checkout/order'
+import { notifyPaymentResult } from '@/lib/notifications'
 
 function generateTxnId() {
   return `RG${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 8).toUpperCase()}`
@@ -50,22 +51,37 @@ export async function completeDemoPayment(formData: FormData) {
   if (!payment || payment.provider !== 'demo' || payment.status !== 'pending') redirect(`/checkout/${checkoutId}/pay`)
 
   if (outcome === 'success') {
-    await admin
+    const reference = `DEMO-${paymentId.slice(0, 8)}`
+    const { data: claimed } = await admin
       .from('storefront_payments')
-      .update({ status: 'paid', provider_reference: `DEMO-${paymentId.slice(0, 8)}`, verified_at: new Date().toISOString() })
+      .update({ status: 'paid', provider_reference: reference, verified_at: new Date().toISOString() })
       .eq('id', paymentId)
-    const result = await createOrderFromCheckout(checkoutId)
+      .eq('status', 'pending')
+      .select('id')
+      .maybeSingle()
+    if (!claimed) redirect(`/checkout/${checkoutId}/confirmation`)
+    const result = await createOrderFromCheckout(checkoutId, { reference })
     if ('error' in result) redirect(`/checkout/${checkoutId}/review?error=${encodeURIComponent(result.error)}`)
+    await notifyPaymentResult(paymentId)
     redirect(`/checkout/${checkoutId}/confirmation`)
   }
 
   if (outcome === 'failure') {
-    await admin.from('storefront_payments').update({ status: 'failed', failure_reason: 'Simulated failure (Demo Payment Mode)' }).eq('id', paymentId)
-    await admin.from('storefront_checkouts').update({ status: 'failed' }).eq('id', checkoutId)
+    const { data: claimed } = await admin
+      .from('storefront_payments')
+      .update({ status: 'failed', failure_reason: 'Simulated failure (Demo Payment Mode)' })
+      .eq('id', paymentId)
+      .eq('status', 'pending')
+      .select('id')
+      .maybeSingle()
+    if (claimed) {
+      await admin.from('storefront_checkouts').update({ status: 'failed' }).eq('id', checkoutId)
+      await notifyPaymentResult(paymentId)
+    }
     redirect(`/checkout/${checkoutId}/confirmation`)
   }
 
-  // Cancel: leave the payment row as-is (still 'pending' is wrong — mark cancelled so it's not retried as the same attempt), cart/checkout untouched, back to review.
-  await admin.from('storefront_payments').update({ status: 'cancelled' }).eq('id', paymentId)
+  // Cancel: mark this attempt cancelled so it's never reused; cart/checkout untouched, back to review for a fresh attempt.
+  await admin.from('storefront_payments').update({ status: 'cancelled' }).eq('id', paymentId).eq('status', 'pending')
   redirect(`/checkout/${checkoutId}/review`)
 }

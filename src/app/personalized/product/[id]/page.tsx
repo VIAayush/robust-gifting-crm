@@ -5,7 +5,8 @@ import { notFound } from 'next/navigation'
 import { SiteShell } from '@/components/site/site-shell'
 import { ProductDetailProvider, ProductGallerySlot, ColorSelectorSlot } from '@/components/site/product-detail-view'
 import { PersonalizedPurchaseActions } from '@/components/site/personalized-purchase-actions'
-import { formatCurrency, isUuid } from '@/lib/utils'
+import { isUuid } from '@/lib/utils'
+import { PriceDisplay } from '@/components/site/price-display'
 import { getPublicProductWithVariants } from '@/lib/catalogue/products'
 
 type Props = { params: Promise<{ id: string }> }
@@ -59,7 +60,8 @@ export default async function PersonalizedProductPage({ params }: Props) {
               ) : null}
               <h1 className="mt-3 font-serif text-3xl tracking-tight sm:text-4xl lg:text-5xl">{product.name}</h1>
               {product.brand_name ? <p className="mt-3 text-sm text-[#5C6570]">{product.brand_name}</p> : null}
-              <p className="mt-6 text-2xl font-semibold text-[#9C7A33]">{formatCurrency(product.price)}</p>
+              <p className="mt-2 font-mono text-[11px] tracking-wide text-[#8A94A3]">SKU {product.sku}</p>
+              <PriceDisplay price={product.price} mrp={product.mrp} size="lg" className="mt-6" />
 
               <p className="mt-8 max-w-md text-sm leading-relaxed text-[#5C6570]">
                 {product.description || 'A thoughtful gift, ready to send.'}

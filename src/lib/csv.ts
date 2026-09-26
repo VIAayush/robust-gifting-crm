@@ -69,7 +69,10 @@ export const CSV_FIELD_ALIASES: Record<string, string[]> = {
   description: ['description', 'desc', 'notes', 'details'],
   category: ['category', 'category_name'],
   supplier: ['supplier', 'supplier_name', 'vendor'],
-  price: ['price', 'selling_price', 'unit_price', 'mrp'],
+  price: ['price', 'selling_price', 'unit_price', 'sale_price'],
+  // Kept separate from price on purpose: an "MRP" column must never be
+  // silently imported as the selling price.
+  mrp: ['mrp', 'max_retail_price', 'list_price', 'compare_at_price'],
   supplier_cost: ['supplier_cost', 'cost', 'landed_cost'],
   moq: ['moq', 'min_qty', 'minimum_order_qty', 'quantity'],
   hsn_code: ['hsn_code', 'hsn'],

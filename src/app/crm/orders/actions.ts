@@ -3,7 +3,110 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { getProfile, canChangeOrderStage, canSeeCosts, isOpsStaff } from '@/lib/auth'
-import { nextLifecycleStatus, STAGE_DEPARTMENT } from '@/lib/order-workflow'
+import { nextLifecycleStatus, STAGE_DEPARTMENT, ORDER_STATUS_LABELS } from '@/lib/order-workflow'
+import { requirePermission } from '@/lib/permissions'
+import { writeAudit } from '@/lib/audit'
+import { notifyOrderStatusChanged } from '@/lib/notifications'
+
+const PROCUREMENT_STATUSES = [
+  'not_assigned', 'supplier_selected', 'po_pending', 'po_raised', 'confirmed',
+  'in_production', 'ready', 'dispatched', 'received', 'cancelled',
+] as const
+
+/**
+ * Per-order-line supplier allocation, distinct from the order-level
+ * assignSupplier() below - one order can have items fulfilled by different
+ * suppliers. Snapshots supplier_sku/cost/lead_time at assignment time so a
+ * later cost change on product_suppliers never rewrites what this specific
+ * order actually paid.
+ */
+export async function assignOrderItemSupplier(formData: FormData) {
+  const supabase = await createClient()
+  const access = await requirePermission(supabase, 'orders.assign_supplier')
+  if ('error' in access) return access
+
+  const orderItemId = String(formData.get('order_item_id') || '')
+  const orderId = String(formData.get('order_id') || '')
+  const supplierId = String(formData.get('supplier_id') || '') || null
+  if (!orderItemId || !orderId) return { error: 'Order item is required' }
+
+  let snapshot: { supplier_sku_snapshot: string | null; supplier_cost_snapshot: number | null; supplier_lead_time_snapshot: number | null } = {
+    supplier_sku_snapshot: null,
+    supplier_cost_snapshot: null,
+    supplier_lead_time_snapshot: null,
+  }
+
+  if (supplierId) {
+    const { data: item } = await supabase.from('order_items').select('product_id').eq('id', orderItemId).maybeSingle()
+    if (item?.product_id) {
+      const { data: mapping } = await supabase
+        .from('product_suppliers')
+        .select('supplier_sku, supplier_cost, lead_time_days')
+        .eq('product_id', item.product_id)
+        .eq('supplier_id', supplierId)
+        .is('variant_id', null)
+        .maybeSingle()
+      if (mapping) {
+        snapshot = {
+          supplier_sku_snapshot: mapping.supplier_sku,
+          supplier_cost_snapshot: mapping.supplier_cost,
+          supplier_lead_time_snapshot: mapping.lead_time_days,
+        }
+      }
+    }
+  }
+
+  const { error } = await supabase
+    .from('order_items')
+    .update({
+      supplier_id: supplierId,
+      ...snapshot,
+      procurement_status: supplierId ? 'supplier_selected' : 'not_assigned',
+      supplier_assigned_at: supplierId ? new Date().toISOString() : null,
+      supplier_assigned_by: supplierId ? access.profile.id : null,
+    })
+    .eq('id', orderItemId)
+  if (error) return { error: error.message }
+
+  await writeAudit(supabase, {
+    action: 'assign_supplier',
+    entity: 'order_items',
+    entityId: orderItemId,
+    next: { order_id: orderId, supplier_id: supplierId, ...snapshot },
+    userId: access.profile.id,
+  })
+  revalidatePath(`/crm/orders/${orderId}`)
+  return { success: true }
+}
+
+export async function updateOrderItemProcurement(formData: FormData) {
+  const supabase = await createClient()
+  const access = await requirePermission(supabase, 'orders.procurement')
+  if ('error' in access) return access
+
+  const orderItemId = String(formData.get('order_item_id') || '')
+  const orderId = String(formData.get('order_id') || '')
+  const status = String(formData.get('procurement_status') || '')
+  const notes = String(formData.get('procurement_notes') || '').trim() || null
+  if (!orderItemId || !orderId) return { error: 'Order item is required' }
+  if (!(PROCUREMENT_STATUSES as readonly string[]).includes(status)) return { error: 'Invalid procurement status' }
+
+  const { error } = await supabase
+    .from('order_items')
+    .update({ procurement_status: status, procurement_notes: notes })
+    .eq('id', orderItemId)
+  if (error) return { error: error.message }
+
+  await writeAudit(supabase, {
+    action: 'update_procurement_status',
+    entity: 'order_items',
+    entityId: orderItemId,
+    next: { order_id: orderId, procurement_status: status },
+    userId: access.profile.id,
+  })
+  revalidatePath(`/crm/orders/${orderId}`)
+  return { success: true }
+}
 
 export async function advanceOrderStatus(orderId: string, comment?: string) {
   const profile = await getProfile()
@@ -26,6 +129,7 @@ export async function advanceOrderStatus(orderId: string, comment?: string) {
     p_comment: comment || `Advanced to ${next}`,
   })
   if (error) return { error: error.message }
+  await notifyOrderStatusChanged(orderId, ORDER_STATUS_LABELS[next] || next)
   revalidatePath(`/crm/orders/${orderId}`)
   revalidatePath('/crm/order-management')
   revalidatePath('/crm/dashboard')
@@ -59,6 +163,7 @@ export async function handOffOrder(formData: FormData) {
     p_next_action: nextAction,
   })
   if (error) return { error: error.message }
+  await notifyOrderStatusChanged(orderId, ORDER_STATUS_LABELS[status] || status)
   revalidatePath(`/crm/orders/${orderId}`)
   revalidatePath('/crm/order-management')
   revalidatePath('/crm/department')
@@ -89,6 +194,7 @@ export async function setOrderStage(orderId: string, status: string) {
     p_comment: `Moved to ${status} from Order Control Kanban`,
   })
   if (error) return { error: error.message }
+  await notifyOrderStatusChanged(orderId, ORDER_STATUS_LABELS[status] || status)
   revalidatePath('/crm/order-management')
   revalidatePath(`/crm/orders/${orderId}`)
   revalidatePath('/crm/dashboard')

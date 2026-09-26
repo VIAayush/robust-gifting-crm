@@ -116,6 +116,18 @@ export default async function NewProductPage({
                 className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#9C7A33] focus:outline-none"
               />
             </div>
+            <div>
+              <label htmlFor="new-product-mrp" className="block text-xs font-semibold text-gray-700 mb-1.5">MRP (₹)</label>
+              <input
+                id="new-product-mrp"
+                type="number"
+                name="mrp"
+                step="0.01"
+                min={0}
+                placeholder="Optional, e.g. 999"
+                className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#9C7A33] focus:outline-none"
+              />
+            </div>
 
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">Minimum Order Qty (MOQ) *</label>

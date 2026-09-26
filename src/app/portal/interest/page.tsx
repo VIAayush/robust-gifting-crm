@@ -35,8 +35,19 @@ export default async function PortalInterestPage() {
 
   const [{ data: products }, { data: variants }, { data: sampleRequests }] = await Promise.all([
     productIds.length
-      ? supabase.from('client_products').select('id, name, sku, image_url, price, moq, category_name').in('id', productIds)
-      : Promise.resolve({ data: [] as { id: string; name: string; sku: string; image_url: string | null; price: number | null; moq: number; category_name: string | null }[] }),
+      ? supabase.from('client_products').select('id, name, sku, image_url, price, moq, category_name, customization_enabled').in('id', productIds)
+      : Promise.resolve({
+          data: [] as {
+            id: string
+            name: string
+            sku: string
+            image_url: string | null
+            price: number | null
+            moq: number
+            category_name: string | null
+            customization_enabled: boolean | null
+          }[],
+        }),
     variantIds.length
       ? supabase.from('client_product_variants').select('id, colour, display_name').in('id', variantIds)
       : Promise.resolve({ data: [] as { id: string; colour: string | null; display_name: string | null }[] }),
@@ -112,7 +123,11 @@ export default async function PortalInterestPage() {
                   </div>
 
                   <div className="mt-auto space-y-2 border-t border-gray-100 pt-3">
-                    <RequestSampleForm productId={product.id} variantId={row.variant_id} />
+                    <RequestSampleForm
+                      productId={product.id}
+                      variantId={row.variant_id}
+                      customizationEnabled={Boolean(product.customization_enabled)}
+                    />
                     <form action={removeCompanyInterestForm}>
                       <input type="hidden" name="interest_id" value={row.id} />
                       <button
