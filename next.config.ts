@@ -12,6 +12,15 @@ const nextConfig: NextConfig = {
     // Safe to cache aggressively since there's no in-place-mutation case to
     // go stale against.
     minimumCacheTTL: 2592000,
+    // Vercel bills one transformation per unique (image, width) pair. Next's
+    // defaults offer 15 widths up to 3840px, so one product photo could be
+    // generated many times over depending on each visitor's screen. Product
+    // sources are <=1600px and never display wider than ~480 CSS px, so a
+    // short list lets every device share the same few cached variants.
+    // 640 and 1080 are kept from the defaults so existing cached variants stay valid.
+    deviceSizes: [640, 1080, 1920],
+    imageSizes: [64, 128, 256],
+    qualities: [75],
   },
   experimental: {
     serverActions: {
