@@ -101,3 +101,65 @@ export function passwordResetEmail({ resetUrl }: { resetUrl: string }): { subjec
 </html>`.trim(),
   }
 }
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string)
+}
+
+export function teamInviteEmail({
+  setPasswordUrl,
+  name,
+  roleLabel,
+  invitedBy,
+}: {
+  setPasswordUrl: string
+  name: string
+  roleLabel: string
+  invitedBy: string
+}): { subject: string; html: string } {
+  const safeName = escapeHtml(name)
+  const safeRole = escapeHtml(roleLabel)
+  const safeInviter = escapeHtml(invitedBy)
+  return {
+    subject: 'You have been invited to Robust Gifting',
+    html: `
+<!DOCTYPE html>
+<html>
+  <body style="margin:0;padding:0;background-color:#F1F4F9;font-family:Georgia,'Times New Roman',serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F1F4F9;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;background-color:#ffffff;border-radius:8px;overflow:hidden;">
+            <tr>
+              <td style="background-color:#0D1B2A;padding:28px 32px;">
+                <span style="font-size:20px;color:#ffffff;">Robust Gifting</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px;">
+                <h1 style="margin:0 0 16px;font-size:20px;color:#1B2430;font-weight:normal;">Welcome, ${safeName}</h1>
+                <p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#5C6570;font-family:Arial,sans-serif;">
+                  ${safeInviter} has given you access to the Robust Gifting CRM as <strong>${safeRole}</strong>. Click the button below to set your password and sign in. This link expires in 1 hour; if it does, ask your admin to resend the invite or use "Forgot password" on the sign-in page.
+                </p>
+                <table role="presentation" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="background-color:#9C7A33;border-radius:6px;">
+                      <a href="${setPasswordUrl}" style="display:inline-block;padding:12px 28px;font-size:13px;font-weight:bold;letter-spacing:0.04em;text-transform:uppercase;color:#ffffff;text-decoration:none;font-family:Arial,sans-serif;">
+                        Set your password
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#94A3B8;font-family:Arial,sans-serif;">
+                  If you weren't expecting this, you can ignore this email.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`.trim(),
+  }
+}

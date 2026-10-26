@@ -5,6 +5,7 @@ import { CrmFrame } from '@/components/layout/crm-frame';
 import type { Role } from '@/lib/types';
 import { getRequestTabId } from '@/lib/auth/tab-server';
 import { TabSessionRevive } from '@/components/auth/tab-session-revive';
+import { getAllowedModules } from '@/lib/module-access';
 
 export default async function CrmLayout({ children }: { children: React.ReactNode }) {
   if (!(await getRequestTabId())) return <TabSessionRevive />;
@@ -44,9 +45,12 @@ export default async function CrmLayout({ children }: { children: React.ReactNod
     .order('created_at', { ascending: false })
     .limit(20);
 
+  const { modules } = await getAllowedModules();
+
   return (
     <CrmFrame
       role={profile.role as Role}
+      allowedModules={Array.from(modules)}
       user={{ name: displayName, email: user.email || '' }}
       notifications={notifications || []}
     >

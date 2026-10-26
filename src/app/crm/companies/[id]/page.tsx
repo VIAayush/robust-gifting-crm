@@ -7,9 +7,11 @@ import { ProductImage } from '@/components/ui/product-image'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { uploadCompanyLogo, removeCompanyLogo, updateCompany, removeCompany } from '../actions'
 import { ConfirmAction } from '@/components/ui/confirm-action'
-import { formatCurrency, formatDate, formatUnits, isUuid } from '@/lib/utils'
+import { formatCurrency, formatDate, formatUnits, isUuid, LEAD_STAGE_LABELS } from '@/lib/utils'
 import { Plus, Trash2 } from 'lucide-react'
 import { grantCompanyProductAccess, revokeCompanyProductAccess } from '@/app/crm/products/actions'
+import { ProductPicker } from '@/components/products/product-picker'
+import { fetchAllProducts } from '@/lib/products/all-products'
 import { requireStaff } from '@/lib/auth'
 import { createContact } from '@/app/crm/contacts/actions'
 import { asFormAction } from '@/lib/form-action'
@@ -56,7 +58,7 @@ export default async function CompanyDetailPage({
     supabase.from('orders').select('*').eq('company_id', id).order('created_at', { ascending: false }),
     supabase.from('invoices').select('id, invoice_number, amount, status, created_at').eq('company_id', id).order('created_at', { ascending: false }),
     supabase.from('company_product_access').select('*, product:products!inner(*)').eq('company_id', id).eq('product.status', 'active'),
-    supabase.from('products').select('id, name, sku, price').eq('status', 'active').order('name'),
+    fetchAllProducts(supabase).then((data) => ({ data })),
     supabase.from('profiles').select('id, full_name, email, role, is_active').eq('company_id', id).in('role', ['client_admin', 'client_user']).order('full_name'),
     supabase.from('tasks').select('id, title, status, due_at, assigned_to, order_id, priority, assignee:profiles!assigned_to(full_name)').eq('company_id', id).order('due_at', { ascending: true }),
     supabase.from('products').select('id', { count: 'exact', head: true }).eq('status', 'active').eq('catalogue_access', 'all'),
@@ -313,16 +315,12 @@ export default async function CompanyDetailPage({
 
             {canManageVisibility && (
             <form action={addProductAction} className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-              <MobileSheetSelect
+              <ProductPicker
                 name="product_id"
-                label="Product"
+                label="Product to add"
                 required
-                className="w-full sm:w-64"
-                emptyLabel="Select product to add..."
-                options={[
-                  { value: '', label: 'Select product to add...' },
-                  ...unassignedProducts.map((p) => ({ value: p.id, label: `${p.name} (${p.sku})` })),
-                ]}
+                className="w-full sm:w-80"
+                products={unassignedProducts}
               />
               <button
                 type="submit"
@@ -514,7 +512,7 @@ export default async function CompanyDetailPage({
             <tbody className="divide-y divide-gray-100">
               {leads?.map(l => (
                 <tr key={l.id}>
-                  <td className="px-4 py-2.5 capitalize font-semibold">{l.stage}</td>
+                  <td className="px-4 py-2.5 font-semibold">{LEAD_STAGE_LABELS[l.stage] || l.stage}</td>
                   <td className="px-4 py-2.5 font-bold">{formatCurrency(l.estimated_value)}</td>
                   <td className="px-4 py-2.5 text-gray-500">{formatDate(l.next_follow_up_at)}</td>
                   <td className="px-4 py-2.5 text-gray-500">{formatDate(l.created_at)}</td>

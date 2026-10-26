@@ -5,14 +5,14 @@ import { formatDateTime } from '@/lib/utils'
 import { requireStaff } from '@/lib/auth'
 import { entityHref, describeAudit } from '@/lib/entity-href'
 import { ShieldCheck } from 'lucide-react'
+import { summarizeAuditChange } from '@/lib/audit-summary'
 
-function preview(value: unknown) {
-  if (value == null) return '—'
+function raw(value: unknown) {
+  if (value == null) return null
   try {
-    const text = typeof value === 'string' ? value : JSON.stringify(value)
-    return text.length > 80 ? `${text.slice(0, 80)}…` : text
+    return typeof value === 'string' ? value : JSON.stringify(value, null, 2)
   } catch {
-    return '—'
+    return null
   }
 }
 
@@ -52,8 +52,7 @@ export default async function AuditLogPage({
               <th className="text-left px-5 py-3.5 font-semibold text-[#4A5568]">User</th>
               <th className="text-left px-5 py-3.5 font-semibold text-[#4A5568]">Action</th>
               <th className="text-left px-5 py-3.5 font-semibold text-[#4A5568]">Entity</th>
-              <th className="text-left px-5 py-3.5 font-semibold text-[#4A5568]">Previous</th>
-              <th className="text-left px-5 py-3.5 font-semibold text-[#4A5568]">New</th>
+              <th className="text-left px-5 py-3.5 font-semibold text-[#4A5568]">What changed</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E7ECF3]">
@@ -73,14 +72,28 @@ export default async function AuditLogPage({
                         <span className="capitalize">{label}</span>
                       )}
                     </td>
-                    <td className="px-5 py-3 text-gray-500 font-mono text-[11px]">{preview(log.previous_value)}</td>
-                    <td className="px-5 py-3 text-gray-500 font-mono text-[11px]">{preview(log.new_value)}</td>
+                    <td className="max-w-[28rem] px-5 py-3 text-[#334155]">
+                      <p>{summarizeAuditChange(log.previous_value, log.new_value)}</p>
+                      {raw(log.previous_value) || raw(log.new_value) ? (
+                        <details className="mt-1">
+                          <summary className="cursor-pointer text-[11px] text-gray-400 hover:text-gray-600">Raw data</summary>
+                          <div className="mt-1 grid gap-2 sm:grid-cols-2">
+                            {raw(log.previous_value) ? (
+                              <pre className="max-h-48 overflow-auto rounded bg-gray-50 p-2 font-mono text-[10px] text-gray-600">{raw(log.previous_value)}</pre>
+                            ) : null}
+                            {raw(log.new_value) ? (
+                              <pre className="max-h-48 overflow-auto rounded bg-gray-50 p-2 font-mono text-[10px] text-gray-600">{raw(log.new_value)}</pre>
+                            ) : null}
+                          </div>
+                        </details>
+                      ) : null}
+                    </td>
                   </tr>
                 )
               })
             ) : (
               <tr>
-                <td colSpan={6} className="p-8 text-center text-gray-400">
+                <td colSpan={5} className="p-8 text-center text-gray-400">
                   <ShieldCheck className="w-8 h-8 mx-auto text-gray-300 mb-2" />
                   No audit events yet.
                 </td>

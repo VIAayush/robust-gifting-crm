@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireStaff, applyOwnerScope } from '@/lib/auth'
-import { formatCurrency, formatDate, oneRelation, asRows } from '@/lib/utils'
+import { formatCurrency, formatDate, oneRelation, asRows, LEAD_STAGE_LABELS } from '@/lib/utils'
 import { ORDER_STATUS_LABELS, orderHealth, HEALTH_LABELS, HEALTH_STYLES } from '@/lib/order-workflow'
 import Link from 'next/link'
 import { MobileFilterBar } from '@/components/ui/mobile-filter-sheet'
@@ -225,7 +225,7 @@ export default async function MyWorkPage({
                   className="block rounded-xl border border-[#E7ECF3] bg-[#F5F7FA] p-3 text-sm"
                 >
                   <p className="font-medium text-gray-900">{company?.name || 'Lead'}</p>
-                  <p className="mt-0.5 text-[11px] text-[#4A5568]">{l.stage} · {formatCurrency(l.estimated_value)}</p>
+                  <p className="mt-0.5 text-[11px] text-[#4A5568]">{LEAD_STAGE_LABELS[l.stage] || l.stage} · {formatCurrency(l.estimated_value)}</p>
                 </Link>
               )
             })}

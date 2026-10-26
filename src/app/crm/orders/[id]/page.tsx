@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { BackButton } from '@/components/ui/back-button'
+import { OrderTypeBadge, PaymentStatusBadge } from '@/components/orders/order-badges'
 import { formatCurrency, formatDate, formatDateTime, isUuid, oneRelation } from '@/lib/utils'
 import {
   advanceOrderStatus,
@@ -171,6 +172,13 @@ export default async function OrderDetailPage({
             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${HEALTH_STYLES[health]}`}>
               {HEALTH_LABELS[health]}
             </span>
+            <OrderTypeBadge type={order.order_type} />
+            <PaymentStatusBadge status={order.payment_status} />
+            {order.payment_reference ? (
+              <span className="font-mono text-[10px] text-gray-500" title="Payment reference">
+                Ref {order.payment_reference}
+              </span>
+            ) : null}
           </div>
           <h1 className="text-2xl font-bold text-gray-900">
             {company?.name || 'Client'}
@@ -483,11 +491,20 @@ export default async function OrderDetailPage({
                       <div className="flex justify-between text-gray-500"><span>Courier cost</span><span>{formatCurrency(order.courier_cost)}</span></div>
                       <div className="flex justify-between text-gray-500"><span>Other cost</span><span>{formatCurrency(order.other_cost)}</span></div>
                       <div className="flex justify-between pt-2 border-t"><span>Total cost</span><span>{formatCurrency(order.total_cost)}</span></div>
-                      <div className="flex justify-between font-semibold text-[#9C7A33]"><span>Gross profit</span><span>{formatCurrency(order.gross_profit)}</span></div>
-                      <div className="flex justify-between font-semibold">
-                        <span>Margin</span>
-                        <span>{Number(order.order_value) > 0 ? `${((Number(order.gross_profit || 0) / Number(order.order_value)) * 100).toFixed(1)}%` : '—'}</span>
-                      </div>
+                      {Number(order.total_cost || 0) > 0 ? (
+                        <>
+                          <div className="flex justify-between font-semibold text-[#9C7A33]"><span>Gross profit</span><span>{formatCurrency(order.gross_profit)}</span></div>
+                          <div className="flex justify-between font-semibold">
+                            <span>Margin</span>
+                            <span>{Number(order.order_value) > 0 ? `${((Number(order.gross_profit || 0) / Number(order.order_value)) * 100).toFixed(1)}%` : '—'}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex justify-between font-semibold text-gray-500">
+                          <span>Gross profit / margin</span>
+                          <span>Cost not set</span>
+                        </div>
+                      )}
                       <p className="text-[10px] text-gray-400 pt-2 border-t">
                         Total cost and gross profit are recalculated on the server and cannot be overwritten directly.
                       </p>

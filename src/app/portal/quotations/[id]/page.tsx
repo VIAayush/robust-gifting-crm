@@ -158,7 +158,7 @@ export default async function PortalQuotationDetailPage({ params }: { params: Pr
             </div>
           </div>
 
-          {quote.status === 'sent' && (
+          {(quote.status === 'sent' || quote.status === 'viewed') && (
             <div className="pt-4 border-t border-gray-100">
               <QuotationActions quotationId={quote.id} />
             </div>

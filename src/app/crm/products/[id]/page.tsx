@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { formatCurrency, formatUnits, isUuid } from '@/lib/utils'
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import { sortProductCategories } from '@/lib/products/categories'
 import { BackButton } from '@/components/ui/back-button'
+import { excludeIndividualCompanies } from '@/lib/companies/individual'
 import { updateProduct, removeProduct } from '../actions'
+import { ProductFormShell } from '@/components/products/product-form-shell'
 import { ConfirmAction } from '@/components/ui/confirm-action'
 import { asFormAction } from '@/lib/form-action'
 import { Globe, Lock, EyeOff } from 'lucide-react'
@@ -48,7 +50,7 @@ export default async function ProductDetailPage({
     supabase.from('categories').select('id, name'),
     supabase.from('brands').select('id, name').order('name'),
     supabase.from('suppliers').select('id, name').eq('status', 'active').order('name'),
-    supabase.from('companies').select('id, name, logo_path').eq('status', 'active').order('name'),
+    excludeIndividualCompanies(supabase.from('companies').select('id, name, logo_path').eq('status', 'active')).order('name'),
     supabase.from('company_product_access').select('*, company:companies(id, name, city)').eq('product_id', id),
     supabase.from('product_variants').select('*').eq('product_id', id).eq('status', 'active').order('sort_order'),
     supabase.from('product_images').select('*').eq('product_id', id).order('sort_order'),
@@ -91,13 +93,7 @@ export default async function ProductDetailPage({
 
   const grantedCompanyIds = accessRecords?.map(a => a.company_id) || []
 
-  const handleUpdate = async (formData: FormData) => {
-    'use server'
-    const result = await updateProduct(product.id, formData)
-    if (result && typeof result === 'object' && 'error' in result && result.error) {
-      redirect(`/crm/products/${product.id}?error=${encodeURIComponent(result.error)}`)
-    }
-  }
+  const saveProduct = updateProduct.bind(null, product.id)
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -212,7 +208,13 @@ export default async function ProductDetailPage({
             Edit Product Information
           </h2>
 
-          <form action={handleUpdate} className="space-y-4">
+          <ProductFormShell
+            action={saveProduct}
+            creating={false}
+            existing={{ price: product.price, mrp: product.mrp ?? null, sku: product.sku }}
+            successMessage="Product saved."
+            className="space-y-4"
+          >
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Product Name</label>
               <input
@@ -355,7 +357,7 @@ export default async function ProductDetailPage({
             >
               Save Product Details
             </button>
-          </form>
+          </ProductFormShell>
         </div>
 
         {/* Catalogue visibility is inherently short (a few radio options), so it shares this

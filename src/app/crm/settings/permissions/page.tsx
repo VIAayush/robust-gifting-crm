@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { BackButton } from '@/components/ui/back-button'
 import { PermissionMatrix } from '@/components/crm/permission-matrix'
+import { ModuleMatrix } from '@/components/crm/module-matrix'
+import { MODULE_PERMISSION_PREFIX, defaultModulesForRole, modulePermissionKey } from '@/lib/modules'
 
 const ROLES = ['admin', 'sales', 'operations', 'accounts', 'management'] as const
 
@@ -25,6 +27,12 @@ export default async function PermissionsPage() {
   ])
 
   const granted = (rolePermissions || []).map((r) => `${r.role}:${r.permission_key}`)
+  const actionPermissions = (permissions || []).filter((p) => !p.key.startsWith(MODULE_PERMISSION_PREFIX))
+  const moduleRowsReady = (permissions || []).some((p) => p.key.startsWith(MODULE_PERMISSION_PREFIX))
+  // Before the migration runs, show today's defaults (read-only) so the matrix reflects real access.
+  const moduleGranted = moduleRowsReady
+    ? granted.filter((g) => g.includes(`:${MODULE_PERMISSION_PREFIX}`))
+    : ROLES.filter((r) => r !== 'admin').flatMap((role) => defaultModulesForRole(role).map((key) => `${role}:${modulePermissionKey(key)}`))
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -32,12 +40,14 @@ export default async function PermissionsPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Role permissions</h1>
         <p className="mt-1 text-xs text-gray-500">
-          Admin always has every permission. Toggle what each other role can do with suppliers and procurement.
+          Admin always has every permission. Control which CRM modules each role can open, and what each role can do with
+          suppliers, procurement, pricing and notifications.
         </p>
       </div>
+      <ModuleMatrix roles={ROLES.filter((r) => r !== 'admin')} granted={moduleGranted} ready={moduleRowsReady} />
       <PermissionMatrix
         roles={ROLES.filter((r) => r !== 'admin')}
-        permissions={permissions || []}
+        permissions={actionPermissions}
         granted={granted}
       />
     </div>

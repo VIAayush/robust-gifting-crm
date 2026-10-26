@@ -1,8 +1,6 @@
 /**
- * Public-catalogue wishlist — same localStorage pattern as the client portal's
- * shortlist (src/lib/portal/catalogue-shortlist.ts), kept separate because this
- * one is for unauthenticated visitors browsing the public site, not signed-in
- * portal clients.
+ * Public-catalogue wishlist for unauthenticated visitors (localStorage only).
+ * Signed-in portal clients use the database-backed Shortlist instead.
  */
 export type WishlistItem = {
   id: string

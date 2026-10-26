@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { writeAudit } from '@/lib/audit'
 import { requirePermission } from '@/lib/permissions'
+import { MODULE_PERMISSION_PREFIX, moduleByKey } from '@/lib/modules'
 
 export async function toggleRolePermission(formData: FormData) {
   const supabase = await createClient()
@@ -15,6 +16,13 @@ export async function toggleRolePermission(formData: FormData) {
   const grant = String(formData.get('grant') || '') === 'true'
   if (!role || !permissionKey) return { error: 'Role and permission are required' }
   if (role === 'admin') return { error: 'Admin always has every permission and cannot be changed' }
+  if (permissionKey.startsWith(MODULE_PERMISSION_PREFIX)) {
+    const mod = moduleByKey(permissionKey.slice(MODULE_PERMISSION_PREFIX.length))
+    if (!mod) return { error: 'Unknown module' }
+    if (grant && !(mod.eligibleRoles as string[]).includes(role)) {
+      return { error: `${mod.label} can't be given to this role: its pages and data are not available to it.` }
+    }
+  }
 
   if (grant) {
     const { error } = await supabase.from('role_permissions').insert({ role, permission_key: permissionKey })
@@ -32,5 +40,6 @@ export async function toggleRolePermission(formData: FormData) {
     userId: access.profile.id,
   })
   revalidatePath('/crm/settings/permissions')
+  revalidatePath('/crm', 'layout')
   return { success: true }
 }

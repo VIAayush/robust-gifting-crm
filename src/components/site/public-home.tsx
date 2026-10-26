@@ -15,7 +15,7 @@ import {
   productsForOccasion,
 } from '@/lib/catalogue/collections'
 import { getPublicCatalogueProducts, getPublicCategories } from '@/lib/catalogue/products'
-import { curatePublicHome, homeCategoryTiles } from '@/lib/catalogue/curate'
+import { curatePublicHome, homeCategoryTiles, withLiveProducts } from '@/lib/catalogue/curate'
 
 const ARROW = '\u2192'
 
@@ -30,7 +30,7 @@ const CATEGORY_LINES: Record<string, string> = {
 
 export async function PublicHome() {
   const products = await getPublicCatalogueProducts()
-  const categories = homeCategoryTiles(await getPublicCategories(), 6)
+  const categories = homeCategoryTiles(withLiveProducts(await getPublicCategories(), products), 6)
   const collections = CATALOGUE_COLLECTIONS.slice(0, 6)
   const {
     heroProducts,

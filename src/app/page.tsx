@@ -55,7 +55,7 @@ export default async function RootPage({
   }
 
   return (
-    <SiteShell>
+    <SiteShell mode="corporate">
       <PublicHome />
     </SiteShell>
   )

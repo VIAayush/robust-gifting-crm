@@ -1,5 +1,7 @@
 'use server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { assignPreferredSuppliers } from '@/lib/orders/preferred-suppliers'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getProfile } from '@/lib/auth'
@@ -59,6 +61,12 @@ export async function convertToOrder(quotationId: string) {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('convert_quotation_to_order', { p_quotation_id: quotationId })
   if (error) return { error: error.message }
+  // Give each new order line its product's preferred supplier (system step, so service role).
+  const admin = createAdminClient()
+  if (admin && data) {
+    const assigned = await assignPreferredSuppliers(admin, data as string)
+    if (assigned.error) console.error('[quotations] supplier auto-assign failed', assigned.error)
+  }
   await writeAudit(supabase, {
     action: 'create',
     entity: 'orders',

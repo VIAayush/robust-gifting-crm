@@ -16,6 +16,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 import { requireStaff, applyOrderScope } from '@/lib/auth'
 import { OrderLifecycleBar } from '@/components/orders/order-lifecycle'
+import { OrderTypeBadge, PaymentStatusBadge } from '@/components/orders/order-badges'
 import { MobileFilterBar } from '@/components/ui/mobile-filter-sheet'
 
 type OrderCompany = { id: string; name: string }
@@ -25,6 +26,9 @@ type OrderRow = {
   order_number: string | null
   order_value: number | null
   status: string
+  order_type?: string | null
+  payment_status?: string | null
+  payment_reference?: string | null
   expected_delivery_date: string | null
   company?: OrderCompany | OrderCompany[] | null
   owner?: OrderOwner | OrderOwner[] | null
@@ -102,6 +106,7 @@ export default async function OrdersPage(props: { searchParams: Promise<{ status
               <th className="p-4 font-medium text-gray-500">Order #</th>
               <th className="p-4 font-medium text-gray-500">Company</th>
               <th className="p-4 font-medium text-gray-500">Value</th>
+              <th className="p-4 font-medium text-gray-500">Payment</th>
               <th className="p-4 font-medium text-gray-500">Status</th>
               <th className="p-4 font-medium text-gray-500">Expected Delivery</th>
               <th className="p-4 font-medium text-gray-500">Owner</th>
@@ -119,11 +124,22 @@ export default async function OrdersPage(props: { searchParams: Promise<{ status
                     <Link href={`/crm/orders/${order.id}`} className="text-blue-600 hover:underline font-medium">
                       {order.order_number || `ORD-${order.id.slice(0,6)}`}
                     </Link>
+                    <div className="mt-1">
+                      <OrderTypeBadge type={order.order_type} />
+                    </div>
                   </td>
                   <td className="p-4">
                     {company?.name || '—'}
                   </td>
                   <td className="p-4">{formatCurrency(order.order_value || 0)}</td>
+                  <td className="p-4">
+                    <PaymentStatusBadge status={order.payment_status} />
+                    {order.payment_reference ? (
+                      <div className="mt-1 max-w-[150px] truncate font-mono text-[10px] text-gray-500" title={order.payment_reference}>
+                        {order.payment_reference}
+                      </div>
+                    ) : null}
+                  </td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[order.status] || 'bg-gray-100 text-gray-800'}`}>
                       {(order.status || 'unknown').replace(/_/g, ' ')}
@@ -141,7 +157,7 @@ export default async function OrdersPage(props: { searchParams: Promise<{ status
             })}
             {orderRows.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-8 text-center text-gray-500">No orders found.</td>
+                <td colSpan={7} className="p-8 text-center text-gray-500">No orders found.</td>
               </tr>
             )}
           </tbody>

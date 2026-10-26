@@ -18,8 +18,10 @@ export function CrmFrame({
   role,
   user,
   notifications,
+  allowedModules,
   children,
 }: {
+  allowedModules?: string[]
   role: Role
   user: { name: string; email: string }
   notifications: Note[]
@@ -44,7 +46,7 @@ export function CrmFrame({
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-[#F1F4F9]">
       <div className="hidden h-full min-h-0 lg:flex">
-        <Sidebar role={role} user={user} />
+        <Sidebar role={role} user={user} allowedModules={allowedModules} />
       </div>
 
       {/* Keep mounted so nav scroll position is preserved between opens */}
@@ -73,6 +75,7 @@ export function CrmFrame({
             showClose
             onClose={() => setOpen(false)}
             mobileOpen={open}
+            allowedModules={allowedModules}
           />
         </div>
       </div>

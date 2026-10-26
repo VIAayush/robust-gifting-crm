@@ -384,6 +384,12 @@ export function curateStoryProduct(products: PublicProduct[], usage: UsageSets =
   return fallback ? claim(fallback, usage.usedIds, usage.usedImages) : null
 }
 
+/** Display only: drop categories that currently have no live products. */
+export function withLiveProducts<T extends { id: string }>(categories: T[], products: { category_id: string | null }[]) {
+  const live = new Set(products.map((product) => product.category_id).filter(Boolean))
+  return categories.filter((category) => live.has(category.id))
+}
+
 export function homeCategoryTiles<T extends { name: string }>(categories: T[], limit = 6) {
   const byName = new Map(categories.map((category) => [category.name, category]))
   const ordered = HOME_CATEGORY_TILES.map((name) => byName.get(name)).filter(Boolean) as T[]

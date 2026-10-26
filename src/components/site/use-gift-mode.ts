@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { GIFT_MODE_COOKIE, type GiftMode } from '@/lib/site/gift-mode'
+import { GIFT_MODE_COOKIE, modeForPath, type GiftMode } from '@/lib/site/gift-mode'
 
 function readCookie(): GiftMode {
   if (typeof document === 'undefined') return 'corporate'
@@ -10,44 +10,34 @@ function readCookie(): GiftMode {
   return match?.[1] === 'personalized' ? 'personalized' : 'corporate'
 }
 
-function writeCookie(mode: GiftMode) {
+export function writeGiftModeCookie(mode: GiftMode) {
   document.cookie = `${GIFT_MODE_COOKIE}=${mode}; path=/; max-age=31536000; samesite=lax`
 }
 
 /**
- * The site's two anchor pages (/ and /personalized) unambiguously set the
- * mode. Everywhere else (catalogue, categories, collections, product pages)
- * is shared between both, so it remembers whichever mode you last chose via
- * a cookie, so a product click from the catalogue grid doesn't drop you back
- * into the other mode.
+ * Mode-specific pages (see modeForPath: /personalized/*, /cart, /checkout vs
+ * /, /home, /catalogue) set the mode. Shared pages (about,
+ * categories, collections, wishlist) keep whichever mode you last chose, via
+ * a cookie, so moving around the site never flips you into the other mode.
  *
- * `initialMode` should be the same value the server already resolved via
- * `getGiftMode()` (next/headers) for this request. Without it, the first
- * client render falls back to reading `document.cookie` directly, which is
- * unavailable during SSR and defaults to 'corporate' there — mismatching a
- * server render that actually saw a 'personalized' cookie and causing a
- * hydration error. Passing it down keeps the client's first paint identical
- * to what the server already sent.
+ * `initialMode` is the value the server already resolved for this request, so
+ * the first client render matches the server-rendered markup.
  */
 export function useGiftMode(initialMode?: GiftMode): GiftMode {
   const pathname = usePathname()
-  const [mode, setMode] = useState<GiftMode>(() => {
-    if (pathname?.startsWith('/personalized')) return 'personalized'
-    if (pathname === '/' || pathname?.startsWith('/home')) return 'corporate'
-    return initialMode ?? readCookie()
-  })
+  const [mode, setMode] = useState<GiftMode>(() => modeForPath(pathname) ?? initialMode ?? readCookie())
 
   useEffect(() => {
-    if (pathname?.startsWith('/personalized')) {
-      writeCookie('personalized')
-      setMode('personalized')
-    } else if (pathname === '/' || pathname?.startsWith('/home')) {
-      writeCookie('corporate')
-      setMode('corporate')
+    const forced = modeForPath(pathname)
+    if (forced) {
+      writeGiftModeCookie(forced)
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing with the route after client navigation
+      setMode(forced)
     } else {
       setMode(readCookie())
     }
-  }, [pathname])
+    // initialMode changes when a mode switch refreshes a shared page in place.
+  }, [pathname, initialMode])
 
   return mode
 }

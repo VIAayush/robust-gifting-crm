@@ -14,6 +14,7 @@ import { signOut } from '@/app/login/actions';
 import { forgetRememberedTab } from '@/lib/auth/remember-client';
 import { BrandName } from '@/components/brand/brand-name';
 import type { Role } from '@/lib/types';
+import { moduleForPath } from '@/lib/modules';
 
 interface SidebarProps {
   role: Role;
@@ -23,6 +24,8 @@ interface SidebarProps {
   onClose?: () => void;
   /** When true on mobile, scroll the active nav item into view. */
   mobileOpen?: boolean;
+  /** Module keys this user may open (Settings > Role Permissions). */
+  allowedModules?: string[];
 }
 
 type NavItem = { label: string; href: string; matchPrefix: string; icon: typeof LayoutDashboard };
@@ -54,12 +57,12 @@ const navGroups: NavGroup[] = [
       { label: 'Goal Tracker', href: '/crm/goals', matchPrefix: '/crm/goals', icon: Target },
       { label: 'Requirements', href: '/crm/requirements', matchPrefix: '/crm/requirements', icon: ClipboardList },
       { label: 'Products', href: '/crm/products', matchPrefix: '/crm/products', icon: Package },
+      { label: 'Catalogues', href: '/crm/products/catalogues', matchPrefix: '/crm/products/catalogues', icon: FolderGit2 },
       { label: 'Pricing & MRP', href: '/crm/products/pricing', matchPrefix: '/crm/products/pricing', icon: Tags },
       { label: 'Mockup Storage', href: '/crm/mockups', matchPrefix: '/crm/mockups', icon: ImageIcon },
       { label: 'Quotations', href: '/crm/quotations', matchPrefix: '/crm/quotations', icon: FileText },
       { label: 'Orders', href: '/crm/orders', matchPrefix: '/crm/orders', icon: ShoppingBag },
       { label: 'Samples', href: '/crm/samples', matchPrefix: '/crm/samples', icon: Package2 },
-      { label: 'Campaigns', href: '/crm/campaigns', matchPrefix: '/crm/campaigns', icon: FolderGit2 },
       { label: 'Activities', href: '/crm/activities', matchPrefix: '/crm/activities', icon: Activity },
     ]
   },
@@ -121,7 +124,7 @@ const navGroups: NavGroup[] = [
 
 const SCROLL_KEY = 'giffter.crm.sidebar.scrollTop'
 
-export function Sidebar({ role, user, onNavigate, showClose, onClose, mobileOpen }: SidebarProps) {
+export function Sidebar({ role, user, onNavigate, showClose, onClose, mobileOpen, allowedModules }: SidebarProps) {
   const pathname = usePathname();
   const navRef = useRef<HTMLElement | null>(null)
   const activeRef = useRef<HTMLAnchorElement | null>(null)
@@ -129,16 +132,35 @@ export function Sidebar({ role, user, onNavigate, showClose, onClose, mobileOpen
 
   const displayName = user?.name?.trim() || 'User';
   const roleName = role === 'admin' ? 'Admin' : role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const allowed = allowedModules ? new Set(allowedModules) : null
+  const canOpen = (href: string) => {
+    if (!allowed) return true
+    const mod = moduleForPath(href)
+    return !mod || allowed.has(mod.key)
+  }
   const seenHrefs = new Set<string>()
-  const visibleGroups = navGroups.flatMap((group) => {
+  const groupedForRole = navGroups.flatMap((group) => {
     if (!group.roles.includes(role)) return []
     const items = group.items.filter((item) => {
-      if (seenHrefs.has(item.href)) return false
+      if (seenHrefs.has(item.href) || !canOpen(item.href)) return false
       seenHrefs.add(item.href)
       return true
     })
     return items.length ? [{ ...group, items }] : []
   })
+  // Modules an admin granted to a role outside its usual sidebar groups.
+  const extraItems = allowed
+    ? navGroups
+        .flatMap((group) => group.items)
+        .filter((item) => {
+          if (seenHrefs.has(item.href) || !canOpen(item.href)) return false
+          seenHrefs.add(item.href)
+          return true
+        })
+    : []
+  const visibleGroups = extraItems.length
+    ? [...groupedForRole, { label: 'MORE', roles: [role], items: extraItems }]
+    : groupedForRole
 
   // Only the most specific matching item is active, so /crm/products/pricing
   // highlights "Pricing & MRP" and not also "Products".

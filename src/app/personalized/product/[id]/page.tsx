@@ -39,7 +39,7 @@ export default async function PersonalizedProductPage({ params }: Props) {
   if (!product) notFound()
 
   return (
-    <SiteShell>
+    <SiteShell mode="personalized">
       <ProductDetailProvider productName={product.name} sharedImages={product.sharedImages} variants={product.variants}>
         <article className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
           <Link

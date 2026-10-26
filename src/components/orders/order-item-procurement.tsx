@@ -105,7 +105,13 @@ export function OrderItemProcurement({
                 <span>{item.supplierName || 'No supplier assigned'}</span>
               )}
               {item.supplierSkuSnapshot && <span className="font-mono text-gray-400">SKU {item.supplierSkuSnapshot}</span>}
-              {canSeeCost && item.supplierCostSnapshot != null && <span>Cost {formatCurrency(item.supplierCostSnapshot)}</span>}
+              {canSeeCost && item.supplierId ? (
+                item.supplierCostSnapshot != null ? (
+                  <span>Cost {formatCurrency(item.supplierCostSnapshot)}</span>
+                ) : (
+                  <span className="text-amber-700">Cost not set</span>
+                )
+              ) : null}
             </div>
             {canUpdateStatus && item.supplierId && (
               <form

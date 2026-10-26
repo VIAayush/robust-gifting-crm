@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function PersonalizedPage() {
   return (
-    <SiteShell>
+    <SiteShell mode="personalized">
       <PersonalizedHome />
     </SiteShell>
   )

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { submitSampleRequest } from '@/app/portal/interest/actions'
+import { submitSampleRequest } from '@/app/portal/shortlist/actions'
 
 function SubmitButton() {
   const { pending } = useFormStatus()
@@ -51,7 +51,7 @@ export function RequestSampleForm({
       action={async (formData) => {
         setError(null)
         const result = await submitSampleRequest(formData)
-        if (result?.error) setError('We could not send your sample request. Please try again.')
+        if (result?.error) setError(result.error)
         else setDone(true)
       }}
       className="space-y-2 rounded-lg border border-[#E2E8F0] bg-[#F5F7FA] p-2.5"

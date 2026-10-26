@@ -5,6 +5,7 @@ import { AddToCartControl } from '@/components/site/add-to-cart-control'
 import { ProductCustomizer } from '@/components/site/product-customizer'
 import { WishlistHeartButton } from '@/components/site/wishlist-heart-button'
 import type { CustomizationData } from '@/lib/site/cart'
+import { useProductDetail } from '@/components/site/product-detail-view'
 
 type Product = {
   id: string
@@ -31,6 +32,14 @@ export function PersonalizedPurchaseActions({
 }) {
   const [customization, setCustomization] = useState<CustomizationData>({})
   const [customizationFilePath, setCustomizationFilePath] = useState<string | null>(null)
+  // The colour picked in ColorSelectorSlot (same ProductDetailProvider) must go into the cart line.
+  const { variants, selectedId } = useProductDetail()
+  const selectedVariant = variants.find((v) => v.id === selectedId) || variants[0] || null
+  const cartProduct = {
+    ...product,
+    variantId: selectedVariant?.id ?? null,
+    variantColour: selectedVariant?.colour ?? null,
+  }
 
   return (
     <div className="space-y-4">
@@ -47,7 +56,7 @@ export function PersonalizedPurchaseActions({
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <div className="sm:max-w-xs sm:flex-1">
-          <AddToCartControl product={product} customization={customization} customizationFilePath={customizationFilePath} />
+          <AddToCartControl product={cartProduct} customization={customization} customizationFilePath={customizationFilePath} />
         </div>
         <div className="sm:w-48">
           <WishlistHeartButton variant="detail" product={product} />

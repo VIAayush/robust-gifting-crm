@@ -11,15 +11,17 @@ import { GiftModeToggle } from '@/components/site/gift-mode-toggle'
 import { WishlistHeaderLink } from '@/components/site/wishlist-header-link'
 import { CartHeaderLink } from '@/components/site/cart-header-link'
 import { useGiftMode } from '@/components/site/use-gift-mode'
-import type { GiftMode } from '@/lib/site/gift-mode'
+import { catalogueBase, type GiftMode } from '@/lib/site/gift-mode'
 
-const PRIMARY_NAV = [
-  { href: '/about', label: 'About' },
-  { href: '/catalogue', label: 'Catalogue' },
-  { href: '/collections', label: 'Collections' },
-  { href: '/categories', label: 'Categories' },
-  { href: '/collections#occasions', label: 'Occasions' },
-]
+function primaryNav(mode: GiftMode) {
+  return [
+    { href: '/about', label: 'About' },
+    { href: catalogueBase(mode), label: 'Catalogue' },
+    { href: '/collections', label: 'Collections' },
+    { href: '/categories', label: 'Categories' },
+    { href: '/collections#occasions', label: 'Occasions' },
+  ]
+}
 
 type Suggestion = {
   id: string
@@ -38,13 +40,18 @@ export function SiteHeader({
   workspaceHref?: string | null
   workspaceLabel?: string | null
   suggestions?: Suggestion[]
-  categoryLinks?: { href: string; label: string }[]
+  categoryLinks?: { href: string; personalizedHref?: string; label: string }[]
   /** Gift mode already resolved server-side via getGiftMode(), so the first client render matches SSR. */
   initialMode: GiftMode
 }) {
   const router = useRouter()
   const mode = useGiftMode(initialMode)
   const isPersonalized = mode === 'personalized'
+  const PRIMARY_NAV = primaryNav(mode)
+  const modeCategoryLinks = categoryLinks.map((item) => ({
+    label: item.label,
+    href: isPersonalized && item.personalizedHref ? item.personalizedHref : item.href,
+  }))
   const [open, setOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -89,7 +96,7 @@ export function SiteHeader({
     setFocused(false)
     setSearchOpen(false)
     setOpen(false)
-    router.push(next ? `/catalogue?q=${encodeURIComponent(next)}` : '/catalogue')
+    router.push(next ? `${catalogueBase(mode)}?q=${encodeURIComponent(next)}` : catalogueBase(mode))
   }
 
   return (
@@ -269,7 +276,7 @@ export function SiteHeader({
               <p className="pb-2 pt-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#94A3B8]">
                 Categories
               </p>
-              {categoryLinks.map((item) => (
+              {modeCategoryLinks.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}

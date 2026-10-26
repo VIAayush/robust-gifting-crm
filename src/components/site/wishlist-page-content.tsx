@@ -6,13 +6,13 @@ import { Heart } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { ProductImage } from '@/components/ui/product-image'
 import { type WishlistItem, readWishlist, toggleWishlist, WISHLIST_EVENT } from '@/lib/site/wishlist'
-import { productHrefBase } from '@/lib/site/gift-mode'
+import { catalogueBase, productHrefBase, type GiftMode } from '@/lib/site/gift-mode'
 import { useGiftMode } from '@/components/site/use-gift-mode'
 
-export function WishlistPageContent() {
+export function WishlistPageContent({ initialMode }: { initialMode?: GiftMode }) {
   const [items, setItems] = useState<WishlistItem[]>([])
   const [hydrated, setHydrated] = useState(false)
-  const mode = useGiftMode()
+  const mode = useGiftMode(initialMode)
   const base = productHrefBase(mode)
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export function WishlistPageContent() {
           Tap the heart on any gift in the catalogue to save it here.
         </p>
         <Link
-          href="/catalogue"
+          href={catalogueBase(mode)}
           className="mt-6 inline-flex bg-[#9C7A33] px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white"
         >
           Browse the catalogue

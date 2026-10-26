@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { purposeLabel } from '@/lib/requirements/purpose'
 import { BackButton } from '@/components/ui/back-button'
 import { formatCurrency, formatDate, formatUnits, isUuid } from '@/lib/utils'
 import { ClipboardList, Building2, User, Calendar, DollarSign, Package } from 'lucide-react'
@@ -148,7 +149,7 @@ export default async function RequirementDetailPage({
             <div className="bg-white p-6 rounded-2xl border border-gray-200 text-xs space-y-3">
               <h3 className="font-bold text-sm text-gray-900 pb-2 border-b">Delivery & Commercial Terms</h3>
               <div className="grid grid-cols-2 gap-4">
-                <div><span className="text-gray-500 block mb-0.5">Purpose / Occasion:</span> <span className="font-semibold text-gray-900">{req.purpose || '—'}</span></div>
+                <div><span className="text-gray-500 block mb-0.5">Purpose / Occasion:</span> <span className="font-semibold text-gray-900">{purposeLabel(req.purpose) || '—'}</span></div>
                 <div><span className="text-gray-500 block mb-0.5">Delivery City:</span> <span className="font-semibold text-gray-900">{req.delivery_city || '—'}</span></div>
                 <div><span className="text-gray-500 block mb-0.5">Payment Terms:</span> <span className="font-semibold text-gray-900">{req.payment_terms || 'Standard'}</span></div>
                 <div><span className="text-gray-500 block mb-0.5">Target Deadline:</span> <span className="font-semibold text-red-600">{formatDate(req.deadline)}</span></div>
@@ -173,6 +174,8 @@ export default async function RequirementDetailPage({
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="p-3.5 font-semibold text-gray-500">Shortlisted Product</th>
+                <th className="p-3.5 font-semibold text-gray-500 text-right">Qty requested</th>
+                <th className="p-3.5 font-semibold text-gray-500">Notes</th>
                 <th className="p-3.5 font-semibold text-gray-500 text-right">Price</th>
                 <th className="p-3.5 font-semibold text-gray-500 text-right">MOQ</th>
               </tr>
@@ -186,12 +189,14 @@ export default async function RequirementDetailPage({
                     </Link>
                     <div className="text-gray-400 font-mono text-[10px]">{item.product?.sku}</div>
                   </td>
+                  <td className="p-3.5 text-right font-semibold text-gray-900">{formatUnits(item.quantity ?? 1)}</td>
+                  <td className="p-3.5 text-gray-600">{item.notes || '—'}</td>
                   <td className="p-3.5 text-right font-bold text-gray-900">{formatCurrency(item.product?.price)}</td>
                   <td className="p-3.5 text-right text-gray-600">{formatUnits(item.product?.moq ?? 1)}</td>
                 </tr>
               ))}
               {(!products || products.length === 0) && (
-                <tr><td colSpan={3} className="p-6 text-center text-gray-400">No products attached to this brief.</td></tr>
+                <tr><td colSpan={5} className="p-6 text-center text-gray-400">No products attached to this brief.</td></tr>
               )}
             </tbody>
           </table>

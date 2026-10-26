@@ -1,28 +1,48 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { respondToQuotation } from '../../actions'
 
 export function QuotationActions({ quotationId }: { quotationId: string }) {
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [rejecting, setRejecting] = useState(false)
   const [comment, setComment] = useState('')
+  const [error, setError] = useState<string | null>(null)
 
   const handleRespond = async (status: 'accepted' | 'rejected') => {
     if (status === 'rejected' && !rejecting) {
       setRejecting(true)
       return
     }
+    if (loading) return
 
     setLoading(true)
-    await respondToQuotation(quotationId, status, comment)
-    setLoading(false)
-    setRejecting(false)
+    setError(null)
+    try {
+      const result = await respondToQuotation(quotationId, status, comment.trim().slice(0, 1000))
+      if (result?.error) {
+        setError(result.error)
+        return
+      }
+      setRejecting(false)
+      router.refresh()
+    } catch {
+      setError('We could not record your decision. Please check your connection and try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <div className="mt-8 border-t border-gray-200 pt-8">
       <h3 className="mb-4 text-lg font-semibold text-gray-900">Your Decision</h3>
+      {error ? (
+        <p role="alert" className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
       
       {rejecting ? (
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">

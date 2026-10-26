@@ -465,6 +465,13 @@ export function MobileSheetSelect({
           onChange={(event) => setValue(event.target.value)}
           className="min-h-11 w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500"
         >
+          {/* Without this, an empty value silently displays the first option
+              (e.g. "Festival") while the form still holds "", so validation fails. */}
+          {value === '' && !options.some((option) => option.value === '') ? (
+            <option value="" disabled>
+              {emptyLabel}
+            </option>
+          ) : null}
           {options.map((option) => (
             <option key={`${name || label}-opt-${option.value || 'empty'}`} value={option.value}>
               {option.label}

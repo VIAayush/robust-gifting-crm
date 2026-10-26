@@ -1,3 +1,4 @@
+import { excludeIndividualCompanies } from '@/lib/companies/individual'
 import { createClient } from '@/lib/supabase/server'
 import { requireStaff } from '@/lib/auth'
 import { createRequirement } from '../actions'
@@ -15,7 +16,7 @@ export default async function NewRequirementPage({
   const supabase = await createClient()
 
   const [{ data: companies }, { data: contacts }, { data: owners }] = await Promise.all([
-    supabase.from('companies').select('id, name').order('name'),
+    excludeIndividualCompanies(supabase.from('companies').select('id, name')).order('name'),
     supabase.from('contacts').select('id, full_name, company_id').order('full_name'),
     supabase.from('profiles').select('id, full_name').in('role', ['admin', 'sales']).eq('is_active', true).order('full_name'),
   ])

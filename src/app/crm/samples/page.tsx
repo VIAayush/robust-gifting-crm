@@ -6,6 +6,9 @@ import { receiveSample, moveSample, sendSampleToClient, updateSampleRequestStatu
 import { requireStaff, canSeeCosts } from '@/lib/auth'
 import { asFormAction } from '@/lib/form-action'
 import { MobileSheetSelect } from '@/components/ui/mobile-filter-sheet'
+import { excludeIndividualCompanies } from '@/lib/companies/individual'
+import { ProductPicker } from '@/components/products/product-picker'
+import { fetchAllProducts } from '@/lib/products/all-products'
 
 export default async function SamplesPage({
   searchParams,
@@ -25,8 +28,8 @@ export default async function SamplesPage({
   const [{ data: samples }, { data: movements }, { data: products }, { data: companies }, { data: sampleRequests }] = await Promise.all([
     supabase.from('sample_stock').select('*, product:products(name, sku)'),
     supabase.from('sample_movements').select('*, product:products(name), company:companies(name)').order('created_at', { ascending: false }).limit(25),
-    supabase.from('products').select('id, name, sku').eq('status', 'active').order('name').limit(200),
-    supabase.from('companies').select('id, name').order('name'),
+    fetchAllProducts(supabase).then((data) => ({ data })),
+    excludeIndividualCompanies(supabase.from('companies').select('id, name')).order('name'),
     supabase
       .from('sample_requests')
       .select(
@@ -102,7 +105,7 @@ export default async function SamplesPage({
       <div className="rounded-2xl border bg-white p-5">
         <h2 className="font-serif text-lg mb-1">Customer sample requests</h2>
         <p className="mb-3 text-xs text-[#4A5568]">
-          Requests submitted by clients from their Interest List in the portal. Fulfilling one ships it from office
+          Requests submitted by clients from their Shortlist in the portal. Fulfilling one ships it from office
           stock the same way <span className="font-semibold text-[#9C7A33]">Send to client</span> does, and records it below.
         </p>
         {(sampleRequests || []).length === 0 ? (
@@ -198,17 +201,12 @@ export default async function SamplesPage({
       </div>
 
       <form action={asFormAction(receiveSample)} className="grid items-end gap-3 rounded-2xl border bg-white p-4 text-xs md:grid-cols-4">
-        <MobileSheetSelect
+        <ProductPicker
           name="product_id"
-          label="Product"
+          label="Product to receive"
           required
-          showDesktopLabel
-          emptyLabel="Select product to receive"
           className="md:col-span-2"
-          options={[
-            { value: '', label: 'Select product to receive' },
-            ...(products || []).map((p) => ({ value: p.id, label: `${p.name} · ${p.sku}` })),
-          ]}
+          products={products || []}
         />
         <label className="block space-y-1">
           <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#4A5568]">Quantity</span>

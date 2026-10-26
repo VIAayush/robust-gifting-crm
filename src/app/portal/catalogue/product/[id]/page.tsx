@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { BackButton } from '@/components/ui/back-button'
 import { formatCurrency, formatUnits } from '@/lib/utils'
 import { ProductDetailProvider, ProductGallerySlot, ColorSelectorSlot } from '@/components/site/product-detail-view'
-import { InterestButtonSlot } from '@/components/portal/product-interest-button'
+import { ShortlistButtonSlot } from '@/components/portal/shortlist-button'
 
 export default async function PortalProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -52,21 +52,17 @@ export default async function PortalProductDetailPage({ params }: { params: Prom
     .filter((v) => v.colour)
     .map((v) => ({ id: v.id as string, colour: (v.display_name || v.colour) as string, images: imagesByVariant.get(v.id as string) || [] }))
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const interestedVariantIds: string[] = []
-  let interestedNoVariant = false
-  if (user) {
-    const { data: interestRows } = await supabase
-      .from('company_product_interests')
-      .select('variant_id')
-      .eq('user_id', user.id)
-      .eq('product_id', product.id)
-    for (const row of interestRows || []) {
-      if (row.variant_id) interestedVariantIds.push(row.variant_id as string)
-      else interestedNoVariant = true
-    }
+  const { data: companyId } = await supabase.rpc('client_company_id')
+  const shortlistedVariantIds: string[] = []
+  let shortlistedNoVariant = false
+  const { data: shortlistRows } = await supabase
+    .from('company_product_interests')
+    .select('variant_id')
+    .eq('company_id', companyId)
+    .eq('product_id', product.id)
+  for (const row of shortlistRows || []) {
+    if (row.variant_id) shortlistedVariantIds.push(row.variant_id as string)
+    else shortlistedNoVariant = true
   }
 
   return (
@@ -102,10 +98,10 @@ export default async function PortalProductDetailPage({ params }: { params: Prom
               </div>
 
               <div className="space-y-3 border-t border-gray-100 pt-4">
-                <InterestButtonSlot
+                <ShortlistButtonSlot
                   productId={product.id}
-                  interestedVariantIds={interestedVariantIds}
-                  interestedNoVariant={interestedNoVariant}
+                  shortlistedVariantIds={shortlistedVariantIds}
+                  shortlistedNoVariant={shortlistedNoVariant}
                 />
                 <Link
                   href="/portal/requirements/new"
@@ -114,7 +110,7 @@ export default async function PortalProductDetailPage({ params }: { params: Prom
                   Create requirement
                 </Link>
                 <p className="text-xs text-gray-500">
-                  Add gifts you like to your Interest List, then request samples or share a requirement so your account manager can prepare a quotation with branding and packaging options.
+                  Add gifts you like to your Shortlist, then request samples or create a requirement so your account manager can prepare a quotation with branding and packaging options.
                 </p>
               </div>
             </div>

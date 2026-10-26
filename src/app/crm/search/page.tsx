@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireStaff, applyOrderScope, applyOwnerScope, applyCompanyScope } from '@/lib/auth'
 import Link from 'next/link'
-import { formatCurrency, oneRelation, asRows } from '@/lib/utils'
+import { formatCurrency, oneRelation, asRows, LEAD_STAGE_LABELS } from '@/lib/utils'
 
 type SearchLead = {
   id: string
@@ -111,7 +111,7 @@ export default async function SearchPage({
             const company = oneRelation(l.company)
             return (
               <Link key={l.id} href={`/crm/leads/${l.id}`} className="block text-sm hover:underline">
-                {company?.name || 'Lead'} · {l.stage}
+                {company?.name || 'Lead'} · {(l.stage && LEAD_STAGE_LABELS[l.stage]) || l.stage || '—'}
               </Link>
             )
           })}
@@ -137,7 +137,7 @@ export default async function SearchPage({
       {canSales && (
         <Section title="Campaigns">
           {(campaigns || []).map((c: SearchCampaign) => (
-            <Link key={c.id} href={`/crm/campaigns/${c.id}`} className="block text-sm hover:underline">{c.name}</Link>
+            <Link key={c.id} href={`/crm/products/catalogues/${c.id}`} className="block text-sm hover:underline">{c.name}</Link>
           ))}
           {(!campaigns || campaigns.length === 0) && <p className="text-sm text-gray-500">No campaigns.</p>}
         </Section>

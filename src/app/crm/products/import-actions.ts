@@ -8,6 +8,7 @@ import { PRODUCT_CATEGORY_ALIASES } from '@/lib/products/categories'
 import { canonicalColourName, stripColourSuffixFromSku } from '@/lib/products/colours'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createHash } from 'crypto'
+import { friendlyProductDbError } from '@/lib/products/validation'
 
 const CATALOGUE_ROLES = ['admin', 'sales'] as const
 const IMAGE_BUCKET = 'product-images'
@@ -223,19 +224,24 @@ async function buildImportPlan(formData: FormData, supabase: SupabaseClient, pro
       }
     }
 
-    const price = Number(cell(row, 'price'))
-    if (!Number.isFinite(price) || price < 0) {
-      failures.push({ row: rowNumber, sku: rawSku, reason: 'Price must be a number 0 or greater' })
+    const priceRaw = cell(row, 'price')
+    const price = Number(priceRaw)
+    if (!priceRaw) {
+      failures.push({ row: rowNumber, sku: rawSku, reason: 'Selling price is missing' })
+      return
+    }
+    if (!Number.isFinite(price) || price <= 0) {
+      failures.push({ row: rowNumber, sku: rawSku, reason: `Selling price must be a number more than 0 (got "${priceRaw}")` })
       return
     }
     const mrpRaw = cell(row, 'mrp')
     const mrp = mrpRaw ? Number(mrpRaw) : null
-    if (mrpRaw && (!Number.isFinite(mrp as number) || (mrp as number) < 0)) {
-      failures.push({ row: rowNumber, sku: rawSku, reason: 'MRP must be a number 0 or greater' })
+    if (mrpRaw && (!Number.isFinite(mrp as number) || (mrp as number) <= 0)) {
+      failures.push({ row: rowNumber, sku: rawSku, reason: `MRP must be a number more than 0, or left empty (got "${mrpRaw}")` })
       return
     }
     if (mrp != null && mrp < price) {
-      failures.push({ row: rowNumber, sku: rawSku, reason: 'MRP cannot be lower than the selling price' })
+      failures.push({ row: rowNumber, sku: rawSku, reason: `MRP (${mrp}) cannot be lower than the selling price (${price})` })
       return
     }
     const companyNames = splitCompanyNames(cell(row, 'companies'))
@@ -324,6 +330,12 @@ async function buildImportPlan(formData: FormData, supabase: SupabaseClient, pro
         sku: rawSku,
         reason: 'At least one photo is required — fill in image_url or image_filename for this row',
       })
+      return
+    }
+
+    const moqRaw = cell(row, 'moq')
+    if (moqRaw && (!/^\d+$/.test(moqRaw) || Number(moqRaw) < 1)) {
+      failures.push({ row: rowNumber, sku: rawSku, reason: `MOQ must be a whole number of at least 1 (got "${moqRaw}")` })
       return
     }
 
@@ -535,7 +547,7 @@ async function commitGroup(
       .eq('id', group.existingProductId)
     if (updateError) {
       for (const row of group.rows) {
-        plan.failures.push({ row: row.rowNumber, sku: row.sku, reason: `Could not update product: ${updateError.message}` })
+        plan.failures.push({ row: row.rowNumber, sku: row.sku, reason: `Could not update product: ${friendlyProductDbError(updateError)}` })
       }
       return 'failed'
     }
@@ -554,7 +566,7 @@ async function commitGroup(
         plan.failures.push({
           row: row.rowNumber,
           sku: row.sku,
-          reason: error?.code === '23505' ? 'SKU already exists' : error?.message || 'Could not save product',
+          reason: friendlyProductDbError(error),
         })
       }
       return 'failed'

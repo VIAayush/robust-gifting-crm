@@ -1,5 +1,7 @@
 'use server'
 
+import { validateProductForm, friendlyProductDbError } from '@/lib/products/validation'
+
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -62,17 +64,14 @@ export async function createProduct(formData: FormData) {
     ),
   ]
 
-  if (!name) {
-    return { error: 'Product name is required' }
+  const fieldErrors = validateProductForm(formData, { creating: true })
+  if (Object.keys(fieldErrors).length > 0) {
+    return { error: 'Please fix the highlighted fields.', fieldErrors }
   }
-  if (!sku) {
-    return { error: 'SKU is required' }
+  const { data: skuTaken } = await supabase.from('products').select('id').eq('sku', sku.toUpperCase()).limit(1)
+  if (skuTaken && skuTaken.length > 0) {
+    return { error: 'This SKU is already used by another product.', fieldErrors: { sku: 'This SKU is already used by another product. Choose a different SKU.' } }
   }
-  if (!category_id) {
-    return { error: 'Please select a category' }
-  }
-  if (mrp != null && (!Number.isFinite(mrp) || mrp < 0)) return { error: 'MRP must be a positive number' }
-  if (mrp != null && mrp < price) return { error: 'MRP cannot be lower than the selling price' }
   if (image_url && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\b/i.test(image_url)) {
     return { error: 'Image URLs cannot point to localhost. Upload a product photo instead.' }
   }
@@ -118,8 +117,7 @@ export async function createProduct(formData: FormData) {
     .single()
 
   if (error) {
-    if (error.code === '23505') return { error: 'SKU already exists.' }
-    return { error: error.message }
+    return { error: friendlyProductDbError(error) }
   }
 
   if (catalogue_access === 'selected') {
@@ -259,6 +257,14 @@ export async function updateProduct(productId: string, formData: FormData) {
     .maybeSingle()
   if (!existing) return { error: 'Product not found' }
 
+  const fieldErrors = validateProductForm(formData, {
+    creating: false,
+    existing: { price: existing.price, mrp: existing.mrp, sku: existing.sku },
+  })
+  if (Object.keys(fieldErrors).length > 0) {
+    return { error: 'Please fix the highlighted fields.', fieldErrors }
+  }
+
   // Only write fields the submitted form actually contains. Previously any field
   // missing from the form (supplier, margin) was overwritten with null on save.
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
@@ -345,10 +351,16 @@ export async function updateProduct(productId: string, formData: FormData) {
     return { error: 'Image URLs cannot point to localhost. Upload a product photo instead.' }
   }
 
+  if (typeof update.sku === 'string') {
+    const { data: skuTaken } = await supabase.from('products').select('id').eq('sku', update.sku).neq('id', productId).limit(1)
+    if (skuTaken && skuTaken.length > 0) {
+      return { error: 'This SKU is already used by another product.', fieldErrors: { sku: 'This SKU is already used by another product. Choose a different SKU.' } }
+    }
+  }
+
   const { error } = await supabase.from('products').update(update).eq('id', productId)
   if (error) {
-    if (error.code === '23505') return { error: 'SKU already exists.' }
-    return { error: error.message }
+    return { error: friendlyProductDbError(error) }
   }
 
   if (update.status && update.status !== 'active') {
@@ -388,7 +400,7 @@ async function hideDiscontinuedProductFromClients(
   ])
   revalidatePath('/portal/catalogue')
   revalidatePath('/portal/shortlist')
-  revalidatePath('/crm/campaigns')
+  revalidatePath('/crm/products/catalogues')
 }
 
 function isStoredProductImage(url: string | null | undefined): url is string {

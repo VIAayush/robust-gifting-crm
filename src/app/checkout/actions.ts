@@ -3,20 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isUuid } from '@/lib/utils'
 import type { CartItem } from '@/lib/site/cart'
-
-function clean(value: FormDataEntryValue | string | null | undefined) {
-  return String(value ?? '').trim()
-}
-
-type CustomerInput = {
-  fullName: string
-  email: string
-  phone: string
-  addressLine: string
-  city: string
-  state: string
-  postalCode: string
-}
+import { validateCheckoutCustomer, type CheckoutCustomer, type CheckoutFieldErrors } from '@/lib/checkout/validation'
 
 /**
  * Creates a real checkout from the cart — this is the "real order, not just
@@ -25,21 +12,15 @@ type CustomerInput = {
  */
 export async function createCheckout(
   cartItems: CartItem[],
-  customer: CustomerInput
-): Promise<{ error?: string; checkoutId?: string }> {
-  const fullName = clean(customer.fullName)
-  const email = clean(customer.email).toLowerCase()
-  const phone = clean(customer.phone)
-  const addressLine = clean(customer.addressLine)
-  const city = clean(customer.city)
-  const state = clean(customer.state) || null
-  const postalCode = clean(customer.postalCode) || null
+  customer: CheckoutCustomer
+): Promise<{ error?: string; fieldErrors?: CheckoutFieldErrors; checkoutId?: string }> {
+  // Never trust the browser's validation: re-check every field here.
+  const { errors, value } = validateCheckoutCustomer(customer)
+  if (Object.keys(errors).length > 0) return { error: 'Please fix the highlighted fields.', fieldErrors: errors }
+  const { fullName, email, phone, addressLine, city } = value
+  const state = value.state || null
+  const postalCode = value.postalCode
 
-  if (!fullName) return { error: 'Please share your name.' }
-  if (!email || !email.includes('@')) return { error: 'Please share a valid email.' }
-  if (!phone) return { error: 'Please share a phone number.' }
-  if (!addressLine) return { error: 'Please share a delivery address.' }
-  if (!city) return { error: 'Please share a delivery city.' }
   if (!Array.isArray(cartItems) || cartItems.length === 0) return { error: 'Your cart is empty.' }
 
   const admin = createAdminClient()
@@ -125,44 +106,9 @@ export async function createCheckout(
   const deliveryCharge = freeAbove != null && subtotal >= freeAbove ? 0 : baseDelivery
   const totalAmount = Math.round((subtotal + taxAmount + deliveryCharge) * 100) / 100
 
-  // Reuse a company by email if this customer has ordered before, instead of
-  // creating a fresh "individual customer" company on every checkout. limit(1)
-  // rather than maybeSingle(): two contacts can share an email, and
-  // maybeSingle() would error on that and silently create a duplicate company.
-  const { data: existingContacts } = await admin.from('contacts').select('id, company_id').eq('email', email).order('created_at').limit(1)
-  const existingContact = existingContacts?.[0] || null
-
-  let companyId: string
-  let contactId: string
-
-  if (existingContact) {
-    companyId = existingContact.company_id
-    contactId = existingContact.id
-    await admin.from('contacts').update({ full_name: fullName, phone }).eq('id', contactId)
-  } else {
-    const { data: ownerRow } = await admin.from('profiles').select('id').eq('role', 'admin').eq('is_active', true).limit(1).maybeSingle()
-    const { data: company, error: companyError } = await admin
-      .from('companies')
-      .insert({
-        name: `${fullName} (Individual Customer)`,
-        status: 'active',
-        owner_id: ownerRow?.id ?? null,
-        notes: 'Individual customer — created from a personalized-gifts checkout.',
-      })
-      .select('id')
-      .single()
-    if (companyError || !company) return { error: 'Unable to start checkout. Please try again.' }
-    companyId = company.id
-
-    const { data: contact, error: contactError } = await admin
-      .from('contacts')
-      .insert({ company_id: companyId, full_name: fullName, email, phone, contact_type: 'primary', kind: 'direct' })
-      .select('id')
-      .single()
-    if (contactError || !contact) return { error: 'Unable to start checkout. Please try again.' }
-    contactId = contact.id
-  }
-
+  // No CRM company/contact is created here: that happens only once payment
+  // succeeds (createOrderFromCheckout), so abandoned checkouts leave no trace
+  // in the CRM. The customer details live on the checkout until then.
   const { data: checkout, error: checkoutError } = await admin
     .from('storefront_checkouts')
     .insert({
@@ -178,8 +124,6 @@ export async function createCheckout(
       tax_amount: taxAmount,
       delivery_charge: deliveryCharge,
       total_amount: totalAmount,
-      company_id: companyId,
-      contact_id: contactId,
     })
     .select('id')
     .single()

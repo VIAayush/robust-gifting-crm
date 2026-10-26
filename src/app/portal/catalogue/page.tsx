@@ -1,13 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { OfferingActions } from './OfferingActions'
-import { formatCurrency, formatUnits, asRows, isUuid } from '@/lib/utils'
+import { redirect } from 'next/navigation'
+import { formatCurrency, formatUnits, isUuid } from '@/lib/utils'
 import { ProductImage } from '@/components/ui/product-image'
 import { Package, Search } from 'lucide-react'
 import { sortProductCategories } from '@/lib/products/categories'
 import { swatchHex } from '@/lib/products/colours'
 import { MobileFilterBar } from '@/components/ui/mobile-filter-sheet'
-import { ProductInterestButton } from '@/components/portal/product-interest-button'
+import { ShortlistButton } from '@/components/portal/shortlist-button'
 
 const PAGE_SIZE = 24
 
@@ -25,77 +25,8 @@ export default async function PortalCataloguePage({
   const supabase = await createClient()
   const { data: companyId } = await supabase.rpc('client_company_id')
 
-  // Campaign mode keeps the existing curated-offering experience (with shortlisting),
-  // which is scoped to a single campaign.
-  if (campaignFilter) {
-    const [{ data: offerings }, { data: selections }] = await Promise.all([
-      supabase
-        .from('campaign_products')
-        .select('id, display_name, client_description, client_image_url, selling_price, moq, campaign_id, campaign:campaigns(id, name, company_id), product:products!inner(status)')
-        .eq('visibility', 'published')
-        .eq('campaign_id', campaignFilter)
-        .eq('product.status', 'active')
-        .order('display_order'),
-      supabase.from('client_product_selections').select('campaign_product_id, kind').eq('company_id', companyId),
-    ])
-
-    const selectionByOffering = new Map(
-      asRows<{ campaign_product_id: string; kind: string }>(selections).map((s: { campaign_product_id: string; kind: string }) => [s.campaign_product_id, s.kind])
-    )
-
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Your campaign selection</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Shortlist the gifts you like and we will build your quotation around them.
-          </p>
-        </div>
-
-        {!offerings?.length ? (
-          <EmptyState
-            title="Nothing to review just yet"
-            body="Your account manager will share gifting options for this campaign shortly."
-          />
-        ) : (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {offerings.map((offering) => {
-              const campaign = Array.isArray(offering.campaign) ? offering.campaign[0] : offering.campaign
-              return (
-                <div key={offering.id} className="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white">
-                  <ProductImage src={offering.client_image_url} alt={offering.display_name || 'Gift'} size="md" />
-                  <div className="flex flex-1 flex-col justify-between space-y-4 p-5">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-primary)]">
-                        {campaign?.name}
-                      </p>
-                      <Link href={`/portal/catalogue/${offering.id}`}>
-                        <h3 className="mt-1 line-clamp-1 text-sm font-semibold text-gray-900 hover:text-[var(--color-primary)]">
-                          {offering.display_name}
-                        </h3>
-                      </Link>
-                      <p className="mt-1 line-clamp-2 text-xs text-gray-500">{offering.client_description || ''}</p>
-                    </div>
-                    <div className="space-y-3 border-t border-gray-100 pt-3">
-                      <div>
-                        <p className="text-base font-semibold text-gray-900">{formatCurrency(offering.selling_price)}</p>
-                        <p className="text-[10px] text-gray-400">MOQ: {formatUnits(offering.moq ?? 1)}</p>
-                      </div>
-                      <OfferingActions
-                        campaignId={offering.campaign_id}
-                        campaignProductId={offering.id}
-                        currentKind={selectionByOffering.get(offering.id) || null}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-    )
-  }
+  // Old campaign links (?campaign=<id>) now open that catalogue.
+  if (campaignFilter && isUuid(campaignFilter)) redirect(`/portal/catalogues/${campaignFilter}`)
 
   // Default: the client's own gift catalogue.
   //
@@ -155,18 +86,16 @@ export default async function PortalCataloguePage({
     }
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const interestedProductIds = new Set<string>()
-  if (user && productIds.length > 0) {
-    const { data: interestRows } = await supabase
+  // The shortlist is shared by everyone in the company.
+  const shortlistedProductIds = new Set<string>()
+  if (productIds.length > 0) {
+    const { data: shortlistRows } = await supabase
       .from('company_product_interests')
       .select('product_id')
-      .eq('user_id', user.id)
+      .eq('company_id', companyId)
       .is('variant_id', null)
       .in('product_id', productIds)
-    for (const row of interestRows || []) interestedProductIds.add(row.product_id as string)
+    for (const row of shortlistRows || []) shortlistedProductIds.add(row.product_id as string)
   }
 
   const pageHref = (nextPage: number) => {
@@ -291,7 +220,7 @@ export default async function PortalCataloguePage({
                         </div>
                       )}
                     </div>
-                    <ProductInterestButton productId={product.id} interested={interestedProductIds.has(product.id)} />
+                    <ShortlistButton productId={product.id} shortlisted={shortlistedProductIds.has(product.id)} />
                   </div>
                 </div>
               </article>

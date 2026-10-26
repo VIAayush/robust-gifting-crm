@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 export default function HomeAliasPage() {
   return (
-    <SiteShell>
+    <SiteShell mode="corporate">
       <PublicHome />
     </SiteShell>
   )

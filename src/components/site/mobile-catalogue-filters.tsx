@@ -27,6 +27,7 @@ export function MobileCatalogueFilters({
   sort,
   categoryCounts,
   productTotal,
+  basePath = '/catalogue',
 }: {
   categories: CategoryOption[]
   categoryFilter: string
@@ -36,6 +37,7 @@ export function MobileCatalogueFilters({
   sort: string
   categoryCounts: Record<string, number>
   productTotal: number
+  basePath?: string
 }) {
   const router = useRouter()
   const [sheet, setSheet] = useState<'category' | 'budget' | 'sort' | null>(null)
@@ -51,7 +53,7 @@ export function MobileCatalogueFilters({
     if (nextSort && nextSort !== 'name') params.set('sort', nextSort)
     const qs = params.toString()
     setSheet(null)
-    router.push(`/catalogue${qs ? `?${qs}` : ''}`)
+    router.push(`${basePath}${qs ? `?${qs}` : ''}`)
   }
 
   const categoryLabel =
@@ -82,7 +84,7 @@ export function MobileCatalogueFilters({
         disabled={!hasFilters}
         onClick={() => {
           setSheet(null)
-          router.push('/catalogue')
+          router.push(basePath)
         }}
         className={`inline-flex min-h-10 w-full items-center text-[12px] font-bold uppercase tracking-[0.14em] transition-colors ${
           hasFilters ? 'text-[#9C7A33]' : 'cursor-not-allowed text-[#C9D3E0]'

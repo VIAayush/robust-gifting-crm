@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { purposeLabel } from '@/lib/requirements/purpose'
 import { formatCurrency, formatDate, asRows, oneRelation } from '@/lib/utils'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -18,6 +19,7 @@ type RequirementRow = {
   id: string
   title?: string | null
   name?: string | null
+  purpose?: string | null
   budget?: number | null
   quantity?: number | null
   deadline?: string | null
@@ -109,6 +111,9 @@ export default async function RequirementsPage(props: { searchParams: Promise<{ 
                   <Link href={`/crm/requirements/${req.id}`} className="text-blue-600 hover:underline font-medium">
                     {req.title || req.name}
                   </Link>
+                  {purposeLabel(req.purpose) ? (
+                    <div className="mt-0.5 text-xs text-gray-500">{purposeLabel(req.purpose)}</div>
+                  ) : null}
                 </td>
                 <td className="p-4">{company?.name || '—'}</td>
                 <td className="p-4">{owner?.full_name || '—'}</td>

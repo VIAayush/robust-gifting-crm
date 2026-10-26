@@ -6,7 +6,7 @@ const ENTITY_PATH: Record<string, (id: string) => string> = {
   products: (id) => `/crm/products/${id}`,
   companies: (id) => `/crm/companies/${id}`,
   invoices: (id) => `/crm/invoices/${id}`,
-  campaigns: (id) => `/crm/campaigns/${id}`,
+  campaigns: (id) => `/crm/products/catalogues/${id}`,
   tasks: () => `/crm/tasks`,
   contacts: () => `/crm/contacts`,
   mockups: () => `/crm/mockups`,

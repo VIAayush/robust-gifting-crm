@@ -7,6 +7,8 @@ import { SiteProductCard } from '@/components/site/site-product-card'
 import { formatCurrency } from '@/lib/utils'
 import { ProductImage } from '@/components/ui/product-image'
 import type { PublicProduct } from '@/lib/catalogue/products'
+import { QuickAddToCart } from '@/components/site/quick-add-to-cart'
+import { PriceDisplay } from '@/components/site/price-display'
 
 const VIEW_KEY = 'giffter.public-catalogue.view'
 
@@ -18,7 +20,16 @@ const VIEW_KEY = 'giffter.public-catalogue.view'
 const INITIAL_VISIBLE = 36
 const LOAD_MORE_STEP = 36
 
-export function CatalogueBrowser({ products, hrefBase = '/catalogue' }: { products: PublicProduct[]; hrefBase?: string }) {
+export function CatalogueBrowser({
+  products,
+  hrefBase = '/catalogue',
+  purchasable = false,
+}: {
+  products: PublicProduct[]
+  hrefBase?: string
+  /** Personalized (B2C) storefront: show Add to Cart under each product. */
+  purchasable?: boolean
+}) {
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE)
   const [renderedProducts, setRenderedProducts] = useState(products)
@@ -86,19 +97,24 @@ export function CatalogueBrowser({ products, hrefBase = '/catalogue' }: { produc
 
       {view === 'grid' ? (
         <div className="grid grid-cols-2 gap-x-3 gap-y-7 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-3 xl:grid-cols-4">
-          {visibleProducts.map((product) => (
-            <SiteProductCard key={product.id} product={product} hrefBase={hrefBase} />
-          ))}
+          {visibleProducts.map((product) =>
+            purchasable ? (
+              <div key={product.id} className="flex flex-col gap-3">
+                <SiteProductCard product={product} hrefBase={hrefBase} />
+                <div className="mt-auto">
+                  <QuickAddToCart product={product} productHref={`${hrefBase}/${product.id}`} />
+                </div>
+              </div>
+            ) : (
+              <SiteProductCard key={product.id} product={product} hrefBase={hrefBase} />
+            ),
+          )}
         </div>
       ) : (
         <div className="divide-y divide-[#E2E8F0] border-y border-[#E2E8F0]">
           {visibleProducts.map((product) => (
-            <Link
-              key={product.id}
-              href={`${hrefBase}/${product.id}`}
-              className="grid grid-cols-[5rem_1fr_auto] items-center gap-4 py-4 text-inherit hover:text-inherit sm:grid-cols-[6.5rem_1fr_auto] sm:gap-5"
-            >
-              <div className="relative aspect-square overflow-hidden rounded-md catalogue-studio-field">
+            <div key={product.id} className="grid grid-cols-[5rem_1fr_auto] items-center gap-4 py-4 sm:grid-cols-[6.5rem_1fr_auto] sm:gap-5">
+              <Link href={`${hrefBase}/${product.id}`} className="relative aspect-square overflow-hidden rounded-md catalogue-studio-field">
                 <ProductImage
                   src={product.image_url}
                   alt={product.name}
@@ -108,17 +124,29 @@ export function CatalogueBrowser({ products, hrefBase = '/catalogue' }: { produc
                   className="absolute inset-0 h-full w-full bg-transparent"
                   imgClassName="catalogue-product-img"
                 />
-              </div>
-              <div className="min-w-0">
+              </Link>
+              <Link href={`${hrefBase}/${product.id}`} className="min-w-0 text-inherit hover:text-inherit">
                 <p className="text-[10px] uppercase tracking-[0.14em] text-[#5C6570]">{product.category_name}</p>
                 <p className="mt-1 truncate font-medium text-[#1B2430]">{product.name}</p>
                 <p className="mt-1 font-mono text-[10px] text-[#5C6570]">{product.sku}</p>
+              </Link>
+              <div className="flex flex-col items-end gap-2 text-right">
+                {purchasable ? (
+                  <PriceDisplay price={product.price} mrp={product.mrp} className="justify-end" />
+                ) : (
+                  <p className="text-sm font-semibold text-[#9C7A33]">{formatCurrency(product.price)}</p>
+                )}
+                {purchasable ? (
+                  <div className="w-32">
+                    <QuickAddToCart product={product} productHref={`${hrefBase}/${product.id}`} />
+                  </div>
+                ) : (
+                  <Link href={`${hrefBase}/${product.id}`} className="text-[10px] uppercase tracking-[0.14em] text-[#5C6570] hover:text-[#9C7A33]">
+                    View
+                  </Link>
+                )}
               </div>
-              <div className="text-right">
-                <p className="text-sm font-semibold text-[#9C7A33]">{formatCurrency(product.price)}</p>
-                <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-[#5C6570]">View</p>
-              </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}

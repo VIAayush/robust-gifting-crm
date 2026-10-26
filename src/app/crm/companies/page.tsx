@@ -6,6 +6,7 @@ import { Search } from 'lucide-react';
 
 import { requireStaff, applyCompanyScope } from '@/lib/auth'
 import { MobileFilterBar } from '@/components/ui/mobile-filter-sheet'
+import { excludeIndividualCompanies, onlyIndividualCompanies } from '@/lib/companies/individual'
 
 type CompanyOwner = { full_name: string | null }
 type CompanyRow = {
@@ -19,7 +20,7 @@ type CompanyRow = {
   owner?: CompanyOwner | CompanyOwner[] | null
 }
 
-export default async function Companies(props: { searchParams: Promise<{ q?: string; status?: string; removed?: string }> }) {
+export default async function Companies(props: { searchParams: Promise<{ q?: string; status?: string; removed?: string; type?: string }> }) {
   const profile = await requireStaff()
   const searchParams = await props.searchParams;
   const supabase = await createClient();
@@ -27,12 +28,16 @@ export default async function Companies(props: { searchParams: Promise<{ q?: str
   const q = searchParams?.q || '';
   const status = searchParams?.status || '';
   const removed = searchParams?.removed || '';
+  // B2C buyers also get a CRM company; keep them out of the corporate list by default.
+  const type = searchParams?.type === 'individual' || searchParams?.type === 'all' ? searchParams.type : 'corporate';
 
   let query = supabase.from('companies').select('*, owner:profiles!owner_id(full_name)').order('created_at', { ascending: false }).limit(50);
   query = applyCompanyScope(query, profile)
   
   if (q) query = query.ilike('name', `%${q}%`);
   if (status) query = query.eq('status', status);
+  if (type === 'corporate') query = excludeIndividualCompanies(query);
+  else if (type === 'individual') query = onlyIndividualCompanies(query);
 
   const { data: companies } = await query;
   const companyRows = asRows<CompanyRow>(companies)
@@ -60,9 +65,36 @@ export default async function Companies(props: { searchParams: Promise<{ q?: str
         </div>
       )}
 
+      <nav className="mb-4 flex gap-1 border-b" aria-label="Company type">
+        {[
+          { value: 'corporate', label: 'Corporate clients' },
+          { value: 'individual', label: 'Individual customers (B2C)' },
+          { value: 'all', label: 'All' },
+        ].map((tab) => {
+          const params = new URLSearchParams()
+          if (q) params.set('q', q)
+          if (status) params.set('status', status)
+          if (tab.value !== 'corporate') params.set('type', tab.value)
+          const qs = params.toString()
+          return (
+            <Link
+              key={tab.value}
+              href={`/crm/companies${qs ? `?${qs}` : ''}`}
+              aria-current={type === tab.value ? 'page' : undefined}
+              className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${
+                type === tab.value ? 'border-[var(--color-primary)] text-[var(--color-primary)]' : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {tab.label}
+            </Link>
+          )
+        })}
+      </nav>
+
       <div className="mb-6 space-y-3">
         <form className="flex gap-2">
           {status ? <input type="hidden" name="status" value={status} /> : null}
+          {type !== 'corporate' ? <input type="hidden" name="type" value={type} /> : null}
           <div className="relative min-w-0 flex-1 sm:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input name="q" defaultValue={q} placeholder="Search companies..." className="w-full rounded-md border py-2.5 pl-10 pr-4 text-base sm:py-2 sm:text-sm" />
@@ -71,7 +103,7 @@ export default async function Companies(props: { searchParams: Promise<{ q?: str
         </form>
         <MobileFilterBar
           pathname="/crm/companies"
-          preserveParams={q ? { q } : {}}
+          preserveParams={{ ...(q ? { q } : {}), ...(type !== 'corporate' ? { type } : {}) }}
           fields={[
             {
               key: 'status',

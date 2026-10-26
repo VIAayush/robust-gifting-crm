@@ -7,10 +7,9 @@ import { HeroStage } from '@/components/site/hero-stage'
 import { ProductRail } from '@/components/site/product-rail'
 import { Reveal } from '@/components/site/reveal'
 import { GiftFinder } from '@/components/site/gift-finder'
-import { slugify } from '@/lib/utils'
 import { BUDGET_BANDS, CATALOGUE_COLLECTIONS, PERSONAL_OCCASIONS, productsForOccasion } from '@/lib/catalogue/collections'
 import { getPublicCatalogueProducts, getPublicCategories } from '@/lib/catalogue/products'
-import { curatePublicHome, homeCategoryTiles } from '@/lib/catalogue/curate'
+import { curatePublicHome, homeCategoryTiles, withLiveProducts } from '@/lib/catalogue/curate'
 
 const ARROW = '→'
 
@@ -31,13 +30,12 @@ const PERSONAL_COLLECTIONS = CATALOGUE_COLLECTIONS.filter((c) =>
 
 /**
  * The B2C counterpart to PublicHome — same catalogue data, reframed for
- * individual/personal gifting instead of corporate programmes. There is no
- * cart or checkout on this site (it's a request-a-quote catalogue), so the
- * calls to action stay "enquire" rather than pretending there's a buy flow.
+ * individual/personal gifting instead of corporate programmes, with a real
+ * cart and checkout (Shop Gifts leads to /personalized/catalogue).
  */
 export async function PersonalizedHome() {
   const products = await getPublicCatalogueProducts()
-  const categories = homeCategoryTiles(await getPublicCategories(), 6)
+  const categories = homeCategoryTiles(withLiveProducts(await getPublicCategories(), products), 6)
   const {
     heroProducts,
     categorySamples,
@@ -93,7 +91,7 @@ export async function PersonalizedHome() {
         products={heroSlideshow.length ? heroSlideshow : heroProducts}
         headlineLines={['Thoughtful gifts,', 'for the people who matter.']}
         subtext="Curated presents for birthdays, anniversaries and every reason to say thank you."
-        primaryCta={{ href: '/catalogue', label: 'Explore Gifts' }}
+        primaryCta={{ href: '/personalized/catalogue', label: 'Shop Gifts' }}
         secondaryCta={{ href: '/wishlist', label: 'My Wishlist' }}
         productHrefBase="/personalized/product"
       />
@@ -146,7 +144,7 @@ export async function PersonalizedHome() {
                 <p className="store-eyebrow">Popular right now</p>
                 <h2 className="store-section-title mt-2">Loved by gift-givers.</h2>
               </div>
-              <Link href="/catalogue?sort=newest" className="store-link shrink-0">
+              <Link href="/personalized/catalogue?sort=newest" className="store-link shrink-0">
                 View all {ARROW}
               </Link>
             </div>
@@ -177,7 +175,7 @@ export async function PersonalizedHome() {
               return (
                 <Reveal key={category.id} delay={(index % 3) * 50}>
                   <Link
-                    href={`/categories/${slugify(category.name)}`}
+                    href={`/personalized/catalogue?category=${encodeURIComponent(category.id)}`}
                     className="group block overflow-hidden rounded-md bg-white shadow-[0_1px_3px_rgba(27,36,48,0.06)] transition-shadow hover:shadow-[0_8px_24px_rgba(27,36,48,0.08)]"
                   >
                     <div className="relative aspect-square catalogue-studio-field">
@@ -233,7 +231,7 @@ export async function PersonalizedHome() {
             {budgetCounts.map((band) => (
               <Link
                 key={band.id}
-                href={`/catalogue?budget=${encodeURIComponent(band.id)}`}
+                href={`/personalized/catalogue?budget=${encodeURIComponent(band.id)}`}
                 className="rounded-md border border-[#E2E8F0] bg-white px-4 py-6 text-center transition-shadow hover:shadow-[0_8px_20px_rgba(27,36,48,0.07)]"
               >
                 <p className="font-serif text-xl text-[#1B2430]">{band.label}</p>
@@ -295,7 +293,7 @@ export async function PersonalizedHome() {
                 <p className="store-eyebrow">Handpicked</p>
                 <h2 className="store-section-title mt-2">Gifts we love right now.</h2>
               </div>
-              <Link href="/catalogue" className="store-link">
+              <Link href="/personalized/catalogue" className="store-link">
                 Full catalogue {ARROW}
               </Link>
             </div>

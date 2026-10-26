@@ -31,6 +31,13 @@ function nextBatch(pool: PublicProduct[], start: number, count: number, avoid: s
   return { ids, nextCursor: idx % pool.length }
 }
 
+/** Deterministic first batch, so the server-rendered HTML already contains the four cards. */
+function initialBatch(pool: PublicProduct[]) {
+  if (!pool.length) return { ids: [] as string[], nextCursor: 0 }
+  const start = pool.length > SLOT_COUNT ? Math.floor(pool.length / 4) : 0
+  return nextBatch(pool, start, Math.min(SLOT_COUNT, pool.length))
+}
+
 export function HeroStage({
   products,
   headlineLines = ['Corporate gifting,', 'designed to be remembered.'],
@@ -53,26 +60,21 @@ export function HeroStage({
     [products],
   )
 
-  const [slotIds, setSlotIds] = useState<string[]>([])
+  // Seeded synchronously (not in an effect): an empty first render is what made
+  // the four hero cards appear as grey blanks until client JS filled them in.
+  const [first] = useState(() => initialBatch(pool))
+  const [slotIds, setSlotIds] = useState<string[]>(first.ids)
+  const [upcomingIds, setUpcomingIds] = useState<string[]>(() =>
+    pool.length > first.ids.length ? nextBatch(pool, first.nextCursor, first.ids.length, first.ids).ids : [],
+  )
+  const [rotated, setRotated] = useState(false)
   const [phase, setPhase] = useState<TransitionPhase>('idle')
-  const cursorRef = useRef(0)
-  const slotIdsRef = useRef<string[]>([])
+  const cursorRef = useRef(first.nextCursor)
+  const slotIdsRef = useRef<string[]>(first.ids)
 
   useEffect(() => {
     slotIdsRef.current = slotIds
   }, [slotIds])
-
-  useEffect(() => {
-    if (!pool.length) {
-      setSlotIds([])
-      return
-    }
-    const start = pool.length > SLOT_COUNT ? Math.floor(pool.length / 4) : 0
-    const { ids, nextCursor } = nextBatch(pool, start, Math.min(SLOT_COUNT, pool.length))
-    setSlotIds(ids)
-    cursorRef.current = nextCursor
-    setPhase('idle')
-  }, [pool])
 
   useEffect(() => {
     if (pool.length < 2) return
@@ -92,6 +94,8 @@ export function HeroStage({
           const { ids, nextCursor } = nextBatch(pool, cursorRef.current, current.length, current)
           cursorRef.current = nextCursor
           setSlotIds(ids)
+          setRotated(true)
+          setUpcomingIds(nextBatch(pool, nextCursor, ids.length, ids).ids)
           setPhase('in')
           timers.push(window.setTimeout(() => setPhase('idle'), 40))
         }, FADE_MS),
@@ -188,6 +192,20 @@ export function HeroStage({
           </div>
         ) : null}
 
+        {/* Warms the next batch through the same optimized /_next/image URLs the
+            cards use, so each rotation fades to a loaded photo instead of grey. */}
+        <div aria-hidden="true" className="pointer-events-none fixed -left-[9999px] top-0 hidden h-px w-px overflow-hidden lg:block">
+          {upcomingIds.map((id) => {
+            const product = pool.find((item) => item.id === id)
+            if (!product) return null
+            return (
+              <div key={`warm-${id}`} className="relative h-[220px] w-[220px]">
+                <ProductImage src={product.image_url} alt="" size="md" fit="contain" priority className="absolute inset-0 h-full w-full" />
+              </div>
+            )
+          })}
+        </div>
+
         {/* Desktop collage */}
         <div className="mx-auto hidden w-full max-w-md grid-cols-2 gap-5 lg:grid">
           {floats.map((product, index) => (
@@ -206,6 +224,7 @@ export function HeroStage({
                     fadeEdges
                     className="absolute inset-0 h-full w-full bg-transparent"
                     imgClassName="catalogue-product-img scale-[1.04]"
+                    priority={!rotated}
                   />
                 </div>
                 <div className="border-t border-[#E2E8F0] bg-white px-3 py-2.5 text-[#1B2430]">

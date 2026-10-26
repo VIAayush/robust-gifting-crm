@@ -1,10 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireStaff } from '@/lib/auth'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 import { BackButton } from '@/components/ui/back-button'
 import { BrandName } from '@/components/brand/brand-name'
+import { excludeIndividualCompanies } from '@/lib/companies/individual'
 import { createProduct } from '../actions'
+import { ProductFormShell } from '@/components/products/product-form-shell'
 import { Package, Globe, Lock, EyeOff } from 'lucide-react'
 import { sortProductCategories } from '@/lib/products/categories'
 import { ProductImageField } from '@/components/products/product-image-field'
@@ -24,16 +25,8 @@ export default async function NewProductPage({
     supabase.from('categories').select('id, name').order('name'),
     supabase.from('brands').select('id, name').order('name'),
     supabase.from('suppliers').select('id, name').order('name'),
-    supabase.from('companies').select('id, name').eq('status', 'active').order('name'),
+    excludeIndividualCompanies(supabase.from('companies').select('id, name').eq('status', 'active')).order('name'),
   ])
-
-  const handleCreate = async (formData: FormData) => {
-    'use server'
-    const result = await createProduct(formData)
-    if (result && typeof result === 'object' && 'error' in result && result.error) {
-      redirect(`/crm/products/new?error=${encodeURIComponent(result.error)}`)
-    }
-  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -58,7 +51,7 @@ export default async function NewProductPage({
           </div>
         )}
 
-        <form action={handleCreate} className="space-y-6">
+        <ProductFormShell action={createProduct} creating className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">Product Name *</label>
@@ -324,7 +317,7 @@ export default async function NewProductPage({
               Create Product
             </button>
           </div>
-        </form>
+        </ProductFormShell>
       </div>
     </div>
   )

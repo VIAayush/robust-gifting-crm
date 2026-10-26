@@ -1,6 +1,182 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyOrderCreated } from '@/lib/notifications'
 import { formatCustomization } from '@/lib/products/customization'
+import { assignPreferredSuppliers } from '@/lib/orders/preferred-suppliers'
+import { INDIVIDUAL_COMPANY_TYPE } from '@/lib/companies/individual'
+
+type CheckoutRow = {
+  id: string
+  order_id: string | null
+  company_id: string | null
+  contact_id: string | null
+  customer_name: string
+  customer_email: string
+  customer_phone: string
+  delivery_address_line: string
+  delivery_city: string
+  delivery_state: string | null
+  delivery_postal_code: string | null
+  delivery_country: string
+  total_amount: number
+}
+
+function todayInIndia() {
+  return new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10)
+}
+
+/**
+ * The CRM customer for a paid checkout. Created here, after payment, so an
+ * abandoned or failed checkout never adds companies/contacts to the CRM.
+ * A returning customer (same email) reuses their existing company and contact.
+ */
+async function resolveCustomer(admin: SupabaseClient, checkout: CheckoutRow): Promise<{ companyId: string; contactId: string } | { error: string }> {
+  if (checkout.company_id && checkout.contact_id) {
+    return { companyId: checkout.company_id, contactId: checkout.contact_id }
+  }
+
+  const email = checkout.customer_email.trim().toLowerCase()
+  // limit(1), not maybeSingle(): two contacts can share an email, and
+  // maybeSingle() would error on that and silently create a duplicate company.
+  const { data: existingContacts } = await admin
+    .from('contacts')
+    .select('id, company_id')
+    .ilike('email', email)
+    .order('created_at')
+    .limit(1)
+  const existing = existingContacts?.[0]
+
+  let companyId: string
+  let contactId: string
+  let createdCompanyId: string | null = null
+
+  if (existing?.company_id) {
+    companyId = existing.company_id as string
+    contactId = existing.id as string
+    await admin.from('contacts').update({ full_name: checkout.customer_name, phone: checkout.customer_phone }).eq('id', contactId)
+  } else {
+    const { data: ownerRow } = await admin
+      .from('profiles')
+      .select('id')
+      .eq('role', 'admin')
+      .eq('is_active', true)
+      .order('created_at')
+      .limit(1)
+      .maybeSingle()
+    const { data: company, error: companyError } = await admin
+      .from('companies')
+      .insert({
+        name: `${checkout.customer_name} (Individual Customer)`,
+        company_type: INDIVIDUAL_COMPANY_TYPE,
+        status: 'active',
+        owner_id: ownerRow?.id ?? null,
+        city: checkout.delivery_city,
+        notes: 'Individual customer, created from a paid personalized-gifts order.',
+      })
+      .select('id')
+      .single()
+    if (companyError || !company) return { error: companyError?.message || 'Could not create the customer.' }
+    companyId = company.id as string
+    createdCompanyId = companyId
+
+    const { data: contact, error: contactError } = await admin
+      .from('contacts')
+      .insert({
+        company_id: companyId,
+        full_name: checkout.customer_name,
+        email,
+        phone: checkout.customer_phone,
+        contact_type: 'primary',
+        kind: 'direct',
+      })
+      .select('id')
+      .single()
+    if (contactError || !contact) {
+      await admin.from('companies').delete().eq('id', companyId)
+      return { error: contactError?.message || 'Could not create the customer contact.' }
+    }
+    contactId = contact.id as string
+  }
+
+  // Attach to the checkout only if nobody else did first.
+  const { data: claimed } = await admin
+    .from('storefront_checkouts')
+    .update({ company_id: companyId, contact_id: contactId })
+    .eq('id', checkout.id)
+    .is('company_id', null)
+    .select('id')
+  if (!claimed || claimed.length === 0) {
+    if (createdCompanyId) {
+      // Lost a race: remove the duplicate we just created and use the winner's.
+      await admin.from('contacts').delete().eq('company_id', createdCompanyId)
+      await admin.from('companies').delete().eq('id', createdCompanyId)
+    }
+    const { data: fresh } = await admin.from('storefront_checkouts').select('company_id, contact_id').eq('id', checkout.id).single()
+    if (fresh?.company_id && fresh.contact_id) return { companyId: fresh.company_id as string, contactId: fresh.contact_id as string }
+    return { error: 'Could not attach the customer to this checkout.' }
+  }
+  return { companyId, contactId }
+}
+
+async function ensureLead(admin: SupabaseClient, companyId: string, contactId: string, orderNumber: string, value: number) {
+  const { data: leads } = await admin.from('leads').select('id').eq('company_id', companyId).limit(1)
+  if (leads && leads.length > 0) return
+  const { data: company } = await admin.from('companies').select('owner_id').eq('id', companyId).maybeSingle()
+  const { error } = await admin.from('leads').insert({
+    company_id: companyId,
+    contact_id: contactId,
+    owner_id: company?.owner_id ?? null,
+    source: 'website',
+    stage: 'client',
+    estimated_value: value,
+    notes: `Personalized-gifts customer. First paid online order ${orderNumber}.`,
+  })
+  if (error) console.error('[checkout] lead for paid order failed', error.message)
+}
+
+/** CRM > Invoices and Payments entries for an order that was paid online. Idempotent per order. */
+async function recordOnlinePayment(
+  admin: SupabaseClient,
+  order: { id: string; number: string; companyId: string; amount: number },
+  reference: string | null,
+) {
+  const { data: existing } = await admin.from('invoices').select('id').eq('order_id', order.id).limit(1)
+  if (existing && existing.length > 0) return
+
+  const { data: invoiceNumber, error: numberError } = await admin.rpc('next_invoice_number')
+  if (numberError || !invoiceNumber) {
+    console.error('[checkout] invoice number failed', numberError?.message)
+    return
+  }
+  const today = todayInIndia()
+  const { data: invoice, error: invoiceError } = await admin
+    .from('invoices')
+    .insert({
+      invoice_number: invoiceNumber,
+      order_id: order.id,
+      company_id: order.companyId,
+      invoice_date: today,
+      due_date: today,
+      amount: order.amount,
+      status: 'paid',
+      notes: `Paid online (personalized-gifts checkout) for order ${order.number}.`,
+    })
+    .select('id')
+    .single()
+  if (invoiceError || !invoice) {
+    console.error('[checkout] invoice insert failed', invoiceError?.message)
+    return
+  }
+  const { error: paymentError } = await admin.from('payments').insert({
+    invoice_id: invoice.id,
+    payment_date: today,
+    amount: order.amount,
+    method: 'other',
+    reference,
+    notes: 'Online payment from the personalized-gifts checkout.',
+  })
+  if (paymentError) console.error('[checkout] payment insert failed', paymentError.message)
+}
 
 /**
  * Creates the real orders/order_items rows from a paid checkout, so
@@ -17,12 +193,13 @@ export async function createOrderFromCheckout(
   const admin = createAdminClient()
   if (!admin) return { error: 'Service unavailable.' }
 
-  const { data: checkout, error: checkoutError } = await admin
+  const { data: checkoutData, error: checkoutError } = await admin
     .from('storefront_checkouts')
     .select('*')
     .eq('id', checkoutId)
     .single()
-  if (checkoutError || !checkout) return { error: checkoutError?.message || 'Checkout not found.' }
+  if (checkoutError || !checkoutData) return { error: checkoutError?.message || 'Checkout not found.' }
+  const checkout = checkoutData as CheckoutRow
 
   if (checkout.order_id) return { orderId: checkout.order_id }
 
@@ -32,6 +209,9 @@ export async function createOrderFromCheckout(
     .eq('checkout_id', checkoutId)
   if (itemsError) return { error: itemsError.message }
   if (!items || items.length === 0) return { error: 'Checkout has no items.' }
+
+  const customer = await resolveCustomer(admin, checkout)
+  if ('error' in customer) return { error: customer.error }
 
   const { data: orderNumber, error: orderNumberError } = await admin.rpc('next_order_number')
   if (orderNumberError || !orderNumber) return { error: orderNumberError?.message || 'Could not allocate an order number.' }
@@ -51,8 +231,8 @@ export async function createOrderFromCheckout(
     .from('orders')
     .insert({
       order_number: orderNumber,
-      company_id: checkout.company_id,
-      contact_id: checkout.contact_id,
+      company_id: customer.companyId,
+      contact_id: customer.contactId,
       order_value: checkout.total_amount,
       status: 'created',
       order_type: 'b2c',
@@ -99,6 +279,16 @@ export async function createOrderFromCheckout(
     .update({ order_id: order.id, status: 'paid' })
     .eq('id', checkoutId)
   if (updateError) return { error: updateError.message }
+
+  // Back-office bookkeeping. None of it may undo a paid order, so failures are logged, not returned.
+  const supplierResult = await assignPreferredSuppliers(admin, order.id)
+  if (supplierResult.error) console.error('[checkout] supplier auto-assign failed', supplierResult.error)
+  await ensureLead(admin, customer.companyId, customer.contactId, orderNumber as string, Number(checkout.total_amount) || 0)
+  await recordOnlinePayment(
+    admin,
+    { id: order.id, number: orderNumber as string, companyId: customer.companyId, amount: Number(checkout.total_amount) || 0 },
+    payment?.reference || null,
+  )
 
   await notifyOrderCreated(order.id)
   return { orderId: order.id }

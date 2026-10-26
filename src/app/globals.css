@@ -215,3 +215,9 @@
     min-width: 640px;
   }
 }
+
+/* Invalid form fields (set by ProductFormShell and other validated forms). */
+form [aria-invalid="true"] {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 1px #ef4444;
+}

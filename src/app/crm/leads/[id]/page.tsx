@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { formatCurrency, formatDate, isUuid, oneRelation } from '@/lib/utils'
+import { formatCurrency, formatDate, isUuid, oneRelation, LEAD_STAGE_LABELS } from '@/lib/utils'
 import { updateLeadStage, updateLead, removeLead } from '../actions'
 import { ConfirmAction } from '@/components/ui/confirm-action'
 import { asFormAction } from '@/lib/form-action'
@@ -98,7 +98,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
                 <p className={`mt-2 text-[11px] font-semibold capitalize ${
                   isCompleted ? 'text-[#9C7A33]' : 'text-gray-400'
                 }`}>
-                  {stage.replace(/_/g, ' ')}
+                  {LEAD_STAGE_LABELS[stage] || stage}
                 </p>
               </div>
             )

@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { formatCurrency, ORDER_STATUSES, ORDER_STATUS_LABELS } from '@/lib/utils'
+import { formatCurrency, ORDER_STATUSES, ORDER_STATUS_LABELS, LEAD_STAGE_LABELS } from '@/lib/utils'
 import { requireStaff, canSeeFinance } from '@/lib/auth'
 import Link from 'next/link'
 import { MobileFilterBar } from '@/components/ui/mobile-filter-sheet'
@@ -159,7 +159,7 @@ export default async function ReportsPage({
             <div className="w-full max-w-md">
               {Object.entries(leadsByStage).map(([stage, count]) => (
                 <div key={stage} className="flex items-center mb-2">
-                  <div className="w-32 text-sm capitalize text-gray-600">{stage.replace(/_/g, ' ')}</div>
+                  <div className="w-32 text-sm text-gray-600">{LEAD_STAGE_LABELS[stage] || stage}</div>
                   <div className="flex-1 bg-gray-100 rounded h-4 overflow-hidden">
                     <div
                       className="bg-[var(--color-primary)] h-full"

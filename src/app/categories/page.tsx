@@ -5,6 +5,8 @@ import { ProductImage } from '@/components/ui/product-image'
 import { getPublicCatalogueProducts, getPublicCategories } from '@/lib/catalogue/products'
 import { slugify } from '@/lib/utils'
 import { PRODUCT_CATEGORY_ORDER, sortProductCategories } from '@/lib/products/categories'
+import { getGiftMode } from '@/lib/site/gift-mode-server'
+import { catalogueHref } from '@/lib/site/gift-mode'
 
 export const metadata: Metadata = {
   title: 'Categories',
@@ -12,10 +14,13 @@ export const metadata: Metadata = {
 }
 
 export default async function CategoriesPage() {
-  const [products, live] = await Promise.all([getPublicCatalogueProducts(), getPublicCategories()])
+  const [products, live, mode] = await Promise.all([getPublicCatalogueProducts(), getPublicCategories(), getGiftMode()])
   const named = PRODUCT_CATEGORY_ORDER.map((name) => live.find((item) => item.name === name) || { id: name, name })
   const extra = live.filter((item) => !PRODUCT_CATEGORY_ORDER.includes(item.name as (typeof PRODUCT_CATEGORY_ORDER)[number]))
-  const categories = [...named, ...sortProductCategories(extra)]
+  // Display only: a category with no live products is not shown (nothing is deleted).
+  const categories = [...named, ...sortProductCategories(extra)].filter((category) =>
+    products.some((product) => product.category_name === category.name),
+  )
 
   return (
     <SiteShell>
@@ -34,7 +39,11 @@ export default async function CategoriesPage() {
             return (
               <Link
                 key={category.name}
-                href={`/categories/${slugify(category.name)}`}
+                href={
+                  mode === 'personalized'
+                    ? catalogueHref('personalized', { category: category.id })
+                    : `/categories/${slugify(category.name)}`
+                }
                 className="group overflow-hidden rounded-md border border-[#E2E8F0] bg-white transition-shadow hover:shadow-[0_8px_24px_rgba(27,36,48,0.08)]"
               >
                 <div className="aspect-[5/4] catalogue-studio-field">

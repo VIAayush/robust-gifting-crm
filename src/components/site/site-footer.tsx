@@ -1,14 +1,18 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { BUDGET_BANDS } from '@/lib/catalogue/collections'
+import { catalogueHref, type GiftMode } from '@/lib/site/gift-mode'
 
 export function SiteFooter({
   workspaceHref,
   workspaceLabel,
+  mode = 'corporate',
 }: {
   workspaceHref?: string | null
   workspaceLabel?: string | null
+  mode?: GiftMode
 }) {
+  const personalized = mode === 'personalized'
   return (
     <footer className="mt-0 border-t border-[#E2E8F0] bg-[#F1F4F9] text-[#1B2430]">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:gap-10 sm:px-6 sm:py-14 md:grid-cols-2 lg:grid-cols-4 lg:px-8">
@@ -22,7 +26,7 @@ export function SiteFooter({
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9C7A33]">Shop</p>
           <div className="mt-4 flex flex-col gap-2.5 text-sm text-[#5C6570]">
-            <Link href="/catalogue" className="hover:text-[#1B2430]">
+            <Link href={catalogueHref(mode)} className="hover:text-[#1B2430]">
               Catalogue
             </Link>
             <Link href="/collections" className="hover:text-[#1B2430]">
@@ -34,9 +38,15 @@ export function SiteFooter({
             <Link href="/collections#occasions" className="hover:text-[#1B2430]">
               Shop by Occasion
             </Link>
-            <Link href="/request-quote" className="hover:text-[#1B2430]">
-              Request a Quote
-            </Link>
+            {personalized ? (
+              <Link href="/cart" className="hover:text-[#1B2430]">
+                Your Cart
+              </Link>
+            ) : (
+              <Link href="/request-quote" className="hover:text-[#1B2430]">
+                Request a Quote
+              </Link>
+            )}
           </div>
         </div>
 
@@ -62,7 +72,7 @@ export function SiteFooter({
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9C7A33]">Shop by price</p>
           <div className="mt-4 flex flex-col gap-2.5 text-sm text-[#5C6570]">
             {BUDGET_BANDS.map((band) => (
-              <Link key={band.id} href={`/catalogue?budget=${encodeURIComponent(band.id)}`} className="hover:text-[#1B2430]">
+              <Link key={band.id} href={catalogueHref(mode, { budget: band.id })} className="hover:text-[#1B2430]">
                 {band.label}
               </Link>
             ))}
