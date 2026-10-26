@@ -7,6 +7,7 @@ import { writeAudit } from '@/lib/audit'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateTemporaryPassword, SERVICE_ROLE_MISSING, validateNewPassword } from '@/lib/auth/password'
 import { findReusableLogo } from '@/lib/companies/identity'
+import { emailAllowed, MAX_ALLOWED_DOMAINS, parseDomainList } from '@/lib/companies/email-domains'
 
 const LOGO_BUCKET = 'company-logos'
 const MAX_LOGO_BYTES = 2 * 1024 * 1024
@@ -306,6 +307,18 @@ export async function createPortalClient(formData: FormData) {
   const { data: company } = await supabase.from('companies').select('id, name').eq('id', companyId).maybeSingle()
   if (!company) return { error: 'Company not found' }
 
+  // Optional per-company e-mail domain restriction. Tolerates the column not existing yet
+  // (migration 20261028 not applied): an error here simply means "no restriction configured".
+  const { data: domainRow, error: domainError } = await supabase
+    .from('companies')
+    .select('allowed_email_domains')
+    .eq('id', companyId)
+    .maybeSingle()
+  const allowedDomains = domainError ? [] : ((domainRow?.allowed_email_domains as string[] | null) ?? [])
+  if (!emailAllowed(email, allowedDomains)) {
+    return { error: `This company only allows login emails from: ${allowedDomains.join(', ')}.` }
+  }
+
   const admin = createAdminClient()
   if (!admin) {
     return { error: SERVICE_ROLE_MISSING }
@@ -500,4 +513,26 @@ export async function removeCompany(formData: FormData) {
   })
   revalidatePath('/crm/companies')
   redirect('/crm/companies?removed=deleted')
+}
+
+export async function updateAllowedEmailDomains(formData: FormData) {
+  const profile = await getProfile()
+  if (!profile) return { error: 'Not authenticated' }
+  if (profile.role !== 'admin') return { error: 'Only an admin can change allowed email domains' }
+
+  const companyId = String(formData.get('company_id') || '')
+  if (!companyId) return { error: 'Company is required' }
+  const { domains, invalid } = parseDomainList(String(formData.get('domains') || ''))
+  if (invalid.length > 0) return { error: `Not a valid domain: ${invalid.join(', ')}` }
+  if (domains.length > MAX_ALLOWED_DOMAINS) return { error: `Add at most ${MAX_ALLOWED_DOMAINS} domains.` }
+
+  const supabase = await createClient()
+  const { error } = await supabase.from('companies').update({ allowed_email_domains: domains }).eq('id', companyId)
+  if (error) {
+    console.error('[companies] allowed domains update failed', error.message)
+    return { error: 'Could not save the allowed domains. If this keeps happening, check that the latest migration has been applied.' }
+  }
+  await writeAudit(supabase, { action: 'update', entity: 'companies', entityId: companyId, next: { allowed_email_domains: domains }, userId: profile.id })
+  revalidatePath(`/crm/companies/${companyId}`)
+  return { success: true }
 }

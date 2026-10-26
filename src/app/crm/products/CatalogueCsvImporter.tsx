@@ -13,6 +13,7 @@ const FIELD_LABELS: { key: string; label: string; required?: boolean }[] = [
   { key: 'mrp', label: 'MRP' },
   { key: 'description', label: 'Description' },
   { key: 'category', label: 'Category' },
+  { key: 'subcategory', label: 'Subcategory (must exist under the category)' },
   { key: 'supplier', label: 'Supplier' },
   { key: 'moq', label: 'MOQ' },
   { key: 'supplier_cost', label: 'Supplier cost' },

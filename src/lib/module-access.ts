@@ -38,6 +38,6 @@ export async function requireModule(key: string) {
   if (!mod) return
   const { role, modules } = await getAllowedModules()
   if (!role) redirect('/login')
-  if (role === 'client_admin' || role === 'client_user') redirect('/portal')
+  if (role === 'client_admin' || role === 'client_user') redirect('/portal/catalogue')
   if (!modules.has(key)) redirect(`/crm/access-denied?module=${encodeURIComponent(key)}`)
 }

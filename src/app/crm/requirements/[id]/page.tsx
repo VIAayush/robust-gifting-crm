@@ -6,10 +6,23 @@ import { BackButton } from '@/components/ui/back-button'
 import { formatCurrency, formatDate, formatUnits, isUuid } from '@/lib/utils'
 import { ClipboardList, Building2, User, Calendar, DollarSign, Package } from 'lucide-react'
 import { requireStaff } from '@/lib/auth'
-import { updateRequirementForm, removeRequirement } from '../actions'
+import { updateRequirementForm, removeRequirement, createQuotationFromRequirement } from '../actions'
+import { WorkflowPanel } from './workflow-panel'
+import { STAGES, TONE_CLASSES, type WorkflowStage, budgetStatus, isWorkflowStage, selectionTotals, staffCanCreateQuotation, totalBudget } from '@/lib/requirements/workflow'
 import { ConfirmAction } from '@/components/ui/confirm-action'
 import { asFormAction } from '@/lib/form-action'
 import { MobileSheetSelect, SheetDateField } from '@/components/ui/mobile-filter-sheet'
+
+type EventRow = {
+  id: string
+  actor_kind: string
+  to_stage: string | null
+  note: string | null
+  visible_to_client: boolean
+  created_at: string
+  actor: { full_name: string | null } | { full_name: string | null }[] | null
+}
+type SelectionRow = { quantity: number | null; unit_price_snapshot: number | null; product: { price: number | null } | { price: number | null }[] | null }
 
 export default async function RequirementDetailPage({
   params,
@@ -28,7 +41,8 @@ export default async function RequirementDetailPage({
     { data: req },
     { data: products },
     { data: quotations },
-    { data: activities }
+    { data: activities },
+    { data: events }
   ] = await Promise.all([
     supabase
       .from('requirements')
@@ -42,10 +56,21 @@ export default async function RequirementDetailPage({
       .maybeSingle(),
     supabase.from('requirement_products').select('*, product:products(*)').eq('requirement_id', id),
     supabase.from('quotations').select('*').eq('requirement_id', id).order('created_at', { ascending: false }),
-    supabase.from('activities').select('*, created_by_profile:profiles!activities_created_by_fkey(id, full_name)').eq('related_type', 'requirement').eq('related_id', id).order('created_at', { ascending: false })
+    supabase.from('activities').select('*, created_by_profile:profiles!activities_created_by_fkey(id, full_name)').eq('related_type', 'requirement').eq('related_id', id).order('created_at', { ascending: false }),
+    supabase.from('requirement_events').select('id, actor_kind, from_stage, to_stage, note, visible_to_client, created_at, actor:profiles(full_name)').eq('requirement_id', id).order('created_at', { ascending: false })
   ])
 
   if (!req) notFound()
+
+  const stageKey: WorkflowStage | null = isWorkflowStage(req.workflow_stage) ? req.workflow_stage : null
+  const budgetAll = totalBudget(req.budget, req.quantity)
+  const selection = selectionTotals(
+    ((products || []) as unknown as SelectionRow[]).map((item) => {
+      const product = Array.isArray(item.product) ? item.product[0] : item.product
+      return { quantity: Number(item.quantity) || 0, unitPrice: item.unit_price_snapshot ?? product?.price ?? null }
+    }),
+  )
+  const selectionStatus = budgetStatus(selection.total, budgetAll)
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -94,6 +119,51 @@ export default async function RequirementDetailPage({
           Delete
         </ConfirmAction>
       </div>
+
+      {stageKey ? (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 text-xs shadow-sm">
+            <span className={`rounded-full px-3 py-1 font-semibold ${TONE_CLASSES[STAGES[stageKey].tone]}`}>{STAGES[stageKey].label}</span>
+            {req.decision_note ? <span className="text-gray-600">Last decision note: {req.decision_note}</span> : null}
+            {products && products.length > 0 ? (
+              <span className="ml-auto text-gray-600">
+                Selection {formatCurrency(selection.total)}
+                {budgetAll ? ` of ${formatCurrency(budgetAll)} (${selectionStatus === 'over' ? 'above budget' : selectionStatus === 'near' ? 'near budget' : 'within budget'})` : ''}
+              </span>
+            ) : null}
+          </div>
+          <WorkflowPanel requirementId={req.id} stage={stageKey} />
+          {staffCanCreateQuotation(stageKey) ? (
+            <form action={asFormAction(createQuotationFromRequirement)} className="flex flex-col gap-2 rounded-2xl border border-green-200 bg-green-50/50 p-4 text-xs sm:flex-row sm:items-center">
+              <input type="hidden" name="requirement_id" value={req.id} />
+              <span className="flex-1 text-gray-700">The selection is approved. Prepare the quotation from the approved items.</span>
+              <button className="min-h-10 rounded-lg bg-[#9C7A33] px-4 font-semibold text-white">Create quotation draft</button>
+            </form>
+          ) : null}
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 text-xs shadow-sm">
+            <h3 className="border-b pb-2 text-sm font-bold text-gray-900">Workflow history</h3>
+            <ol className="mt-3 space-y-3">
+              {((events || []) as unknown as EventRow[]).map((event) => {
+                const actor = Array.isArray(event.actor) ? event.actor[0] : event.actor
+                const toStage = event.to_stage
+                return (
+                <li key={event.id} className="border-l-2 border-gray-200 pl-3">
+                  <p className="font-semibold text-gray-900">
+                    {isWorkflowStage(toStage) ? STAGES[toStage].label : 'Internal note'}
+                    <span className="ml-2 font-normal text-gray-400">
+                      {event.actor_kind === 'client' ? 'Client' : event.actor_kind === 'staff' ? actor?.full_name || 'Staff' : 'System'} · {formatDate(event.created_at)}
+                    </span>
+                    {!event.visible_to_client ? <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">Internal</span> : null}
+                  </p>
+                  {event.note ? <p className="mt-0.5 whitespace-pre-line text-gray-600">{event.note}</p> : null}
+                </li>
+                )
+              })}
+              {(!events || events.length === 0) && <li className="text-gray-400">No workflow activity yet.</li>}
+            </ol>
+          </div>
+        </div>
+      ) : null}
 
       <div className="border-b border-gray-200">
         <nav className="flex space-x-6">

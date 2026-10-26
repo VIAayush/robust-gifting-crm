@@ -94,6 +94,8 @@ export function RequirementWizard({ shortlist, initialName }: { shortlist: Wizar
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const submittingRef = useRef(false)
+  // One key per wizard session: a retry after a network error reuses it, so the server returns the same requirement.
+  const [submissionKey] = useState(() => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `k${Date.now()}${Math.random().toString(36).slice(2, 10)}`))
   const restored = useRef(false)
 
   const [included, setIncluded] = useState<Record<string, boolean>>(() =>
@@ -170,7 +172,7 @@ export function RequirementWizard({ shortlist, initialName }: { shortlist: Wizar
     setSubmitting(true)
     setFormError(null)
     try {
-      const result = await createPortalRequirement({ ...fields, items })
+      const result = await createPortalRequirement({ ...fields, items, submission_key: submissionKey })
       if ('error' in result) {
         setFormError(result.error)
         if (result.fieldErrors) {
@@ -188,7 +190,7 @@ export function RequirementWizard({ shortlist, initialName }: { shortlist: Wizar
       } catch {
         // ignore
       }
-      router.push(`/portal/requirements?created=${result.id}`)
+      router.push(`/portal/requirements/${result.id}?created=1`)
     } catch {
       setFormError('Something went wrong while submitting. Please check your connection and try again.')
       submittingRef.current = false

@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isClientPortalUser } from '@/lib/auth/client-guard'
 import { isUuid } from '@/lib/utils'
 import type { CartItem } from '@/lib/site/cart'
 import { validateCheckoutCustomer, type CheckoutCustomer, type CheckoutFieldErrors } from '@/lib/checkout/validation'
@@ -14,6 +15,11 @@ export async function createCheckout(
   cartItems: CartItem[],
   customer: CheckoutCustomer
 ): Promise<{ error?: string; fieldErrors?: CheckoutFieldErrors; checkoutId?: string }> {
+  // Corporate (B2B) client users order through requirements and quotations, never B2C checkout.
+  if (await isClientPortalUser()) {
+    return { error: 'Corporate accounts request products through the client portal. Please use Requirements instead of checkout.' }
+  }
+
   // Never trust the browser's validation: re-check every field here.
   const { errors, value } = validateCheckoutCustomer(customer)
   if (Object.keys(errors).length > 0) return { error: 'Please fix the highlighted fields.', fieldErrors: errors }

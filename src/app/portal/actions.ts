@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { notifyRequirementEvent } from '@/lib/notifications'
 import { OTHER_PURPOSE, PURPOSE_OPTIONS, MAX_CUSTOM_PURPOSE_LENGTH } from '@/lib/requirements/purpose'
 
 export type PortalRequirementInput = {
@@ -14,6 +15,8 @@ export type PortalRequirementInput = {
   quantity: string
   deadline: string
   delivery_city: string
+  /** Stable per wizard session so a retry or double-click cannot create a second requirement. */
+  submission_key?: string
   items: { product_id: string; variant_id: string | null; quantity: number | string }[]
 }
 
@@ -181,6 +184,17 @@ export async function createPortalRequirement(input: PortalRequirementInput): Pr
       : Promise.resolve({ data: null }),
   ])
 
+  const submissionKey = /^[A-Za-z0-9_-]{8,64}$/.test(String(input.submission_key || '')) ? String(input.submission_key) : null
+  if (submissionKey) {
+    const { data: existing } = await admin
+      .from('requirements')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('submission_key', submissionKey)
+      .maybeSingle()
+    if (existing) return { success: true, id: existing.id as string }
+  }
+
   const { data: requirement, error } = await admin
     .from('requirements')
     .insert({
@@ -195,9 +209,23 @@ export async function createPortalRequirement(input: PortalRequirementInput): Pr
       deadline,
       delivery_city: deliveryCity,
       status: 'active',
+      workflow_stage: 'submitted',
+      submission_key: submissionKey,
+      submitted_at: new Date().toISOString(),
     })
     .select('id')
     .single()
+
+  if (error?.code === '23505' && submissionKey) {
+    // Lost a race with an identical submission: return the one that won.
+    const { data: winner } = await admin
+      .from('requirements')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('submission_key', submissionKey)
+      .maybeSingle()
+    if (winner) return { success: true, id: winner.id as string }
+  }
 
   if (error || !requirement) {
     console.error('[portal] create requirement failed', error?.message)
@@ -235,6 +263,18 @@ export async function createPortalRequirement(input: PortalRequirementInput): Pr
     }
   }
 
+  await admin.from('requirement_events').insert({
+    requirement_id: requirement.id,
+    actor_id: user.id,
+    actor_kind: 'client',
+    from_stage: null,
+    to_stage: 'submitted',
+    note: null,
+    visible_to_client: true,
+  })
+
+  await notifyRequirementEvent(requirement.id as string, 'submitted')
+
   revalidatePath('/portal/requirements')
   revalidatePath('/crm/requirements')
   return { success: true, id: requirement.id as string }
@@ -249,7 +289,7 @@ export async function respondToQuotation(quotationId: string, status: 'accepted'
   const { data: companyId } = await supabase.rpc('client_company_id')
   const { data: quotation } = await supabase
     .from('quotations')
-    .select('company_id, status')
+    .select('company_id, status, requirement_id')
     .eq('id', quotationId)
     .single()
 
@@ -270,6 +310,9 @@ export async function respondToQuotation(quotationId: string, status: 'accepted'
   if (error) {
     console.error('[portal] respond to quotation failed', error.message)
     return { error: 'We could not record your decision. Please try again.' }
+  }
+  if (quotation.requirement_id) {
+    await notifyRequirementEvent(quotation.requirement_id as string, status === 'accepted' ? 'quotation_accepted' : 'quotation_rejected', comment?.trim().slice(0, 1000) || null)
   }
   revalidatePath(`/portal/quotations/${quotationId}`)
   revalidatePath('/portal/quotations')

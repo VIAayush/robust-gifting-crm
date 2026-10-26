@@ -69,6 +69,9 @@ export default async function CheckoutConfirmationPage({ params }: { params: Pro
         <Link href="/personalized" className="mt-8 inline-flex bg-[#9C7A33] px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
           Continue shopping
         </Link>
+        <Link href="/track-order" className="mt-8 ml-3 inline-flex px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9C7A33]">
+          Track this order
+        </Link>
       </div>
     )
   }

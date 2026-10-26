@@ -14,6 +14,8 @@ export type TemplateKey =
   | 'order_status_staff'
   | 'sample_request_customer'
   | 'sample_request_staff'
+  | 'requirement_update_customer'
+  | 'requirement_update_staff'
 
 type TemplateDef = {
   params: string[]
@@ -52,6 +54,14 @@ export const TEMPLATES: Record<TemplateKey, TemplateDef> = {
   sample_request_staff: {
     params: ['company_name', 'product_name', 'quantity'],
     render: (p) => `New sample request from ${p.company_name}: ${p.product_name} x ${p.quantity}. Review it in CRM > Samples.`,
+  },
+  requirement_update_customer: {
+    params: ['customer_name', 'requirement_name', 'update'],
+    render: (p) => `Hi ${p.customer_name}, update on your requirement "${p.requirement_name}": ${p.update}. Open your Robust Gifting portal to continue.`,
+  },
+  requirement_update_staff: {
+    params: ['company_name', 'requirement_name', 'update'],
+    render: (p) => `${p.company_name} - requirement "${p.requirement_name}": ${p.update}. Review it in CRM > Requirements.`,
   },
 }
 

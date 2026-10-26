@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getProfile } from '@/lib/auth'
 import { writeAudit } from '@/lib/audit'
-import { notifyOrderCreated } from '@/lib/notifications'
+import { notifyOrderCreated, notifyRequirementEvent } from '@/lib/notifications'
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {
   draft: ['sent'],
   sent: ['accepted', 'rejected', 'expired'],
@@ -25,7 +25,7 @@ export async function updateQuotationStatus(quotationId: string, newStatus: stri
   const supabase = await createClient()
   const { data: quote, error: readError } = await supabase
     .from('quotations')
-    .select('id, status')
+    .select('id, status, requirement_id')
     .eq('id', quotationId)
     .maybeSingle()
   if (readError) return { error: readError.message }
@@ -47,6 +47,9 @@ export async function updateQuotationStatus(quotationId: string, newStatus: stri
     next: { status: newStatus },
     userId: profile.id,
   })
+
+  // Quotations that came from a client requirement tell the client their quotation is ready.
+  if (newStatus === 'sent' && quote.requirement_id) await notifyRequirementEvent(quote.requirement_id as string, 'quotation_sent')
 
   revalidatePath(`/crm/quotations/${quotationId}`)
   revalidatePath('/crm/quotations')

@@ -19,7 +19,7 @@ export async function SiteShell({
 }) {
   const profile = await getProfile()
   const isClient = profile?.role === 'client_admin' || profile?.role === 'client_user'
-  const workspaceHref = profile ? (isClient ? '/portal' : landingPathForRole(profile.role)) : null
+  const workspaceHref = profile ? (isClient ? '/portal/catalogue' : landingPathForRole(profile.role)) : null
   const workspaceLabel = profile ? (isClient ? 'Client portal' : 'Workspace') : null
   const [products, categories, cookieMode] = await Promise.all([getPublicCatalogueProducts(), getPublicCategories(), getGiftMode()])
   const mode = forcedMode ?? cookieMode

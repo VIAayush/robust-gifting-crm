@@ -163,3 +163,49 @@ export function teamInviteEmail({
 </html>`.trim(),
   }
 }
+
+export function requirementUpdateEmail({
+  name,
+  requirementName,
+  update,
+  note,
+  url,
+}: {
+  name: string
+  requirementName: string
+  update: string
+  note: string | null
+  url: string
+}): { subject: string; html: string } {
+  const safeName = escapeHtml(name)
+  const safeRequirement = escapeHtml(requirementName)
+  const safeUpdate = escapeHtml(update)
+  const safeNote = note ? escapeHtml(note).replace(/\n/g, '<br />') : ''
+  const safeUrl = escapeHtml(url)
+  return {
+    subject: `Update on your requirement: ${requirementName}`.slice(0, 150),
+    html: `
+<!DOCTYPE html>
+<html>
+  <body style="margin:0;padding:0;background-color:#F1F4F9;font-family:Georgia,'Times New Roman',serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F1F4F9;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;background-color:#ffffff;border-radius:8px;overflow:hidden;">
+            <tr><td style="background-color:#0D1B2A;padding:28px 32px;"><span style="font-size:20px;color:#ffffff;">Robust Gifting</span></td></tr>
+            <tr>
+              <td style="padding:32px;color:#1B2430;font-size:15px;line-height:1.6;">
+                <p style="margin:0 0 12px;">Hi ${safeName},</p>
+                <p style="margin:0 0 12px;">Update on your requirement <strong>${safeRequirement}</strong>: ${safeUpdate}.</p>
+                ${safeNote ? `<p style="margin:0 0 12px;padding:12px;background:#F5F7FA;border-radius:6px;">${safeNote}</p>` : ''}
+                <p style="margin:24px 0 0;"><a href="${safeUrl}" style="background:#9C7A33;color:#ffffff;padding:10px 20px;border-radius:6px;text-decoration:none;">Open requirement</a></p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`.trim(),
+  }
+}

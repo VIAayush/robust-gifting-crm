@@ -56,6 +56,9 @@ export function SiteFooter({
             <Link href="/about" className="hover:text-[#1B2430]">
               About
             </Link>
+            <Link href="/track-order" className="hover:text-[#1B2430]">
+              Track your order
+            </Link>
             {workspaceHref && workspaceLabel ? (
               <Link href={workspaceHref} className="hover:text-[#1B2430]">
                 {workspaceLabel}

@@ -179,7 +179,7 @@ export async function signUp(formData: FormData): Promise<{ error?: string; mess
   }
 
   if (data.session) {
-    return { redirectTo: '/portal' }
+    return { redirectTo: '/portal/catalogue' }
   }
 
   return { message: SIGNUP_CONFIRM_MESSAGE }

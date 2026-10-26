@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import { ClipboardList } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { purposeLabel } from '@/lib/requirements/purpose'
+import { STAGES, TONE_CLASSES, isWorkflowStage } from '@/lib/requirements/workflow'
 
 const STATUS: Record<string, { label: string; className: string }> = {
   draft: { label: 'Draft', className: 'bg-gray-100 text-gray-700' },
@@ -13,6 +14,14 @@ const STATUS: Record<string, { label: string; className: string }> = {
   won: { label: 'Confirmed', className: 'bg-green-100 text-green-800' },
   lost: { label: 'Not proceeding', className: 'bg-gray-100 text-gray-600' },
   closed: { label: 'Closed', className: 'bg-gray-100 text-gray-600' },
+}
+
+function statusFor(req: { status: string | null; workflow_stage: string | null }) {
+  if (isWorkflowStage(req.workflow_stage)) {
+    const stage = STAGES[req.workflow_stage]
+    return { label: stage.clientLabel, className: TONE_CLASSES[stage.tone] }
+  }
+  return STATUS[req.status || ''] || { label: req.status || '—', className: 'bg-gray-100 text-gray-700' }
 }
 
 function formatDay(value: string | null | undefined) {
@@ -26,6 +35,7 @@ type RequirementRow = {
   name: string
   purpose: string | null
   status: string | null
+  workflow_stage: string | null
   budget: number | null
   quantity: number | null
   deadline: string | null
@@ -41,7 +51,7 @@ export default async function PortalRequirementsPage({ searchParams }: { searchP
   // RLS already limits this to the caller's own company.
   const { data, error } = await supabase
     .from('requirements')
-    .select('id, name, purpose, status, budget, quantity, deadline, delivery_city, created_at')
+    .select('id, name, purpose, status, workflow_stage, budget, quantity, deadline, delivery_city, created_at')
     .eq('company_id', companyId)
     .order('created_at', { ascending: false })
   const requirements = (data || []) as RequirementRow[]
@@ -80,7 +90,7 @@ export default async function PortalRequirementsPage({ searchParams }: { searchP
 
       {justCreated ? (
         <div role="status" className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
-          <strong>{justCreated.name}</strong> was submitted. Your account manager will review it and prepare a quotation.
+          <strong>{justCreated.name}</strong> was submitted. Our team will review it and you will be notified of the decision.
         </div>
       ) : null}
 
@@ -98,12 +108,12 @@ export default async function PortalRequirementsPage({ searchParams }: { searchP
         <>
           <div className="space-y-3 md:hidden">
             {requirements.map((req) => {
-              const status = STATUS[req.status || ''] || { label: req.status || '—', className: 'bg-gray-100 text-gray-700' }
+              const status = statusFor(req)
               return (
                 <article key={req.id} className="space-y-3 rounded-xl border border-[#E2E8F0] bg-white p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-gray-900">{req.name}</p>
+                      <Link href={`/portal/requirements/${req.id}`} className="block truncate text-sm font-semibold text-gray-900 hover:text-[#9C7A33]">{req.name}</Link>
                       <p className="mt-0.5 text-xs text-gray-500">{purposeLabel(req.purpose) || '—'}</p>
                     </div>
                     <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium ${status.className}`}>
@@ -149,11 +159,11 @@ export default async function PortalRequirementsPage({ searchParams }: { searchP
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {requirements.map((req) => {
-                    const status = STATUS[req.status || ''] || { label: req.status || '—', className: 'bg-gray-100 text-gray-700' }
+                    const status = statusFor(req)
                     return (
                       <tr key={req.id} className="transition-colors hover:bg-gray-50">
                         <td className="px-6 py-4 font-medium text-gray-900">
-                          {req.name}
+                          <Link href={`/portal/requirements/${req.id}`} className="hover:text-[#9C7A33]">{req.name}</Link>
                           <div className="mt-1 text-xs font-normal text-gray-500">
                             {purposeLabel(req.purpose) || '—'}
                             {req.delivery_city ? ` · ${req.delivery_city}` : ''}

@@ -168,8 +168,10 @@ export default async function DashboardPage({
   const pendingQuotes = quoteRows.filter((q) => ['draft', 'sent', 'viewed'].includes(q.status || ''))
   const wonQuotes = quoteRows.filter((q) => q.status === 'accepted')
 
-  const totalOrderValue = orderRows.reduce((s, o) => s + Number(o.order_value || 0), 0)
-  const margin = orderRows.reduce((s, o) => s + Number(o.gross_profit || 0), 0)
+  // Cancelled orders are not revenue: they would otherwise inflate both order value and margin.
+  const liveOrders = orderRows.filter((o) => o.status !== 'cancelled')
+  const totalOrderValue = liveOrders.reduce((s, o) => s + Number(o.order_value || 0), 0)
+  const margin = liveOrders.reduce((s, o) => s + Number(o.gross_profit || 0), 0)
   const inProgress = orderRows.filter((o) => !['delivered', 'cancelled'].includes(o.status))
   const delayed = inProgress.filter((o) => orderHealth(o.status, o.expected_delivery_date, o.stage_due_at) === 'delayed')
   const atRisk = inProgress.filter((o) => orderHealth(o.status, o.expected_delivery_date, o.stage_due_at) === 'at_risk')
@@ -321,7 +323,8 @@ export default async function DashboardPage({
               <Card label="Active orders" value={inProgress.length} href="/crm/order-management" />
               <Card label="Completed orders" value={delivered.length} href="/crm/orders?status=delivered" />
               <Card label="Cancelled orders" value={cancelled.length} href="/crm/orders?status=cancelled" />
-              <Card label="Revenue" value={formatCurrency(totalOrderValue)} />
+              <Card label="Order value (excl. cancelled)" value={formatCurrency(totalOrderValue)} />
+              {canSeeFinance(profile.role) && <Card label="Collected (paid invoices)" value={formatCurrency(paid)} href="/crm/payments" />}
               {canSeeFinance(profile.role) && <Card label="Outstanding" value={formatCurrency(outstanding)} href="/crm/receivables" />}
               {canSeeFinance(profile.role) && <Card label="Payables" value={formatCurrency(payableTotal)} href="/crm/payables" />}
               {canSeeFinance(profile.role) && <Card label="Gross margin" value={formatCurrency(margin)} />}
@@ -438,7 +441,7 @@ export default async function DashboardPage({
             <Card label="My quotations" value={quoteRows.length} href="/crm/quotations?owner=mine" />
             <Card label="Pending quotes" value={pendingQuotes.length} href="/crm/quotations?status=sent" />
             <Card label="My orders" value={orderRows.length} href="/crm/orders" />
-            <Card label="My revenue" value={formatCurrency(totalOrderValue)} />
+            <Card label="My order value (excl. cancelled)" value={formatCurrency(totalOrderValue)} />
             <Card label="Req → quote" value={`${reqToQuote}%`} />
             <Card label="Quote → order" value={`${quoteToOrder}%`} />
             <Card label="My work" value="Open" href="/crm/my-work" />

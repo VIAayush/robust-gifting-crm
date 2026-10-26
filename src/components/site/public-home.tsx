@@ -6,6 +6,7 @@ import { SiteProductCard } from '@/components/site/site-product-card'
 import { HeroStage } from '@/components/site/hero-stage'
 import { ProductRail } from '@/components/site/product-rail'
 import { Reveal } from '@/components/site/reveal'
+import { RecentlyViewedRail } from '@/components/site/recently-viewed'
 import { GiftFinder } from '@/components/site/gift-finder'
 import { slugify } from '@/lib/utils'
 import {
@@ -14,7 +15,7 @@ import {
   CATALOGUE_OCCASIONS,
   productsForOccasion,
 } from '@/lib/catalogue/collections'
-import { getPublicCatalogueProducts, getPublicCategories } from '@/lib/catalogue/products'
+import { getPublicCatalogueProducts, getPublicCategories, type PublicProduct } from '@/lib/catalogue/products'
 import { curatePublicHome, homeCategoryTiles, withLiveProducts } from '@/lib/catalogue/curate'
 
 const ARROW = '\u2192'
@@ -26,6 +27,18 @@ const CATEGORY_LINES: Record<string, string> = {
   'Desk & Stationery': 'Notebooks, pens and desk kits',
   Apparel: 'Wearable brand moments',
   'Hampers & Gift Sets': 'Curated boxes, ready to programme',
+}
+
+/**
+ * New arrivals come straight from created_at: products added in the last 45 days.
+ * The section hides itself when nothing is that recent, so stale items never show as "new".
+ */
+function pickNewArrivals(products: PublicProduct[]) {
+  const cutoff = Date.now() - 45 * 24 * 60 * 60 * 1000
+  return products
+    .filter((product) => product.image_url?.trim() && product.created_at && new Date(product.created_at).getTime() >= cutoff)
+    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+    .slice(0, 10)
 }
 
 export async function PublicHome() {
@@ -41,6 +54,8 @@ export async function PublicHome() {
     featured,
     more,
   } = curatePublicHome(products, categories, collections, CATALOGUE_OCCASIONS)
+
+  const newArrivals = pickNewArrivals(products)
 
   // Bounded to HERO_POOL_LIMIT (not the full catalogue) so the rotating hero
   // stops pulling a fresh original from Storage every 3.5s indefinitely -
@@ -86,6 +101,27 @@ export async function PublicHome() {
     <div className="bg-white">
       <HeroStage products={heroSlideshow.length ? heroSlideshow : heroProducts} />
 
+      {newArrivals.length > 0 ? (
+        <section className="bg-[#F1F4F9] py-10 sm:py-14 lg:py-16">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <Reveal>
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="store-eyebrow">New arrivals</p>
+                  <h2 className="store-section-title mt-2">Just added to the catalogue.</h2>
+                </div>
+                <Link href="/catalogue?sort=newest" className="store-link shrink-0">
+                  View all {ARROW}
+                </Link>
+              </div>
+            </Reveal>
+            <div className="mt-8">
+              <ProductRail products={newArrivals} />
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       {/* Top Trending — Bombay Store pattern */}
       <section className="bg-white py-10 sm:py-14 lg:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -105,6 +141,8 @@ export async function PublicHome() {
           </div>
         </div>
       </section>
+
+      <RecentlyViewedRail />
 
       {/* Featured Categories */}
       <section className="bg-[#F1F4F9] py-10 sm:py-14 lg:py-16">

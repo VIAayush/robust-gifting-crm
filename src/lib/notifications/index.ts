@@ -3,6 +3,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { formatCurrency } from '@/lib/utils'
 import { renderTemplate, type TemplateKey } from './templates'
 import { getNotificationProvider } from './providers'
+import { requestOrigin } from '@/lib/auth/request-origin'
+import { sendEmail } from '@/lib/email/resend'
+import { requirementUpdateEmail } from '@/lib/email/templates'
 
 export { isWhatsAppConfigured } from './providers'
 
@@ -320,5 +323,97 @@ export function notifySampleRequested(sampleRequestId: string) {
       })
     }
     await enqueueAndDispatch(admin, inputs)
+  })
+}
+
+/**
+ * Requirement workflow events. Staff-side decisions notify the client company's
+ * users (WhatsApp outbox + email); client-side actions notify the owner and
+ * operations (WhatsApp outbox). In-app notifications are raised by the database
+ * function requirement_transition(). Only the requirement name and a short
+ * status line are sent - never supplier or cost data.
+ */
+const REQUIREMENT_UPDATES: Record<string, { audience: 'customer' | 'staff'; text: string }> = {
+  submitted: { audience: 'staff', text: 'submitted for review' },
+  resubmitted: { audience: 'staff', text: 'resubmitted after changes' },
+  changes_requested: { audience: 'customer', text: 'changes were requested' },
+  admin_rejected: { audience: 'customer', text: 'it was not accepted' },
+  admin_approved: { audience: 'customer', text: 'it was approved - please review and confirm it' },
+  client_confirmed: { audience: 'staff', text: 'confirmed by the client' },
+  selection_submitted: { audience: 'staff', text: 'product selection submitted for review' },
+  selection_changes_requested: { audience: 'customer', text: 'changes were requested on your product selection' },
+  selection_approved: { audience: 'customer', text: 'your product selection was approved and your quotation is being prepared' },
+  quotation_sent: { audience: 'customer', text: 'your quotation is ready to review' },
+  quotation_accepted: { audience: 'staff', text: 'quotation accepted by the client' },
+  quotation_rejected: { audience: 'staff', text: 'quotation declined by the client' },
+}
+
+export function notifyRequirementEvent(requirementId: string, event: string, note?: string | null) {
+  return safely('requirement event', async (admin) => {
+    const update = REQUIREMENT_UPDATES[event]
+    if (!update) return
+    const { data: requirement, error } = await admin
+      .from('requirements')
+      .select('id, name, company_id, owner_id, submitted_at, company:companies(name)')
+      .eq('id', requirementId)
+      .maybeSingle()
+    if (error) throw new Error(error.message)
+    if (!requirement) return
+    const company = Array.isArray(requirement.company) ? requirement.company[0] : requirement.company
+    const companyName = company?.name || 'A client'
+    // submitted_at changes on every (re)submission, so each round is deduped separately.
+    const round = String(requirement.submitted_at || '')
+    const inputs: EnqueueInput[] = []
+
+    if (update.audience === 'staff') {
+      for (const staff of await staffRecipients(admin, [requirement.owner_id])) {
+        inputs.push({
+          eventType: `requirement_${event}`,
+          recipientType: 'staff',
+          recipientPhone: staff.phone,
+          recipientName: staff.name,
+          recipientProfileId: staff.profileId,
+          templateKey: 'requirement_update_staff',
+          payload: { company_name: companyName, requirement_name: requirement.name, update: update.text },
+          entity: 'requirements',
+          entityId: requirement.id,
+          dedupeKey: `requirement:${requirement.id}:${event}:${round}:staff:${normalizePhone(staff.phone)}`,
+        })
+      }
+    } else {
+      const { data: users } = await admin
+        .from('profiles')
+        .select('id, full_name, email, phone')
+        .eq('company_id', requirement.company_id)
+        .in('role', ['client_admin', 'client_user'])
+        .eq('is_active', true)
+      const origin = await requestOrigin()
+      for (const user of users || []) {
+        inputs.push({
+          eventType: `requirement_${event}`,
+          recipientType: 'customer',
+          recipientPhone: user.phone || null,
+          recipientName: user.full_name,
+          recipientProfileId: user.id,
+          templateKey: 'requirement_update_customer',
+          payload: { customer_name: user.full_name || 'there', requirement_name: requirement.name, update: update.text },
+          entity: 'requirements',
+          entityId: requirement.id,
+          dedupeKey: `requirement:${requirement.id}:${event}:${round}:customer:${user.id}`,
+        })
+        if (user.email) {
+          const mail = requirementUpdateEmail({
+            name: user.full_name || 'there',
+            requirementName: requirement.name,
+            update: update.text,
+            note: note || null,
+            url: `${origin}/portal/requirements/${requirement.id}`,
+          })
+          const sent = await sendEmail({ to: user.email, ...mail })
+          if (!sent.ok) console.error('[notifications] requirement email failed:', sent.error)
+        }
+      }
+    }
+    if (inputs.length > 0) await enqueueAndDispatch(admin, inputs)
   })
 }

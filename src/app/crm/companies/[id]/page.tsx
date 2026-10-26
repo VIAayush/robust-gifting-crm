@@ -5,7 +5,7 @@ import { BackButton } from '@/components/ui/back-button'
 import { CompanyAvatar } from '@/components/ui/avatar'
 import { ProductImage } from '@/components/ui/product-image'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
-import { uploadCompanyLogo, removeCompanyLogo, updateCompany, removeCompany } from '../actions'
+import { uploadCompanyLogo, removeCompanyLogo, updateCompany, removeCompany, updateAllowedEmailDomains } from '../actions'
 import { ConfirmAction } from '@/components/ui/confirm-action'
 import { formatCurrency, formatDate, formatUnits, isUuid, LEAD_STAGE_LABELS } from '@/lib/utils'
 import { Plus, Trash2 } from 'lucide-react'
@@ -402,6 +402,15 @@ export default async function CompanyDetailPage({
                 Each login is a Supabase Auth user assigned to this company. Passwords are never stored in CRM tables.
               </p>
             </div>
+            {profile.role === 'admin' && (
+              <form action={asFormAction(updateAllowedEmailDomains)} className="bg-white p-4 rounded-xl border border-gray-200 text-xs space-y-2">
+                <input type="hidden" name="company_id" value={company.id} />
+                <label className="block font-semibold text-gray-700" htmlFor="allowed-domains">Allowed email domains for portal logins</label>
+                <p className="text-gray-500">Comma-separated, e.g. acme.com, acme.co.in. Leave empty to allow any email address.</p>
+                <input id="allowed-domains" name="domains" defaultValue={((company as { allowed_email_domains?: string[] }).allowed_email_domains || []).join(', ')} className="w-full border rounded-lg px-2 py-2" />
+                <button className="min-h-10 rounded-lg bg-[#9C7A33] px-4 font-semibold text-white">Save domains</button>
+              </form>
+            )}
             {profile.role === 'admin' && <PortalClientForm companyId={company.id} />}
           </div>
           <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">

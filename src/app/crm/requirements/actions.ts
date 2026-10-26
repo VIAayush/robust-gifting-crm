@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { writeAudit } from '@/lib/audit'
+import { notifyRequirementEvent } from '@/lib/notifications'
+import { staffCanCreateQuotation } from '@/lib/requirements/workflow'
 
 export async function createRequirement(formData: FormData) {
   const supabase = await createClient()
@@ -61,10 +63,14 @@ export async function createQuotationFromRequirement(formData: FormData) {
 
   const { data: req } = await supabase
     .from('requirements')
-    .select('id, company_id, contact_id, owner_id, quantity')
+    .select('id, company_id, contact_id, owner_id, quantity, workflow_stage')
     .eq('id', requirementId)
     .single()
   if (!req) return { error: 'Requirement not found' }
+  // Client-portal requirements can only be quoted once the product selection is approved.
+  if (req.workflow_stage && !staffCanCreateQuotation(req.workflow_stage)) {
+    return { error: 'This requirement cannot be quoted until the client has confirmed it and the product selection is approved.' }
+  }
 
   const { data: quoteNumber, error: numError } = await supabase.rpc('next_quotation_number')
   if (numError || !quoteNumber) return { error: numError?.message || 'Could not allocate quote number' }
@@ -90,14 +96,14 @@ export async function createQuotationFromRequirement(formData: FormData) {
 
   const { data: reqProducts } = await supabase
     .from('requirement_products')
-    .select('product_id, quantity, product:products(id, name, price)')
+    .select('product_id, quantity, unit_price_snapshot, product:products(id, name, price)')
     .eq('requirement_id', req.id)
 
   if (reqProducts && reqProducts.length > 0) {
     const items = reqProducts.map((row) => {
       const product = Array.isArray(row.product) ? row.product[0] : row.product
       const qty = row.quantity || req.quantity || 1
-      const unit = Number(product?.price || 0)
+      const unit = Number(row.unit_price_snapshot ?? product?.price ?? 0)
       return {
         quotation_id: quote.id,
         product_id: row.product_id,
@@ -196,4 +202,72 @@ export async function removeRequirement(formData: FormData) {
   }
   revalidatePath('/crm/requirements')
   redirect('/crm/requirements')
+}
+
+type WorkflowActionResult = { success: true } | { error: string }
+
+const NOTE_MAX = 1000
+
+async function runTransition(requirementId: string, to: string, note: string, event: string, visible = true): Promise<WorkflowActionResult> {
+  if (!isUuidLike(requirementId)) return { error: 'Requirement not found.' }
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Your session has expired. Please sign in again.' }
+  const { error } = await supabase.rpc('requirement_transition', {
+    p_requirement_id: requirementId,
+    p_to_stage: to,
+    p_note: note.trim().slice(0, NOTE_MAX) || null,
+    p_note_visible: visible,
+  })
+  if (error) {
+    console.error('[crm] requirement transition failed', error.message)
+    // The database raises plain-language messages for expected rule violations.
+    if (/cannot move from|add a note|not found|cannot review|not part of/i.test(error.message)) return { error: error.message }
+    return { error: 'We could not record that decision. Please refresh and try again.' }
+  }
+  await writeAudit(supabase, { action: 'update', entity: 'requirement', entityId: requirementId, next: { workflow_stage: to }, userId: user.id })
+  await notifyRequirementEvent(requirementId, event, note.trim() || null)
+  revalidatePath('/crm/requirements')
+  revalidatePath(`/crm/requirements/${requirementId}`)
+  revalidatePath(`/portal/requirements/${requirementId}`)
+  return { success: true }
+}
+
+function isUuidLike(value: string) {
+  return /^[0-9a-f-]{36}$/i.test(value)
+}
+
+export async function decideRequirement(requirementId: string, decision: 'approve' | 'reject' | 'changes', note: string): Promise<WorkflowActionResult> {
+  const text = String(note || '')
+  if (decision !== 'approve' && !text.trim()) return { error: 'Add a note explaining the reason.' }
+  const map = {
+    approve: ['admin_approved', 'admin_approved'],
+    reject: ['admin_rejected', 'admin_rejected'],
+    changes: ['changes_requested', 'changes_requested'],
+  } as const
+  const entry = map[decision]
+  if (!entry) return { error: 'Choose a decision.' }
+  return runTransition(requirementId, entry[0], text, entry[1])
+}
+
+export async function decideSelection(requirementId: string, decision: 'approve' | 'changes', note: string): Promise<WorkflowActionResult> {
+  const text = String(note || '')
+  if (decision === 'changes' && !text.trim()) return { error: 'Add a note explaining what to change.' }
+  if (decision === 'approve') return runTransition(requirementId, 'selection_approved', text, 'selection_approved')
+  if (decision === 'changes') return runTransition(requirementId, 'selection_changes_requested', text, 'selection_changes_requested')
+  return { error: 'Choose a decision.' }
+}
+
+export async function addRequirementInternalNote(requirementId: string, note: string): Promise<WorkflowActionResult> {
+  if (!isUuidLike(requirementId)) return { error: 'Requirement not found.' }
+  const text = String(note || '').trim().slice(0, NOTE_MAX)
+  if (!text) return { error: 'Write a note first.' }
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('requirement_add_internal_note', { p_requirement_id: requirementId, p_note: text })
+  if (error) {
+    console.error('[crm] internal note failed', error.message)
+    return { error: 'We could not save the note. Please try again.' }
+  }
+  revalidatePath(`/crm/requirements/${requirementId}`)
+  return { success: true }
 }

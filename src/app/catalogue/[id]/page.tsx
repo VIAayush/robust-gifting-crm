@@ -9,6 +9,7 @@ import { BulkOrderEstimator } from '@/components/site/bulk-order-estimator'
 import { BrandingPreviewer } from '@/components/site/branding-previewer'
 import { formatCurrency, formatUnits, isUuid } from '@/lib/utils'
 import { getPublicProductWithVariants } from '@/lib/catalogue/products'
+import { RecentlyViewedRail, RecentlyViewedTracker } from '@/components/site/recently-viewed'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -106,6 +107,10 @@ export default async function PublicProductPage({ params }: Props) {
             <BrandingPreviewer imageUrl={product.image_url} productName={product.name} />
           </div>
         </article>
+        <RecentlyViewedTracker
+          item={{ id: product.id, sku: product.sku, name: product.name, price: product.price, image_url: product.image_url, category_name: product.category_name }}
+        />
+        <RecentlyViewedRail excludeId={product.id} />
       </ProductDetailProvider>
     </SiteShell>
   )

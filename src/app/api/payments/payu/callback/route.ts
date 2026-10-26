@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     return NextResponse.redirect(checkoutUrl, 303)
   }
 
-  const verification = await provider.verifyTransaction(txnId)
+  const verification = await provider.verifyTransaction(txnId, Number(payment.amount))
 
   if (!verification.ok) {
     // Could not reach PayU / ambiguous response — leave status as 'processing' rather than guessing paid or failed.

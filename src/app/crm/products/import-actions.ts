@@ -77,6 +77,8 @@ type PreparedRow = {
   sku: string
   description: string | null
   category_id: string | null
+  /** undefined = the CSV has no subcategory column, so the product's current subcategory is left alone. */
+  subcategory_id?: string | null
   supplier_id: string | null
   price: number
   mrp: number | null
@@ -160,6 +162,12 @@ async function buildImportPlan(formData: FormData, supabase: SupabaseClient, pro
   for (const [alias, canonical] of Object.entries(PRODUCT_CATEGORY_ALIASES)) {
     const id = categoryByName.get(canonical.toLowerCase())
     if (id && !categoryByName.has(alias)) categoryByName.set(alias, id)
+  }
+  const subcategoryColumnMapped = Boolean(mapping.subcategory)
+  const subcategoryByKey = new Map<string, string>()
+  if (subcategoryColumnMapped) {
+    const { data: subcategories } = await supabase.from('subcategories').select('id, name, category_id')
+    for (const sub of subcategories || []) subcategoryByKey.set(`${sub.category_id}|${String(sub.name).trim().toLowerCase()}`, sub.id as string)
   }
   const supplierByName = new Map((suppliers || []).map((s) => [s.name.trim().toLowerCase(), s.id]))
   const companyByName = new Map((companies || []).map((c) => [c.name.trim().toLowerCase(), c.id]))
@@ -271,6 +279,18 @@ async function buildImportPlan(formData: FormData, supabase: SupabaseClient, pro
       failures.push({ row: rowNumber, sku: rawSku, reason: `Category not found: ${categoryName}` })
       return
     }
+    let subcategory_id: string | null | undefined = undefined
+    if (subcategoryColumnMapped) {
+      const subcategoryName = cell(row, 'subcategory')
+      subcategory_id = null
+      if (subcategoryName) {
+        subcategory_id = subcategoryByKey.get(`${category_id}|${subcategoryName.toLowerCase()}`) || null
+        if (!subcategory_id) {
+          failures.push({ row: rowNumber, sku: rawSku, reason: `Subcategory "${subcategoryName}" does not exist under category "${categoryName}"` })
+          return
+        }
+      }
+    }
     const supplier_id = supplierName ? supplierByName.get(supplierName.toLowerCase()) || null : null
     if (supplierName && !supplier_id) {
       failures.push({ row: rowNumber, sku: rawSku, reason: `Supplier not found: ${supplierName}` })
@@ -358,6 +378,7 @@ async function buildImportPlan(formData: FormData, supabase: SupabaseClient, pro
       sku: rawSku,
       description: cell(row, 'description') || null,
       category_id,
+      subcategory_id,
       supplier_id,
       price,
       mrp,
@@ -525,6 +546,7 @@ async function commitGroup(
     name: first.name,
     description: first.description,
     category_id: first.category_id,
+    ...(first.subcategory_id !== undefined ? { subcategory_id: first.subcategory_id } : {}),
     supplier_id: first.supplier_id,
     price: first.price,
     ...(first.mrp != null ? { mrp: first.mrp } : {}),

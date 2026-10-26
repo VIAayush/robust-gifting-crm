@@ -29,6 +29,14 @@ function sha512(input: string) {
   return crypto.createHash('sha512').update(input).digest('hex')
 }
 
+/** Constant-time, case-insensitive comparison of two hex digests. */
+export function hashesMatch(expected: string, received: string | undefined): boolean {
+  if (!received) return false
+  const a = Buffer.from(expected.toLowerCase())
+  const b = Buffer.from(String(received).toLowerCase())
+  return a.length === b.length && crypto.timingSafeEqual(a, b)
+}
+
 function getConfig() {
   const key = process.env.PAYU_KEY
   const salt = process.env.PAYU_SALT
@@ -112,8 +120,7 @@ export class PayuPaymentProvider implements PaymentProvider {
       fields.txnid || '',
       key,
     ].join('|')
-    const expected = sha512(hashString)
-    return expected === fields.hash
+    return hashesMatch(sha512(hashString), fields.hash)
   }
 
   /**
@@ -121,7 +128,7 @@ export class PayuPaymentProvider implements PaymentProvider {
    * decides whether a payment is paid, per PayU's own guidance to never
    * trust the browser redirect alone.
    */
-  async verifyTransaction(txnId: string): Promise<VerifyResult> {
+  async verifyTransaction(txnId: string, expectedAmount?: number): Promise<VerifyResult> {
     const config = getConfig()
     if (!config) return { ok: false, error: 'PayU is not configured.' }
     const { key, salt, environment } = config
@@ -145,12 +152,17 @@ export class PayuPaymentProvider implements PaymentProvider {
 
     const json = (await response.json()) as {
       status?: number
-      transaction_details?: Record<string, { status?: string; mihpayid?: string; error_Message?: string }>
+      transaction_details?: Record<string, { status?: string; mihpayid?: string; error_Message?: string; amt?: string; transaction_amount?: string }>
     }
     const detail = json.transaction_details?.[txnId]
     if (!detail) return { ok: false, error: 'PayU verify_payment returned no matching transaction.' }
 
     if (detail.status === 'success') {
+      // Never trust a success for a different amount than we asked for.
+      const paidAmount = Number(detail.amt ?? detail.transaction_amount)
+      if (expectedAmount !== undefined && Number.isFinite(paidAmount) && Math.abs(paidAmount - expectedAmount) > 0.009) {
+        return { ok: true, status: 'failed', failureReason: `Amount mismatch: expected ${expectedAmount.toFixed(2)}, PayU reported ${paidAmount.toFixed(2)}. Review manually.`, raw: json }
+      }
       return { ok: true, status: 'paid', providerReference: detail.mihpayid || null, raw: json }
     }
     return { ok: true, status: 'failed', failureReason: detail.error_Message || detail.status || 'Payment not successful', raw: json }

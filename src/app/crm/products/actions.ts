@@ -33,6 +33,15 @@ function normalizeProductStatus(raw: string | null | undefined) {
   return value === 'discontinued' || value === 'inactive' ? 'discontinued' : 'active'
 }
 
+/** A subcategory must belong to the chosen category; returns an error message or null. */
+async function subcategoryError(supabase: Awaited<ReturnType<typeof createClient>>, subcategoryId: string | null, categoryId: string | null) {
+  if (!subcategoryId) return null
+  const { data } = await supabase.from('subcategories').select('category_id').eq('id', subcategoryId).maybeSingle()
+  if (!data) return 'The selected subcategory does not exist.'
+  if (!categoryId || data.category_id !== categoryId) return 'The selected subcategory does not belong to the selected category.'
+  return null
+}
+
 export async function createProduct(formData: FormData) {
   const profile = await getProfile()
   if (!profile) return { error: 'Not authenticated' }
@@ -45,6 +54,7 @@ export async function createProduct(formData: FormData) {
   const sku = ((formData.get('sku') as string) || '').trim()
   const category_id = ((formData.get('category_id') as string) || '').trim() || null
   const brand_id = (formData.get('brand_id') as string) || null
+  const subcategory_id = ((formData.get('subcategory_id') as string) || '').trim() || null
   const supplier_id = (formData.get('supplier_id') as string) || null
   const description = (formData.get('description') as string) || null
   const price = parseFloat(formData.get('price') as string) || 0
@@ -68,6 +78,8 @@ export async function createProduct(formData: FormData) {
   if (Object.keys(fieldErrors).length > 0) {
     return { error: 'Please fix the highlighted fields.', fieldErrors }
   }
+  const subError = await subcategoryError(supabase, subcategory_id, category_id)
+  if (subError) return { error: subError }
   const { data: skuTaken } = await supabase.from('products').select('id').eq('sku', sku.toUpperCase()).limit(1)
   if (skuTaken && skuTaken.length > 0) {
     return { error: 'This SKU is already used by another product.', fieldErrors: { sku: 'This SKU is already used by another product. Choose a different SKU.' } }
@@ -98,6 +110,7 @@ export async function createProduct(formData: FormData) {
       name,
       sku: sku.trim().toUpperCase(),
       category_id,
+      subcategory_id,
       brand_id,
       supplier_id,
       description,
@@ -252,7 +265,7 @@ export async function updateProduct(productId: string, formData: FormData) {
   const supabase = await createClient()
   const { data: existing } = await supabase
     .from('products')
-    .select('sku, price, mrp')
+    .select('sku, price, mrp, category_id')
     .eq('id', productId)
     .maybeSingle()
   if (!existing) return { error: 'Product not found' }
@@ -293,6 +306,13 @@ export async function updateProduct(productId: string, formData: FormData) {
   }
   text('brand_id')
   text('subcategory_id')
+  if ('subcategory_id' in update || 'category_id' in update) {
+    const nextCategory = 'category_id' in update ? (update.category_id as string | null) : (existing.category_id as string | null)
+    // Changing the category without re-picking a subcategory clears the old one rather than leaving a mismatch.
+    if ('category_id' in update && !('subcategory_id' in update) && nextCategory !== existing.category_id) update.subcategory_id = null
+    const subError = await subcategoryError(supabase, (update.subcategory_id as string | null) ?? null, nextCategory)
+    if (subError) return { error: subError }
+  }
   text('supplier_id')
   text('hsn_code')
   number('price', 'price', 0)

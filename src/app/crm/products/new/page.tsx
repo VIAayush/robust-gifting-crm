@@ -21,8 +21,9 @@ export default async function NewProductPage({
   const { error } = await searchParams
   const supabase = await createClient()
 
-  const [{ data: categories }, { data: brands }, { data: suppliers }, { data: companies }] = await Promise.all([
+  const [{ data: categories }, { data: subcategories }, { data: brands }, { data: suppliers }, { data: companies }] = await Promise.all([
     supabase.from('categories').select('id, name').order('name'),
+    supabase.from('subcategories').select('id, name, category_id').order('name'),
     supabase.from('brands').select('id, name').order('name'),
     supabase.from('suppliers').select('id, name').order('name'),
     excludeIndividualCompanies(supabase.from('companies').select('id, name').eq('status', 'active')).order('name'),
@@ -84,6 +85,20 @@ export default async function NewProductPage({
               options={[
                 { value: '', label: 'Select Category' },
                 ...sortProductCategories(categories || []).map((c) => ({ value: c.id, label: c.name })),
+              ]}
+            />
+
+            <MobileSheetSelect
+              name="subcategory_id"
+              label="Subcategory"
+              showDesktopLabel
+              emptyLabel="Select Subcategory (Optional)"
+              options={[
+                { value: '', label: 'Select Subcategory (Optional)' },
+                ...(subcategories || []).map((sub) => ({
+                  value: sub.id,
+                  label: `${(categories || []).find((c) => c.id === sub.category_id)?.name || ''} › ${sub.name}`,
+                })),
               ]}
             />
 

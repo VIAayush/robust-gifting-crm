@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { purposeLabel } from '@/lib/requirements/purpose'
 import { formatCurrency, formatDate, asRows, oneRelation } from '@/lib/utils'
+import { STAGES, STAGE_KEYS, TONE_CLASSES, isWorkflowStage } from '@/lib/requirements/workflow'
 
 const STATUS_COLORS: Record<string, string> = {
   active: 'bg-blue-100 text-blue-800',
@@ -24,14 +25,16 @@ type RequirementRow = {
   quantity?: number | null
   deadline?: string | null
   status?: string | null
+  workflow_stage?: string | null
   company?: ReqCompany | ReqCompany[] | null
   owner?: ReqOwner | ReqOwner[] | null
 }
 
-export default async function RequirementsPage(props: { searchParams: Promise<{ status?: string }> }) {
+export default async function RequirementsPage(props: { searchParams: Promise<{ status?: string; stage?: string }> }) {
   const profile = await requireStaff()
   const searchParams = await props.searchParams
   const statusFilter = searchParams.status || 'all'
+  const stageFilter = searchParams.stage || 'all'
   
   const supabase = await createClient()
 
@@ -45,10 +48,18 @@ export default async function RequirementsPage(props: { searchParams: Promise<{ 
     query = query.eq('status', statusFilter)
   }
 
+  if (stageFilter === 'needs_review') query = query.in('workflow_stage', ['submitted', 'selection_submitted'])
+  else if (isWorkflowStage(stageFilter)) query = query.eq('workflow_stage', stageFilter)
+
   const { data: requirements, error } = await query
   const requirementRows = asRows<RequirementRow>(requirements)
 
   const statuses = ['all', 'active', 'won', 'lost', 'closed']
+  const stageOptions = [
+    { value: 'all', label: 'All stages' },
+    { value: 'needs_review', label: 'Needs my review' },
+    ...STAGE_KEYS.map((key) => ({ value: key, label: STAGES[key].label })),
+  ]
 
   return (
     <div>
@@ -73,14 +84,32 @@ export default async function RequirementsPage(props: { searchParams: Promise<{ 
                 label: status === 'all' ? 'All' : status,
               })),
             },
+            {
+              key: 'stage',
+              label: 'Stage',
+              value: stageFilter,
+              emptyLabel: 'All stages',
+              options: stageOptions,
+            },
           ]}
         />
+      </div>
+      <div className="mb-3 hidden flex-wrap gap-2 md:flex">
+        {stageOptions.map((option) => (
+          <Link
+            key={option.value}
+            href={`/crm/requirements?status=${statusFilter}&stage=${option.value}`}
+            className={`rounded-full border px-3 py-1 text-xs font-medium ${stageFilter === option.value ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+          >
+            {option.label}
+          </Link>
+        ))}
       </div>
       <div className="mb-6 hidden gap-2 border-b md:flex">
         {statuses.map(status => (
           <Link 
             key={status}
-            href={`/crm/requirements?status=${status}`}
+            href={`/crm/requirements?status=${status}&stage=${stageFilter}`}
             className={`px-4 py-2 text-sm font-medium capitalize ${statusFilter === status ? 'border-b-2 border-[var(--color-primary)] text-[var(--color-primary)]' : 'text-gray-500 hover:text-gray-700'}`}
           >
             {status}
@@ -89,7 +118,7 @@ export default async function RequirementsPage(props: { searchParams: Promise<{ 
       </div>
 
       <div className="bg-white rounded-lg border overflow-x-auto">
-        <table className="w-full min-w-[720px] text-left">
+        <table className="w-full min-w-[860px] text-left">
           <thead className="bg-gray-50 border-b">
             <tr>
               <th className="p-4 font-medium text-gray-500">Name</th>
@@ -99,6 +128,7 @@ export default async function RequirementsPage(props: { searchParams: Promise<{ 
               <th className="p-4 font-medium text-gray-500">Qty</th>
               <th className="p-4 font-medium text-gray-500">Deadline</th>
               <th className="p-4 font-medium text-gray-500">Status</th>
+              <th className="p-4 font-medium text-gray-500">Workflow stage</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -125,12 +155,21 @@ export default async function RequirementsPage(props: { searchParams: Promise<{ 
                     {req.status || 'unknown'}
                   </span>
                 </td>
+                <td className="p-4">
+                  {isWorkflowStage(req.workflow_stage) ? (
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${TONE_CLASSES[STAGES[req.workflow_stage].tone]}`}>
+                      {STAGES[req.workflow_stage].label}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-400">Staff-created</span>
+                  )}
+                </td>
               </tr>
               )
             })}
             {requirementRows.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-8 text-center text-gray-500">No requirements found.</td>
+                <td colSpan={8} className="p-8 text-center text-gray-500">No requirements found.</td>
               </tr>
             )}
           </tbody>

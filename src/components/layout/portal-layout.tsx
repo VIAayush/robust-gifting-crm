@@ -19,9 +19,9 @@ interface PortalLayoutProps {
 }
 
 const navItems = [
-  { label: 'Dashboard', href: '/portal', icon: LayoutDashboard },
-  { label: 'Catalogues', href: '/portal/catalogues', icon: FolderGit2 },
   { label: 'Products', href: '/portal/catalogue', icon: PackageSearch },
+  { label: 'Catalogues', href: '/portal/catalogues', icon: FolderGit2 },
+  { label: 'Dashboard', href: '/portal', icon: LayoutDashboard },
   { label: 'Shortlist', href: '/portal/shortlist', icon: Heart },
   { label: 'Requirements', href: '/portal/requirements', icon: ClipboardList },
   { label: 'Quotations', href: '/portal/quotations', icon: FileText },
