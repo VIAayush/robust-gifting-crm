@@ -11,6 +11,7 @@ import { canEditQuotation, validateHeader, validateLine } from '@/lib/quotations
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {
   draft: ['sent'],
   sent: ['accepted', 'rejected', 'expired'],
+  viewed: ['accepted', 'rejected', 'expired'],
   accepted: [],
   rejected: [],
   expired: ['sent'],
@@ -37,8 +38,15 @@ export async function updateQuotationStatus(quotationId: string, newStatus: stri
     return { error: `A ${current} quotation cannot move to ${newStatus}` }
   }
 
-  const { error } = await supabase.from('quotations').update({ status: newStatus }).eq('id', quotationId)
+  if (newStatus === 'sent') {
+    const { count } = await supabase.from('quotation_items').select('id', { count: 'exact', head: true }).eq('quotation_id', quotationId)
+    if (!count) return { error: 'Add at least one item before sending the quotation.' }
+  }
+
+  // Conditional on the status we just read: a client answering at the same moment is never overwritten.
+  const { data: moved, error } = await supabase.from('quotations').update({ status: newStatus }).eq('id', quotationId).eq('status', current).select('id').maybeSingle()
   if (error) return { error: error.message }
+  if (!moved) return { error: 'This quotation changed while you were editing it. Reload and try again.' }
 
   await writeAudit(supabase, {
     action: 'status_change',

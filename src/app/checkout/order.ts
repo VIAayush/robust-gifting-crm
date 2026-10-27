@@ -4,6 +4,7 @@ import { notifyOrderCreated } from '@/lib/notifications'
 import { formatCustomization } from '@/lib/products/customization'
 import { assignPreferredSuppliers } from '@/lib/orders/preferred-suppliers'
 import { INDIVIDUAL_COMPANY_TYPE } from '@/lib/companies/individual'
+import { exactIlike } from '@/lib/security/like'
 
 type CheckoutRow = {
   id: string
@@ -38,13 +39,22 @@ async function resolveCustomer(admin: SupabaseClient, checkout: CheckoutRow): Pr
   const email = checkout.customer_email.trim().toLowerCase()
   // limit(1), not maybeSingle(): two contacts can share an email, and
   // maybeSingle() would error on that and silently create a duplicate company.
+  // The email is matched LITERALLY (wildcards escaped), and only a contact that belongs to an individual-customer
+  // company is reused: an online buyer must never be attached to a corporate client, a lead or a staff-linked contact
+  // just because they typed that person's address. Typing someone's email also never rewrites their name.
   const { data: existingContacts } = await admin
     .from('contacts')
-    .select('id, company_id')
-    .ilike('email', email)
+    .select('id, company_id, phone')
+    .ilike('email', exactIlike(email))
     .order('created_at')
-    .limit(1)
-  const existing = existingContacts?.[0]
+    .limit(20)
+  let existing: { id: string; company_id: string | null; phone: string | null } | undefined
+  if (existingContacts && existingContacts.length > 0) {
+    const companyIds = Array.from(new Set(existingContacts.map((c) => c.company_id as string | null).filter(Boolean))) as string[]
+    const { data: companies } = companyIds.length ? await admin.from('companies').select('id, company_type').in('id', companyIds) : { data: [] }
+    const individual = new Set((companies || []).filter((c) => c.company_type === INDIVIDUAL_COMPANY_TYPE).map((c) => c.id as string))
+    existing = existingContacts.find((c) => c.company_id && individual.has(c.company_id as string)) as typeof existing
+  }
 
   let companyId: string
   let contactId: string
@@ -53,7 +63,8 @@ async function resolveCustomer(admin: SupabaseClient, checkout: CheckoutRow): Pr
   if (existing?.company_id) {
     companyId = existing.company_id as string
     contactId = existing.id as string
-    await admin.from('contacts').update({ full_name: checkout.customer_name, phone: checkout.customer_phone }).eq('id', contactId)
+    // Only fill a missing phone number; never overwrite what is already on record.
+    if (!existing.phone) await admin.from('contacts').update({ phone: checkout.customer_phone }).eq('id', contactId)
   } else {
     const { data: ownerRow } = await admin
       .from('profiles')

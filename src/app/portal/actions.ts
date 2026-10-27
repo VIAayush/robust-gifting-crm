@@ -1,9 +1,11 @@
 'use server'
 
+import { exactIlike } from '@/lib/security/like'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { notifyRequirementEvent } from '@/lib/notifications'
+import { quotationExpired, EXPIRED_MESSAGE } from '@/lib/quotations/validity'
 import { overallOutcome, validateDecisions, type ItemDecision } from '@/lib/quotations/decisions'
 import { OTHER_PURPOSE, PURPOSE_OPTIONS, MAX_CUSTOM_PURPOSE_LENGTH } from '@/lib/requirements/purpose'
 
@@ -181,7 +183,7 @@ export async function createPortalRequirement(input: PortalRequirementInput): Pr
   const [{ data: company }, { data: contact }] = await Promise.all([
     admin.from('companies').select('owner_id').eq('id', companyId).maybeSingle(),
     user.email
-      ? admin.from('contacts').select('id').eq('company_id', companyId).ilike('email', user.email).limit(1).maybeSingle()
+      ? admin.from('contacts').select('id').eq('company_id', companyId).ilike('email', exactIlike(user.email)).limit(1).maybeSingle()
       : Promise.resolve({ data: null }),
   ])
 
@@ -290,7 +292,7 @@ export async function respondToQuotation(quotationId: string, status: 'accepted'
   const { data: companyId } = await supabase.rpc('client_company_id')
   const { data: quotation } = await supabase
     .from('quotations')
-    .select('company_id, status, requirement_id')
+    .select('company_id, status, requirement_id, valid_until')
     .eq('id', quotationId)
     .single()
 
@@ -300,6 +302,7 @@ export async function respondToQuotation(quotationId: string, status: 'accepted'
   if (quotation.status !== 'sent' && quotation.status !== 'viewed') {
     return { error: 'This quotation can no longer be answered.' }
   }
+  if (quotationExpired(quotation.valid_until as string | null)) return { error: EXPIRED_MESSAGE }
 
   // The database function takes p_accept (boolean), not a status string.
   const { error } = await supabase.rpc('client_respond_quotation', {
@@ -332,9 +335,10 @@ export async function respondToQuotationItems(quotationId: string, decisions: It
   if (!user) return { error: 'Not authenticated' }
 
   const { data: companyId } = await supabase.rpc('client_company_id')
-  const { data: quotation } = await supabase.from('quotations').select('company_id, status, requirement_id').eq('id', quotationId).single()
+  const { data: quotation } = await supabase.from('quotations').select('company_id, status, requirement_id, valid_until').eq('id', quotationId).single()
   if (!quotation || quotation.company_id !== companyId) return { error: 'Quotation not found.' }
   if (quotation.status !== 'sent' && quotation.status !== 'viewed') return { error: 'This quotation can no longer be answered.' }
+  if (quotationExpired(quotation.valid_until as string | null)) return { error: EXPIRED_MESSAGE }
 
   const { data: items } = await supabase.from('quotation_items').select('id').eq('quotation_id', quotationId)
   const checked = validateDecisions((items || []).map((i) => i.id as string), decisions)

@@ -5,6 +5,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getActiveProviderName } from '@/lib/payments'
 import { createOrderFromCheckout } from '@/app/checkout/order'
 import { notifyPaymentResult } from '@/lib/notifications'
+import { markCheckoutFailedIfUnpaid } from '@/lib/payments/checkout-state'
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function generateTxnId() {
   return `RG${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 8).toUpperCase()}`
@@ -42,13 +45,16 @@ export async function completeDemoPayment(formData: FormData) {
   const checkoutId = String(formData.get('checkout_id') || '')
   const paymentId = String(formData.get('payment_id') || '')
   const outcome = String(formData.get('outcome') || '')
-  if (!checkoutId || !paymentId) redirect('/cart')
+  if (!UUID.test(checkoutId) || !UUID.test(paymentId)) redirect('/cart')
+  // Demo completion is a simulation: it must be impossible once a real provider is configured.
+  if (getActiveProviderName() !== 'demo') redirect(`/checkout/${checkoutId}/review`)
 
   const admin = createAdminClient()
   if (!admin) redirect(`/checkout/${checkoutId}/pay`)
 
-  const { data: payment } = await admin.from('storefront_payments').select('id, status, provider').eq('id', paymentId).single()
-  if (!payment || payment.provider !== 'demo' || payment.status !== 'pending') redirect(`/checkout/${checkoutId}/pay`)
+  const { data: payment } = await admin.from('storefront_payments').select('id, status, provider, checkout_id').eq('id', paymentId).single()
+  // The payment must belong to THIS checkout, otherwise a pair of mismatched ids could pay for someone else's order.
+  if (!payment || payment.provider !== 'demo' || payment.checkout_id !== checkoutId || payment.status !== 'pending') redirect(`/checkout/${checkoutId}/pay`)
 
   if (outcome === 'success') {
     const reference = `DEMO-${paymentId.slice(0, 8)}`
@@ -75,7 +81,7 @@ export async function completeDemoPayment(formData: FormData) {
       .select('id')
       .maybeSingle()
     if (claimed) {
-      await admin.from('storefront_checkouts').update({ status: 'failed' }).eq('id', checkoutId)
+      await markCheckoutFailedIfUnpaid(admin, checkoutId)
       await notifyPaymentResult(paymentId)
     }
     redirect(`/checkout/${checkoutId}/confirmation`)

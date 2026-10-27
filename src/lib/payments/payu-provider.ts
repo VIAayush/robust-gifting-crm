@@ -50,6 +50,38 @@ export function isPayuConfigured(): boolean {
   return getConfig() !== null
 }
 
+export type PayuDetail = { status?: string; mihpayid?: string; error_Message?: string; amt?: string; transaction_amount?: string }
+
+/** Statuses PayU reports for a payment that definitely did not succeed. Anything else that is not 'success' is NOT final. */
+const FAILURE_STATUSES = new Set(['failure', 'failed', 'bounced', 'dropped', 'usercancelled', 'user cancelled', 'cancelled', 'canceled'])
+
+/**
+ * Decides what a PayU verify_payment answer means. Pure, so every branch is unit-tested.
+ *  - success with the expected amount            -> paid
+ *  - success with a different amount             -> failed (kept for manual review, never accepted)
+ *  - success with NO readable amount             -> ambiguous (we cannot confirm what was paid)
+ *  - an explicit failure status                  -> failed
+ *  - pending / initiated / in progress / unknown -> ambiguous: NOT failed, so a payment that settles later
+ *                                                   (UPI collect, net-banking delays) is still picked up
+ */
+export function interpretVerifyDetail(detail: PayuDetail, expectedAmount: number | undefined, raw: unknown): VerifyResult {
+  const status = String(detail.status || '').trim().toLowerCase()
+  if (status === 'success') {
+    if (expectedAmount !== undefined) {
+      const paidAmount = Number(detail.amt ?? detail.transaction_amount)
+      if (!Number.isFinite(paidAmount)) return { ok: false, error: 'PayU did not report the amount paid, so the payment cannot be confirmed.' }
+      if (Math.abs(paidAmount - expectedAmount) > 0.009) {
+        return { ok: true, status: 'failed', failureReason: `Amount mismatch: expected ${expectedAmount.toFixed(2)}, PayU reported ${paidAmount.toFixed(2)}. Review manually.`, raw }
+      }
+    }
+    return { ok: true, status: 'paid', providerReference: detail.mihpayid || null, raw }
+  }
+  if (FAILURE_STATUSES.has(status)) {
+    return { ok: true, status: 'failed', failureReason: detail.error_Message || detail.status || 'Payment not successful', raw }
+  }
+  return { ok: false, error: `PayU reports the payment as "${detail.status || 'unknown'}", which is not final yet.` }
+}
+
 export class PayuPaymentProvider implements PaymentProvider {
   name = 'payu' as const
 
@@ -108,7 +140,10 @@ export class PayuPaymentProvider implements PaymentProvider {
     const udf3 = fields.udf3 || ''
     const udf2 = fields.udf2 || ''
     const udf1 = fields.udf1 || ''
+    // PayU prepends additionalCharges to the reverse-hash string when it applies a surcharge.
+    const additional = fields.additionalCharges ? [fields.additionalCharges] : []
     const hashString = [
+      ...additional,
       salt,
       fields.status || '',
       '', '', '', '', '',
@@ -150,21 +185,14 @@ export class PayuPaymentProvider implements PaymentProvider {
 
     if (!response.ok) return { ok: false, error: `PayU verify_payment returned HTTP ${response.status}` }
 
-    const json = (await response.json()) as {
-      status?: number
-      transaction_details?: Record<string, { status?: string; mihpayid?: string; error_Message?: string; amt?: string; transaction_amount?: string }>
+    let json: { status?: number; transaction_details?: Record<string, PayuDetail> }
+    try {
+      json = (await response.json()) as typeof json
+    } catch {
+      return { ok: false, error: 'PayU verify_payment returned a response that could not be read.' }
     }
     const detail = json.transaction_details?.[txnId]
     if (!detail) return { ok: false, error: 'PayU verify_payment returned no matching transaction.' }
-
-    if (detail.status === 'success') {
-      // Never trust a success for a different amount than we asked for.
-      const paidAmount = Number(detail.amt ?? detail.transaction_amount)
-      if (expectedAmount !== undefined && Number.isFinite(paidAmount) && Math.abs(paidAmount - expectedAmount) > 0.009) {
-        return { ok: true, status: 'failed', failureReason: `Amount mismatch: expected ${expectedAmount.toFixed(2)}, PayU reported ${paidAmount.toFixed(2)}. Review manually.`, raw: json }
-      }
-      return { ok: true, status: 'paid', providerReference: detail.mihpayid || null, raw: json }
-    }
-    return { ok: true, status: 'failed', failureReason: detail.error_Message || detail.status || 'Payment not successful', raw: json }
+    return interpretVerifyDetail(detail, expectedAmount, json)
   }
 }

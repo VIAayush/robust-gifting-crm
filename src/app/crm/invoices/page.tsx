@@ -72,8 +72,7 @@ export default async function InvoicesPage({
             emptyLabel: 'All statuses',
             options: [
               { value: '', label: 'All statuses' },
-              { value: 'draft', label: 'Draft' },
-              { value: 'sent', label: 'Sent' },
+              { value: 'unpaid', label: 'Unpaid' },
               { value: 'partially_paid', label: 'Partially paid' },
               { value: 'paid', label: 'Paid' },
               { value: 'overdue', label: 'Overdue' },

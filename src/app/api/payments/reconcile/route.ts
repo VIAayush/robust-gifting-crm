@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { bearerMatches } from '@/lib/security/secret'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runPaymentReconciliation } from '@/lib/payments/reconcile-run'
 
@@ -10,7 +11,7 @@ import { runPaymentReconciliation } from '@/lib/payments/reconcile-run'
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET
   if (!secret) return NextResponse.json({ error: 'Not configured' }, { status: 404 })
-  if (request.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (!bearerMatches(request.headers.get('authorization'), secret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const admin = createAdminClient()

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { formatCurrency } from '@/lib/utils'
@@ -249,7 +250,7 @@ export function notifyOrderStatusChanged(orderId: string, statusLabel: string) {
   return safely('order status', async (admin) => {
     const { data: order, error: orderError } = await admin
       .from('orders')
-      .select('id, order_number, status, assigned_to, owner_id, shipping_address, storefront_checkout_id, contact:contacts(full_name, phone), company:companies(name)')
+      .select('id, order_number, status, updated_at, assigned_to, owner_id, shipping_address, storefront_checkout_id, contact:contacts(full_name, phone), company:companies(name)')
       .eq('id', orderId)
       .maybeSingle()
     if (orderError) throw new Error(orderError.message)
@@ -268,7 +269,7 @@ export function notifyOrderStatusChanged(orderId: string, statusLabel: string) {
         payload: { customer_name: customerName, order_number: order.order_number, status: statusLabel },
         entity: 'orders',
         entityId: order.id,
-        dedupeKey: `order_status:${order.id}:${order.status}:customer`,
+        dedupeKey: `order_status:${order.id}:${order.status}:${order.updated_at}:customer`,
       },
     ]
     for (const staff of await staffRecipients(admin, [order.assigned_to])) {
@@ -282,11 +283,11 @@ export function notifyOrderStatusChanged(orderId: string, statusLabel: string) {
         payload: { order_number: order.order_number, status: statusLabel },
         entity: 'orders',
         entityId: order.id,
-        dedupeKey: `order_status:${order.id}:${order.status}:staff:${normalizePhone(staff.phone)}`,
+        dedupeKey: `order_status:${order.id}:${order.status}:${order.updated_at}:staff:${normalizePhone(staff.phone)}`,
       })
     }
     await enqueueAndDispatch(admin, inputs)
-    await emailB2cCustomer(admin, order.id, order.storefront_checkout_id as string | null, order.order_number as string, `order_status_${order.status}`, `Your order ${order.order_number} is now: ${statusLabel}`, [`Your Robust Gifting order ${order.order_number} is now: ${statusLabel}.`])
+    await emailB2cCustomer(admin, order.id, order.storefront_checkout_id as string | null, order.order_number as string, `order_status_${order.status}`, `Your order ${order.order_number} is now: ${statusLabel}`, [`Your Robust Gifting order ${order.order_number} is now: ${statusLabel}.`], String(order.updated_at || ''))
   })
 }
 
@@ -423,15 +424,21 @@ export function notifyRequirementEvent(requirementId: string, event: string, not
           dedupeKey: `requirement:${requirement.id}:${event}:${round}:customer:${user.id}`,
         })
         if (user.email) {
-          const mail = requirementUpdateEmail({
-            name: user.full_name || 'there',
-            requirementName: requirement.name,
-            update: update.text,
-            note: note || null,
-            url: `${origin}/portal/requirements/${requirement.id}`,
+          await emailOnce(admin, {
+            recipientType: 'customer',
+            to: user.email,
+            mail: requirementUpdateEmail({
+              name: user.full_name || 'there',
+              requirementName: requirement.name,
+              update: update.text,
+              note: note || null,
+              url: `${origin}/portal/requirements/${requirement.id}`,
+            }),
+            eventType: `requirement_${event}`,
+            dedupeKey: `email:requirement:${requirement.id}:${event}:${round}:customer:${user.id}`,
+            entity: 'requirements',
+            entityId: requirement.id,
           })
-          const sent = await sendEmail({ to: user.email, ...mail })
-          if (!sent.ok) console.error('[notifications] requirement email failed:', sent.error)
         }
       }
     }
@@ -479,6 +486,7 @@ async function emailOnce(
     entityId: string
   },
 ) {
+  const inFlight = 'Email send in progress'
   const { data: ledger, error } = await admin
     .from('notification_outbox')
     .insert({
@@ -489,24 +497,54 @@ async function emailOnce(
       payload: { subject: input.mail.subject },
       rendered_message: input.mail.subject,
       status: 'skipped',
-      last_error: 'Email send in progress',
+      last_error: inFlight,
+      attempts: 1,
       entity: input.entity,
       entity_id: input.entityId,
       dedupe_key: input.dedupeKey,
     })
     .select('id')
     .maybeSingle()
+
+  let ledgerId: string | null = ledger?.id ?? null
   if (error) {
-    if (error.code !== '23505') console.error('[notifications] email ledger failed:', error.message)
-    return
-  }
-  const sent = await sendEmail({ to: input.to, ...input.mail })
-  if (ledger?.id) {
-    await admin
+    if (error.code !== '23505') {
+      console.error('[notifications] email ledger failed:', error.message)
+      return
+    }
+    // Already ledgered. A SENT email is never repeated. A FAILED one (provider outage, e-mail not configured yet) gets
+    // another try, claimed with a conditional update so two processes cannot both resend, up to MAX_ATTEMPTS.
+    const { data: existing } = await admin
       .from('notification_outbox')
-      .update(sent.ok ? { status: 'sent', last_error: null, sent_at: new Date().toISOString(), provider: 'resend' } : { status: 'failed', last_error: sent.error, provider: 'resend' })
-      .eq('id', ledger.id)
+      .select('id, status, attempts')
+      .eq('dedupe_key', input.dedupeKey)
+      .eq('channel', 'email')
+      .maybeSingle()
+    if (!existing || existing.status !== 'failed' || Number(existing.attempts) >= MAX_ATTEMPTS) return
+    const { data: claimed } = await admin
+      .from('notification_outbox')
+      .update({ status: 'skipped', last_error: inFlight, attempts: Number(existing.attempts) + 1 })
+      .eq('id', existing.id)
+      .eq('status', 'failed')
+      .eq('attempts', existing.attempts)
+      .select('id')
+      .maybeSingle()
+    if (!claimed) return
+    ledgerId = claimed.id as string
   }
+  if (!ledgerId) return
+
+  let sent: { ok: true } | { ok: false; error: string }
+  try {
+    sent = await sendEmail({ to: input.to, ...input.mail })
+  } catch (e) {
+    sent = { ok: false, error: e instanceof Error ? e.message : 'Email send failed' }
+  }
+  // 'sent' is written only after the provider accepted the message; every other outcome is 'failed' with the reason.
+  await admin
+    .from('notification_outbox')
+    .update(sent.ok ? { status: 'sent', last_error: null, sent_at: new Date().toISOString(), provider: 'resend' } : { status: 'failed', last_error: sent.error, provider: 'resend' })
+    .eq('id', ledgerId)
 }
 
 async function emailStaff(
@@ -550,7 +588,8 @@ export function notifyProductsAvailable(companyIds: string[], productIds: string
     const names = (productRows || []).map((p) => String(p.name))
     if (names.length === 0) return
     const summary = summariseProductNames(names)
-    const setKey = [...products].sort().join(',').slice(0, 200)
+    // A hash of the whole sorted set (truncating the id list would make two different large sets look identical).
+    const setKey = createHash('sha256').update([...products].sort().join(',')).digest('hex').slice(0, 32)
     const origin = await requestOrigin()
 
     for (const companyId of companies) {
@@ -575,24 +614,32 @@ export function notifyProductsAvailable(companyIds: string[], productIds: string
         dedupeKey: `product_available:${companyId}:${setKey}:${user.id}`,
       }))
       // The outbox row doubles as the "already told" ledger: only newly created rows trigger the in-app
-      // notification and the email, so saving the same visibility twice never repeats either.
+      // notification and the WhatsApp send, so saving the same visibility twice never repeats either.
       const created = await Promise.all(inputs.map((input) => enqueue(admin, input)))
       const fresh = created.filter((id): id is string => Boolean(id))
-      if (fresh.length === 0) continue
-
-      await admin.rpc('notify_users', {
-        p_audience: 'client',
-        p_company_id: companyId,
-        p_title: `New in your catalogue: ${summary}`,
-        p_body: null,
-        p_link: '/portal/catalogue',
-      })
-      await dispatchNotifications(admin, fresh)
-      for (let i = 0; i < users.length; i++) {
-        if (!created[i] || !users[i].email) continue
-        const mail = productAvailableEmail({ name: users[i].full_name || 'there', summary, url: `${origin}/portal/catalogue` })
-        const sent = await sendEmail({ to: users[i].email as string, ...mail })
-        if (!sent.ok) console.error('[notifications] product email failed:', sent.error)
+      if (fresh.length > 0) {
+        await admin.rpc('notify_users', {
+          p_audience: 'client',
+          p_company_id: companyId,
+          p_title: `New in your catalogue: ${summary}`,
+          p_body: null,
+          p_link: '/portal/catalogue',
+        })
+        await dispatchNotifications(admin, fresh)
+      }
+      // Email goes through the ledger for EVERY user on every run: a sent mail is never repeated, a failed one is
+      // retried (bounded), so saving the same visibility again after a provider outage delivers what was missed.
+      for (const user of users) {
+        if (!user.email) continue
+        await emailOnce(admin, {
+          recipientType: 'customer',
+          to: user.email as string,
+          mail: productAvailableEmail({ name: user.full_name || 'there', summary, url: `${origin}/portal/catalogue` }),
+          eventType: 'product_available',
+          dedupeKey: `email:product_available:${companyId}:${setKey}:${user.id}`,
+          entity: 'companies',
+          entityId: companyId,
+        })
       }
     }
   })
@@ -611,6 +658,7 @@ async function emailB2cCustomer(
   eventKey: string,
   title: string,
   lines: string[],
+  round = '',
 ) {
   if (!checkoutId) return
   const { data: checkout } = await admin.from('storefront_checkouts').select('customer_name, customer_email').eq('id', checkoutId).maybeSingle()
@@ -622,7 +670,7 @@ async function emailB2cCustomer(
     to,
     mail: orderEmail({ name: String(checkout?.customer_name || 'there'), title, lines, trackUrl: `${origin}/track-order`, orderNumber }),
     eventType: eventKey,
-    dedupeKey: `email:order:${orderId}:${eventKey}`,
+    dedupeKey: `email:order:${orderId}:${eventKey}${round ? `:${round}` : ''}`,
     entity: 'orders',
     entityId: orderId,
   })

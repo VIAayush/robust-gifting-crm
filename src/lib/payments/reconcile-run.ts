@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { PayuPaymentProvider } from '@/lib/payments'
 import { createOrderFromCheckout } from '@/app/checkout/order'
 import { notifyPaymentResult } from '@/lib/notifications'
+import { markCheckoutFailedIfUnpaid } from '@/lib/payments/checkout-state'
 import { reconcilePayments, type ReconcileDeps, type ReconcilePayment, type ReconcileSummary } from '@/lib/payments/reconcile'
 
 /** Wires the pure reconciliation rules to the database (service role) and to PayU's Verify Payment API. */
@@ -9,15 +10,16 @@ export function buildReconcileDeps(admin: SupabaseClient): ReconcileDeps {
   const provider = new PayuPaymentProvider()
   return {
     async listCandidates(sinceIso) {
-      const { data, error } = await admin
-        .from('storefront_payments')
-        .select('id, checkout_id, provider, provider_txn_id, provider_reference, status, amount, created_at, checkout:storefront_checkouts(order_id)')
-        .in('status', ['pending', 'processing', 'paid'])
-        .gte('created_at', sinceIso)
-        .order('created_at')
-        .limit(200)
-      if (error) throw new Error(error.message)
-      return (data || []).map((row) => {
+      const columns = 'id, checkout_id, provider, provider_txn_id, provider_reference, status, amount, created_at'
+      // Two queries so old, fully processed payments can never crowd the unresolved ones out of the 200-row window:
+      // unresolved payments, and paid payments whose checkout still has no order.
+      const [open, paidWithoutOrder] = await Promise.all([
+        admin.from('storefront_payments').select(`${columns}, checkout:storefront_checkouts(order_id)`).in('status', ['pending', 'processing']).gte('created_at', sinceIso).order('created_at').limit(200),
+        admin.from('storefront_payments').select(`${columns}, checkout:storefront_checkouts!inner(order_id)`).eq('status', 'paid').is('checkout.order_id', null).gte('created_at', sinceIso).order('created_at').limit(200),
+      ])
+      if (open.error) throw new Error(open.error.message)
+      if (paidWithoutOrder.error) throw new Error(paidWithoutOrder.error.message)
+      return [...(open.data || []), ...(paidWithoutOrder.data || [])].map((row) => {
         const checkout = Array.isArray(row.checkout) ? row.checkout[0] : row.checkout
         return {
           id: row.id as string,
@@ -55,7 +57,7 @@ export function buildReconcileDeps(admin: SupabaseClient): ReconcileDeps {
       return Boolean(data)
     },
     async markCheckoutFailed(checkoutId) {
-      await admin.from('storefront_checkouts').update({ status: 'failed' }).eq('id', checkoutId)
+      await markCheckoutFailedIfUnpaid(admin, checkoutId)
     },
     createOrder: (checkoutId, reference) => createOrderFromCheckout(checkoutId, { reference }),
     async setFailureNote(paymentId, note) {

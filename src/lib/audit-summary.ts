@@ -1,6 +1,8 @@
 import { LEAD_STAGE_LABELS } from '@/lib/utils'
+import { COST_FIELDS, REDACTED_MARKER } from '@/lib/audit-redact'
 
-const IGNORED = new Set(['updated_at', 'created_at', 'id', 'search_vector', 'price_updated_at', 'last_activity_at'])
+// Cost fields are ignored here too, so rows written before redaction existed never print a figure in a summary.
+const IGNORED = new Set(['updated_at', 'created_at', 'id', 'search_vector', 'price_updated_at', 'last_activity_at', REDACTED_MARKER, ...COST_FIELDS])
 const IDENTIFYING = ['name', 'full_name', 'title', 'order_number', 'quotation_number', 'invoice_number', 'sku', 'email', 'description']
 const MAX_CHANGES = 4
 

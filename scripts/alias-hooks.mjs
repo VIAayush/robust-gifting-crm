@@ -5,7 +5,12 @@ import path from 'node:path'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
+// Isolated action tests run server actions without Next.js or Supabase: these specifiers resolve to in-memory stubs.
+const STUBBED = new Set(['next/cache', 'next/headers', 'next/navigation', '@/lib/supabase/server', '@/lib/supabase/admin'])
+const stubUrl = pathToFileURL(path.join(root, 'scripts', 'stubs', 'next-stubs.mts')).href
+
 export async function resolve(specifier, context, nextResolve) {
+  if (STUBBED.has(specifier)) return nextResolve(stubUrl, context)
   let target = null
   if (specifier.startsWith('@/')) target = path.join(root, 'src', specifier.slice(2))
   else if ((specifier.startsWith('./') || specifier.startsWith('../')) && context.parentURL?.startsWith('file:')) {

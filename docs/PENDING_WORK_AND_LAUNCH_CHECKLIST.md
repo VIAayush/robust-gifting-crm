@@ -17,6 +17,7 @@ Written while the Supabase project was unavailable. Nothing marked BLOCKED or NO
 | 10 | `20261035_order_cost_protection.sql` | order costs readable only through permission-checked functions | direct API reads of costs stay open |
 | 11 | `20261036_rate_limits.sql` | shared rate limiting for public forms | in-memory limiter per server instance |
 | 12 | `20261037_product_cost_protection.sql` | product and supplier costs readable only through permission-checked functions | direct API reads of product costs (including with the anon key) stay open |
+| 13 | `20261038_security_hardening.sql` | sign-up can no longer grant a role/company, direct writes to requirement workflow fields refused, accepted-line helpers respect access, no overpayment, notification policies, task status `blocked` | a visitor could request the admin role at sign-up; workflow and payments rely on the application only |
 | 9 | `20261034_order_history_handoff_and_sample_team.sql` | assignee/due date in order history, no duplicate history rows, sample moves to/from the team location | history without assignee/due; team moves fail |
 
 All are additive and idempotent. Verification queries are at the bottom of each file. Migration 2 is the only one the shipped code depends on (the full scope-of-work audit is in `docs/SOW_COMPLIANCE_MATRIX.md`); apply 1 and 2 first.

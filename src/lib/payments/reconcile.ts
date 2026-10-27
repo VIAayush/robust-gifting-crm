@@ -89,6 +89,8 @@ export async function reconcilePayments(deps: ReconcileDeps, now: number = Date.
         } else {
           summary.ordersCreated++
           await deps.setFailureNote(payment.id, null)
+          // The customer was never told about this payment; the notification is deduped per payment, so this cannot repeat.
+          await deps.notify(payment.id)
         }
         continue
       }

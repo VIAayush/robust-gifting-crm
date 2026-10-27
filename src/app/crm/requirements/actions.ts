@@ -61,11 +61,20 @@ export async function createQuotationFromRequirement(formData: FormData) {
   const requirementId = String(formData.get('requirement_id') || '')
   if (!requirementId) return { error: 'Requirement is required' }
 
-  const { data: req } = await supabase
+  // Only admin and sales prepare quotations (the same rule as the quotation editor); the database policies repeat it.
+  const { data: me } = await supabase.from('profiles').select('role, is_active').eq('id', user.id).maybeSingle()
+  if (!me || !me.is_active || !['admin', 'sales'].includes(String(me.role))) return { error: 'Not permitted to create quotations' }
+
+  const { data: req, error: reqError } = await supabase
     .from('requirements')
     .select('id, company_id, contact_id, owner_id, quantity, workflow_stage')
     .eq('id', requirementId)
     .single()
+  if (reqError && /workflow_stage|column .* does not exist|42703/i.test(`${reqError.code || ''} ${reqError.message}`)) {
+    // Without migration 20261027 nothing records whether the client has approved the requirement, so the approval
+    // gate cannot be checked. Refuse instead of guessing: this never lets an unapproved requirement through.
+    return { error: 'Quotations from requirements need the requirement workflow database update (migration 20261027) to be applied first.' }
+  }
   if (!req) return { error: 'Requirement not found' }
   // Client-portal requirements can only be quoted once the product selection is approved.
   if (req.workflow_stage && !staffCanCreateQuotation(req.workflow_stage)) {
@@ -147,11 +156,34 @@ export async function addProductToRequirement(formData: FormData) {
   return { success: true }
 }
 
-export async function updateRequirement(id: string, data: Record<string, unknown>) {
+const EDITABLE_STATUSES = ['draft', 'active', 'quoted', 'won', 'lost', 'closed']
+
+/** Internal helper (not an exported action, so it cannot be called from the browser with arbitrary columns). */
+async function updateRequirement(id: string, data: Record<string, unknown>) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
-  const { error } = await supabase.from('requirements').update(data).eq('id', id)
+  const { data: me } = await supabase.from('profiles').select('role, is_active').eq('id', user.id).maybeSingle()
+  if (!me || !me.is_active || me.role === 'client_admin' || me.role === 'client_user') return { error: 'Not allowed' }
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return { error: 'Requirement is required' }
+  // Only these fields may change here. Workflow stage, owner, company and links move through their own actions.
+  const allowed = ['name', 'quantity', 'budget', 'revenue_opportunity', 'deadline', 'delivery_city', 'purpose', 'payment_terms', 'description', 'status']
+  const patch: Record<string, unknown> = {}
+  for (const key of allowed) if (key in data) patch[key] = data[key]
+  if (typeof patch.name === 'string' && !patch.name) return { error: 'Requirement name is required' }
+  if ('status' in patch && !EDITABLE_STATUSES.includes(String(patch.status))) return { error: 'Invalid status' }
+  if ('budget' in patch && patch.budget !== null && !(Number(patch.budget) >= 0)) return { error: 'Budget must be a positive number' }
+  const { data: current } = await supabase.from('requirements').select('workflow_stage, budget, quantity').eq('id', id).maybeSingle()
+  if (!current) return { error: 'Requirement not found' }
+  if (current.workflow_stage) {
+    // Inside the client approval workflow the status follows the workflow (the quotation sync sets quoted/won/lost,
+    // rejection closes it) and the approved budget and quantity stay fixed. Staff may only close it from here.
+    if ('status' in patch && patch.status !== 'closed') delete patch.status
+    const scopeLocked = !['submitted', 'changes_requested', 'admin_rejected'].includes(current.workflow_stage)
+    const changed = (key: 'budget' | 'quantity') => key in patch && Number(patch[key] ?? 0) !== Number(current[key] ?? 0)
+    if (scopeLocked && (changed('budget') || changed('quantity'))) return { error: 'The approved budget and quantity cannot be edited after approval.' }
+  }
+  const { error } = await supabase.from('requirements').update(patch).eq('id', id)
   if (error) return { error: error.message }
   revalidatePath(`/crm/requirements/${id}`)
   return { success: true }

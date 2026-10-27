@@ -4,6 +4,11 @@ import { createClient } from '@/lib/supabase/server'
 import { moduleActionGuard } from '@/lib/module-access'
 import { revalidatePath } from 'next/cache'
 
+// Valid values of the database enum activity_status. (An earlier version inserted 'open', which the enum rejects.)
+const ACTIVITY_STATUSES = ['upcoming', 'completed', 'missed']
+const ACTIVITY_TYPES = ['call', 'email', 'meeting', 'follow_up', 'message']
+const activityType = (value: FormDataEntryValue | null) => (ACTIVITY_TYPES.includes(String(value || '')) ? String(value) : 'follow_up')
+
 export async function logActivity(formData: FormData) {
   const moduleAccess = await moduleActionGuard('activities')
   if (!moduleAccess.ok) return { error: moduleAccess.error }
@@ -19,12 +24,12 @@ export async function logActivity(formData: FormData) {
 
   const { error } = await supabase.from('activities').insert({
     title,
-    type: String(formData.get('type') || 'follow_up'),
+    type: activityType(formData.get('type')),
     due_at: String(formData.get('due_at') || '') || null,
     assigned_to: String(formData.get('assigned_to') || '') || user.id,
     related_type: relatedType,
     related_id: relatedId,
-    status: 'open',
+    status: 'upcoming',
     notes: String(formData.get('notes') || '') || null,
     created_by: user.id,
   })
@@ -48,9 +53,9 @@ export async function updateActivity(formData: FormData) {
 
   const { error } = await supabase.from('activities').update({
     title,
-    type: String(formData.get('type') || 'follow_up'),
+    type: activityType(formData.get('type')),
     notes: String(formData.get('notes') || '') || null,
-    status: String(formData.get('status') || 'upcoming'),
+    status: ACTIVITY_STATUSES.includes(String(formData.get('status') || '')) ? String(formData.get('status')) : 'upcoming',
   }).eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/crm/activities')

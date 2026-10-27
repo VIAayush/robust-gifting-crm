@@ -91,6 +91,9 @@ begin
   if not found then raise exception 'Quotation not found'; end if;
   if q.company_id is distinct from public.client_company_id() then raise exception 'Quotation not found'; end if;
   if q.status not in ('sent', 'viewed') then raise exception 'This quotation can no longer be answered'; end if;
+  if q.valid_until is not null and q.valid_until < (now() at time zone 'Asia/Kolkata')::date then
+    raise exception 'This quotation has expired. Please ask us for a refreshed quotation';
+  end if;
   if p_decisions is null or jsonb_typeof(p_decisions) <> 'array' then raise exception 'Please accept or reject each item'; end if;
 
   select count(*) into v_total_items from public.quotation_items where quotation_id = p_quotation_id;
@@ -128,7 +131,7 @@ begin
     case when v_accepted = v_total_items then 'Quotation accepted'
          when v_accepted > 0 then 'Quotation partly accepted (' || v_accepted || ' of ' || v_total_items || ' items)'
          else 'Quotation rejected' end,
-    coalesce(p_comment, ''), '/quotations/' || p_quotation_id);
+    coalesce(p_comment, ''), '/crm/quotations/' || p_quotation_id);
 end;
 $fn$;
 
@@ -151,6 +154,9 @@ begin
   if not found then raise exception 'Quotation not found'; end if;
   if q.company_id is distinct from public.client_company_id() then raise exception 'Quotation not found'; end if;
   if q.status not in ('sent', 'viewed') then raise exception 'This quotation can no longer be answered'; end if;
+  if q.valid_until is not null and q.valid_until < (now() at time zone 'Asia/Kolkata')::date then
+    raise exception 'This quotation has expired. Please ask us for a refreshed quotation';
+  end if;
   v_status := case when p_accept then 'accepted'::public.quotation_status else 'rejected'::public.quotation_status end;
   update public.quotation_items
     set client_decision = case when p_accept then 'accepted' else 'rejected' end, client_decided_at = now()
@@ -165,7 +171,7 @@ begin
     where id = q.campaign_id;
     perform public.record_campaign_event(q.campaign_id, case when p_accept then 'quotation_accepted' else 'quotation_rejected' end, jsonb_build_object('quotation_id', p_quotation_id));
   end if;
-  perform public.notify_users('internal', q.company_id, case when p_accept then 'Quotation accepted' else 'Quotation rejected' end, coalesce(p_comment, ''), '/quotations/' || p_quotation_id);
+  perform public.notify_users('internal', q.company_id, case when p_accept then 'Quotation accepted' else 'Quotation rejected' end, coalesce(p_comment, ''), '/crm/quotations/' || p_quotation_id);
 end;
 $fn$;
 
@@ -242,7 +248,7 @@ begin
     update public.campaigns set status = 'order_ready' where id = q.campaign_id;
     perform public.record_campaign_event(q.campaign_id, 'order_created', jsonb_build_object('order_id', v_order_id));
   end if;
-  perform public.notify_users('internal', q.company_id, 'New order from accepted quotation', '', '/orders/' || v_order_id::text);
+  perform public.notify_users('internal', q.company_id, 'New order from accepted quotation', '', '/crm/orders/' || v_order_id::text);
   perform public.notify_users('client', q.company_id, 'Your order is confirmed', 'We have started fulfilment.', '/portal/orders');
   return v_order_id;
 end;

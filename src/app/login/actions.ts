@@ -9,6 +9,8 @@ import { isSafeNext, landingPathForRole } from '@/lib/safe-next'
 import { requestOrigin, recoveryRedirectTo } from '@/lib/auth/request-origin'
 import { validateNewPassword } from '@/lib/auth/password'
 import { sendEmail } from '@/lib/email/resend'
+import { RATE_LIMIT_MESSAGE } from '@/lib/security/rate-limit'
+import { RATE_RULES, isRateLimited, isTargetRateLimited } from '@/lib/security/rate-limit-server'
 import { passwordResetEmail, confirmSignupEmail } from '@/lib/email/templates'
 import { getRequestTabId } from '@/lib/auth/tab-server'
 import { TAB_REMEMBER_COOKIE, TAB_REMEMBER_MAX_AGE, isTabId } from '@/lib/auth/tab'
@@ -35,6 +37,7 @@ const SIGNUP_CONFIRM_MESSAGE =
   'Check your email to confirm your account, then sign in. If you don\'t see it in a minute or two, check your spam or junk folder.'
 
 export async function signIn(formData: FormData): Promise<{ error?: string; redirectTo?: string } | undefined> {
+  if (await isRateLimited(RATE_RULES.login)) return { error: RATE_LIMIT_MESSAGE }
   const email = String(formData.get('email') || '').trim()
   const password = String(formData.get('password') || '')
   const next = formData.get('next') as string | null
@@ -103,6 +106,7 @@ export async function signUp(formData: FormData): Promise<{ error?: string; mess
 
   if (!fullName) return { error: 'Name is required' }
   if (!email || !email.includes('@')) return { error: 'A valid email is required' }
+  if ((await isRateLimited(RATE_RULES.authEmail)) || (await isTargetRateLimited(RATE_RULES.authEmailTarget, email))) return { error: RATE_LIMIT_MESSAGE }
   const passwordError = validateNewPassword(password, confirm)
   if (passwordError) return { error: passwordError }
 
@@ -190,6 +194,8 @@ export async function requestPasswordReset(formData: FormData): Promise<{ error?
   if (!email || !email.includes('@')) {
     return { error: 'Enter a valid email address' }
   }
+  // Keyed on the address typed, not on whether an account exists, so hitting the limit reveals nothing about accounts.
+  if ((await isRateLimited(RATE_RULES.authEmail)) || (await isTargetRateLimited(RATE_RULES.authEmailTarget, email))) return { error: RATE_LIMIT_MESSAGE }
 
   const redirectTo = await recoveryRedirectTo()
   const admin = createAdminClient()

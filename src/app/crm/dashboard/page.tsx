@@ -136,7 +136,7 @@ export default async function DashboardPage({
     supabase.from('departments').select('id, name, slug'),
     supabase.from('profiles').select('id, full_name, role, department_id').eq('is_active', true).in('role', ['admin', 'sales', 'operations', 'accounts', 'management']),
     supabase.from('tasks').select('id, status, due_at, assigned_to, completed_at, department_id'),
-    supabase.from('activities').select('id, title, type, due_at, status, assigned_to').eq('assigned_to', profile.id).neq('status', 'done').order('due_at', { ascending: true }).limit(6),
+    supabase.from('activities').select('id, title, type, due_at, status, assigned_to').eq('assigned_to', profile.id).eq('status', 'upcoming').order('due_at', { ascending: true }).limit(6),
     supabase
       .from('audit_logs')
       .select('id, action, entity, entity_id, previous_value, new_value, created_at, user_id, profile:profiles(full_name)')
@@ -201,7 +201,7 @@ export default async function DashboardPage({
   const reqToQuote = reqRows.length ? Math.round((quoteRows.length / reqRows.length) * 100) : 0
   const invoiced = invoiceRows.reduce((s, i) => s + Number(i.amount || 0), 0)
   const paid = invoiceRows.filter((i) => i.status === 'paid').reduce((s, i) => s + Number(i.amount || 0), 0)
-  const unpaid = invoiceRows.filter((i) => ['unpaid', 'issued'].includes(i.status))
+  const unpaid = invoiceRows.filter((i) => i.status === 'unpaid')
   const partial = invoiceRows.filter((i) => i.status === 'partially_paid')
   const overdueInv = invoiceRows.filter((i) => i.status === 'overdue')
   const outstanding = invoiced - paid

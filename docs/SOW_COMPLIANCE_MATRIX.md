@@ -2,7 +2,7 @@
 
 Reference: `Robust Gifting CRM - Scope of Work-final.pdf` (7 pages, 26 October 2026). Section and page numbers below refer to that PDF.
 
-**How to read this.** The audit was a code review of the repository plus local checks: `npx tsc --noEmit`, 21 unit test files (`scripts/test-*.mts`), `npm run build`, and browser/HTTP checks of public routes at 375px. No database was available, so nothing that reads or writes Supabase, depends on RLS, sends a real email/WhatsApp message or takes a real payment has been exercised.
+**How to read this.** The audit was a code review of the repository plus local checks: `npx tsc --noEmit`, 33 test files (`scripts/test-*.mts`, run with `npm test`; unit tests plus server actions called against an in-memory fake database), `npm run build`, and browser/HTTP checks of public routes at 375px. No database was available, so nothing that reads or writes Supabase, depends on RLS, sends a real email/WhatsApp message or takes a real payment has been exercised.
 
 Statuses: **PASS** (implemented and verified in this environment), **PARTIAL**, **MISSING**, **BLOCKED** (needs Supabase, credentials or client data), **NOT VERIFIED** (code exists, behaviour not exercised). A feature is never PASS only because a file or test exists: most rows are therefore NOT VERIFIED or BLOCKED for the database-backed part, with the pure logic covered by unit tests where noted.
 
@@ -24,8 +24,9 @@ Statuses: **PASS** (implemented and verified in this environment), **PARTIAL**, 
 | 10 | `20261035_order_cost_protection.sql` | order cost columns and supplier cost per order line no longer readable through the data API (permission-checked functions instead) |
 | 11 | `20261036_rate_limits.sql` | shared rate limiting for the enquiry form, personalisation uploads and order lookup |
 | 12 | `20261037_product_cost_protection.sql` | product cost, margin, internal notes and per-supplier cost no longer readable through the data API (including with the public anon key) |
+| 13 | `20261038_security_hardening.sql` | sign-up can no longer grant a role or company, workflow stage cannot be written directly, accepted-line helpers respect access, no overpayment trigger, notification policies, task status `blocked`, notification link repair |
 
-All are additive and idempotent, enable RLS where they add a table, and have verification queries at the bottom. The application tolerates 3 to 12 being absent (feature simply inactive or, for quotations, whole-quotation response only); 2 is required for the client requirement screens. **None has been applied.** Migrations 10 and 12 change API privileges: apply them together with this version of the code (the code already lists columns explicitly), then run their verification queries with the anon key and as a client, sales and operations user.
+All thirteen are additive and idempotent, enable RLS where they add a table, and have verification queries at the bottom. The application tolerates 3 to 12 being absent (feature simply inactive or, for quotations, whole-quotation response only); 2 is required for the client requirement screens. **None has been applied.** Migration 13 closes a privilege-escalation path at sign-up (a visitor could request the admin role); apply it with the others. Migration 8 (quotation decisions) was edited in the self-audit to refuse acceptance after the validity date and to use correct notification links; it had not been applied. Migrations 10 and 12 change API privileges: apply them together with this version of the code (the code already lists columns explicitly), then run their verification queries with the anon key and as a client, sales and operations user.
 
 ---
 
@@ -193,6 +194,33 @@ All are additive and idempotent, enable RLS where they add a table, and have ver
 | Product cost fields exposed (found during the audit: `products.supplier_cost`, `internal_margin`, `internal_notes` were readable with the public anon key through the public-catalogue policy, and `product_suppliers.supplier_cost` by every internal role) | Migration 12 withdraws API read access to those four columns (anon, clients and internal roles alike) and grants every other column. Authorised staff read them through `product_cost_summary` (admin, accounts, management) and `product_supplier_costs` (suppliers.cost_view). All wildcard product reads were replaced by explicit column lists; the product list, detail, requirement and company pages overlay costs only for permitted roles, and an editable cost field is shown only when the cost actually loaded (saving can never wipe a cost). Server-side cost reads (supplier assignment snapshot, cost history, bulk assignment) use the service role after their permission checks | **BLOCKED** (SQL not run). Isolated tests: stub-client tests for authorised, unauthorised, missing-function and error paths (an unauthorised refusal never falls back to a direct read); a drift test that the code's column lists equal the real table columns; a test that the migrations withhold exactly the cost columns and never grant them to anon; a source scan that fails on any wildcard read of products, orders, order_items or product_suppliers or any cost column named in a normal select |
 | Kanban moves used a canned comment | Dropping a card now asks for an optional comment and stage due date, which go into the hand-off history | PASS (code), needs DB test |
 
+---
+
+## Third pass: self-audit (27 October 2026)
+
+Full details, evidence and test inventory: `docs/SELF_AUDIT_TEST_REPORT.md`. Everything below was verified with unit tests or server actions on a fake database; each needs the database check listed in that report.
+
+| SOW area | Change | Status |
+|---|---|---|
+| 3.2 Payments / checkout | Demo payment cannot be forged across checkouts or while PayU is active; a failed attempt cannot fail a paid checkout; PayU "pending" is no longer treated as failed; callback cannot regress a resolved payment; delivery free-threshold of 0 no longer makes everything free; reconciliation window cannot be crowded out and notifies after a repair | **FIXED (local)**; PASS (action/unit); live PayU BLOCKED |
+| 3.3 Client admin / sign-up | `handle_new_user` no longer trusts sign-up metadata (migration 13); email lookups match literally | **FIXED (local)**, SQL BLOCKED |
+| 3.5 Requirement approvals (RG-23 to RG-29) | Staff editor is allow-listed, staff-only, cannot set a client requirement to won/quoted/draft or change an approved budget/quantity; direct writes to workflow fields refused at the database (migration 13); stages move only through the workflow function | **FIXED (local)**; PASS (action); SQL BLOCKED |
+| 3.5 Quotations | Conditional status updates, viewed can expire, empty quotation cannot be sent, expired quotation cannot be accepted (app and SQL), accepted-line helpers respect access (migration 13) | **FIXED (local)**; PASS (action); SQL BLOCKED |
+| 3.6 Order stages | Status wording unchanged; status literals scanned against the enums | PASS (static) |
+| 3.8 Samples | A request is fulfilled once, stock moves once, failure reopens the request | **FIXED (local)**; PASS (action); atomic function BLOCKED |
+| 3.9 Finance | Overpayment also blocked at the database (migration 13); invoice/receivable/dashboard/payable status values corrected; task "Blocked" now saves | **FIXED (local)**; SQL BLOCKED |
+| 3.4 / supplier cost confidentiality | Cost and margin writes accepted only from roles that can see them | **FIXED (local)**; PASS (action) |
+| 3.10 Notifications | Email ledger retries failures (bounded), never marks unsent mail as delivered, client requirement emails deduped per user; repeated order status notifies again | **FIXED (local)**; PASS (action, stubbed provider); delivery BLOCKED |
+| Section 7 Security / abuse | Rate limits on cart quote, cart order, checkout, sign-up, password reset (also per mailbox), sign-in; `x-real-ip` preferred | **FIXED (local)**; PASS (in-memory); shared limiter BLOCKED |
+| Section 6 Portal vs CRM | Notifications can no longer be created by clients (migration 13); links repaired | SQL BLOCKED |
+| 3.4 / 6 Cost confidentiality in the audit log | Cost and margin figures are removed before anything is written to the audit log (application and, in migration 13, the database trigger); users cannot read cost-bearing audit rows they created; audit rows can only be inserted by internal users as themselves; summaries never print a figure | **FIXED (local)**; PASS (unit/action); SQL BLOCKED; historic rows need the optional scrub |
+| 3.7 Suppliers and procurement | Partner screens can no longer create, edit or remove suppliers (they bypassed `suppliers.*` permissions and the blocked status); order-line supplier assignment checks the line belongs to the order, the supplier exists and is active, and a supplier is needed to progress procurement; audit trail records before/after without cost; friendly vendor errors | **FIXED (local)**; PASS (action) |
+| 3.5 Quotation from requirement | Admin/sales only; fails closed with a clear message when migration 27 is missing (no approval bypass) | **FIXED (local)**; PASS (action) |
+| 3.10 Product-available notices | Email retried after a failure, never repeated, keyed on the full product set | **FIXED (local)**; PASS (action, stubbed provider); delivery BLOCKED |
+| Section 7 Abuse limits | Limitations documented in the self-audit report (per address, `x-real-ip` trust, per-mailbox allowance, fall-open to memory, PayU callback unlimited by design) | Reviewed |
+
+Still open after the follow-up: R8 to R11 in the self-audit report (catalogue multi-company gap, historic audit rows, lint baseline, deployment-dependent rate limits). The SQL parser limitation is explained there with the safe validation route. The two business decisions listed under "Known gaps that remain" are unchanged and were not guessed.
+
 ## Known gaps that remain
 
 1. Operations and sales cannot see order costing in the app today (secure default). **Decision needed** from you on which roles may see costs and margins; the one-line change location is documented in migration 10.
@@ -222,4 +250,4 @@ All are additive and idempotent, enable RLS where they add a table, and have ver
 - Rate limiting: with migration 11, six enquiries from one connection in 10 minutes, the sixth is refused; counters survive a server restart.
 - Samples: two people move the same product at the same time, counts stay correct; a move to or from the team location is recorded.
 
-**Per-migration checks:** run the verification query at the bottom of each of the twelve files.
+**Per-migration checks:** run the verification query at the bottom of each of the thirteen files.

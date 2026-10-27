@@ -7,6 +7,9 @@ import { isValidCustomizationPath } from '@/lib/site/upload-rules'
 import { validateCustomization } from '@/lib/products/customization'
 import { isUuid } from '@/lib/utils'
 import type { CartItem } from '@/lib/site/cart'
+import { RATE_LIMIT_MESSAGE } from '@/lib/security/rate-limit'
+import { RATE_RULES, isRateLimited } from '@/lib/security/rate-limit-server'
+import { deliveryChargeFor } from '@/lib/checkout/delivery'
 import { validateCheckoutCustomer, type CheckoutCustomer, type CheckoutFieldErrors } from '@/lib/checkout/validation'
 
 /**
@@ -23,6 +26,8 @@ export async function createCheckout(
     return { error: 'Corporate accounts request products through the client portal. Please use Requirements instead of checkout.' }
   }
 
+  if (await isRateLimited(RATE_RULES.order)) return { error: RATE_LIMIT_MESSAGE }
+
   // Never trust the browser's validation: re-check every field here.
   const { errors, value } = validateCheckoutCustomer(customer)
   if (Object.keys(errors).length > 0) return { error: 'Please fix the highlighted fields.', fieldErrors: errors }
@@ -38,12 +43,14 @@ export async function createCheckout(
   const productIds = Array.from(new Set(cartItems.map((item) => item.id).filter(isUuid)))
   if (productIds.length === 0) return { error: 'Your cart items could not be resolved. Please re-add them.' }
 
-  const [{ data: products, error: productsError }, { data: variants, error: variantsError }, { data: settings }] = await Promise.all([
+  const [{ data: products, error: productsError }, { data: variants, error: variantsError }, { data: settings, error: settingsError }] = await Promise.all([
     admin.from('products').select('id, name, price, mrp, status, customization_enabled, customization_fields').in('id', productIds),
     admin.from('product_variants').select('id, product_id, colour, extra_price, status').in('product_id', productIds),
     admin.from('org_settings').select('delivery_charge, free_delivery_above').limit(1).maybeSingle(),
   ])
   if (productsError) return { error: productsError.message }
+  // The delivery charge is part of what the customer pays: never fall back to "free" because settings could not be read.
+  if (settingsError) return { error: 'Unable to start checkout just now. Please try again shortly.' }
   if (variantsError) return { error: variantsError.message }
 
   const b2bOnly = await b2bOnlyProductIds(admin, productIds)
@@ -113,9 +120,7 @@ export async function createCheckout(
   const subtotal = Math.round(resolvedItems.reduce((sum, item) => sum + item.line_total, 0) * 100) / 100
   // Storefront prices are shown as final prices; no separate tax line is added.
   const taxAmount = 0
-  const baseDelivery = Number(settings?.delivery_charge) || 0
-  const freeAbove = settings?.free_delivery_above != null ? Number(settings.free_delivery_above) : null
-  const deliveryCharge = freeAbove != null && subtotal >= freeAbove ? 0 : baseDelivery
+  const deliveryCharge = deliveryChargeFor(subtotal, settings)
   const totalAmount = Math.round((subtotal + taxAmount + deliveryCharge) * 100) / 100
 
   // No CRM company/contact is created here: that happens only once payment

@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { exactIlike } from '@/lib/security/like'
 import { headers } from 'next/headers'
 import { RATE_LIMIT_MESSAGE, RATE_RULES, checkRateLimit, clientKeyFromHeaders } from '@/lib/security/rate-limit'
 import { validateEnquiry } from '@/lib/site/upload-rules'
@@ -79,7 +80,7 @@ export async function submitPublicQuote(formData: FormData): Promise<{ error?: s
   const { data: existingCompany } = await admin
     .from('companies')
     .select('id')
-    .ilike('name', companyName)
+    .ilike('name', exactIlike(companyName))
     .limit(1)
     .maybeSingle()
 

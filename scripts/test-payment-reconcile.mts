@@ -64,7 +64,7 @@ assert.equal(s.markedPaid, 0)
 // paid but order creation failed earlier -> repaired, failure note cleared
 t = makeDeps([pay({ status: 'paid', provider_reference: 'MIH9' })])
 s = await reconcilePayments(t.deps as never, now)
-assert.deepEqual(t.calls, ['createOrder', 'note:null'])
+assert.deepEqual(t.calls, ['createOrder', 'note:null', 'notify'], 'a repaired order also sends the (deduped) payment notification')
 assert.equal(s.ordersCreated, 1)
 
 // repair itself fails -> recorded honestly, counted as an error

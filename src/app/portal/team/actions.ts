@@ -8,6 +8,7 @@ import { sendEmail } from '@/lib/email/resend'
 import { teamInviteEmail } from '@/lib/email/templates'
 import { writeAudit } from '@/lib/audit'
 import { emailAllowed } from '@/lib/companies/email-domains'
+import { exactIlike } from '@/lib/security/like'
 
 type Result = { success: true; message?: string } | { error: string }
 
@@ -49,7 +50,7 @@ export async function inviteCompanyMember(formData: FormData): Promise<Result> {
   const allowed = domainError ? [] : ((domainRow?.allowed_email_domains as string[] | null) ?? [])
   if (!emailAllowed(email, allowed)) return { error: `Your company only allows email addresses from: ${allowed.join(', ')}.` }
 
-  const { data: existing } = await ctx.admin.from('profiles').select('id').ilike('email', email).limit(1)
+  const { data: existing } = await ctx.admin.from('profiles').select('id').ilike('email', exactIlike(email)).limit(1)
   if (existing && existing.length > 0) return { error: 'Someone with this email already has an account. Contact Robust Gifting if they need access.' }
 
   const { data: created, error: createError } = await ctx.admin.auth.admin.createUser({

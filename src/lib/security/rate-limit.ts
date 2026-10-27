@@ -18,6 +18,13 @@ export const RATE_RULES = {
   enquiry: { bucket: 'enquiry', max: 5, windowSeconds: 10 * 60 },
   upload: { bucket: 'upload', max: 10, windowSeconds: 10 * 60 },
   track: { bucket: 'track', max: 20, windowSeconds: 10 * 60 },
+  /** Cart quote / order / checkout creation: each call writes customer, lead and order rows. */
+  order: { bucket: 'order', max: 10, windowSeconds: 10 * 60 },
+  /** Sign-up and password-reset requests send e-mail. Generous enough for an office sharing one address. */
+  authEmail: { bucket: 'auth_email', max: 8, windowSeconds: 10 * 60 },
+  /** The same mailbox can only be sent a handful of reset / confirmation e-mails per hour, from any address. */
+  authEmailTarget: { bucket: 'auth_email_target', max: 3, windowSeconds: 60 * 60 },
+  login: { bucket: 'login', max: 30, windowSeconds: 10 * 60 },
 } as const satisfies Record<string, RateRule>
 
 /** Pure sliding-window counter with an injectable clock, so the behaviour is unit-tested. */
@@ -54,11 +61,20 @@ export class MemoryRateLimiter {
 
 const fallback = new MemoryRateLimiter()
 
-/** Stable, non-reversible key for the caller: first hop of x-forwarded-for (or x-real-ip), hashed with the bucket. */
+/**
+ * Stable, non-reversible key for the caller, hashed with the bucket. x-real-ip is set by the hosting platform
+ * (Vercel) from the real connection, so it is preferred; the first hop of x-forwarded-for is only a fallback because
+ * a client can prepend its own value to that header.
+ */
 export function clientKeyFromHeaders(headers: { get(name: string): string | null }, bucket: string): string {
   const forwarded = headers.get('x-forwarded-for') || ''
-  const ip = forwarded.split(',')[0]?.trim() || headers.get('x-real-ip')?.trim() || 'unknown'
+  const ip = headers.get('x-real-ip')?.trim() || forwarded.split(',')[0]?.trim() || 'unknown'
   return createHash('sha256').update(`${bucket}:${ip}`).digest('hex').slice(0, 32)
+}
+
+/** Non-reversible key for a value such as an e-mail address (so the limiter never stores it in clear). */
+export function hashedKey(value: string, bucket: string): string {
+  return createHash('sha256').update(`${bucket}:${value.trim().toLowerCase()}`).digest('hex').slice(0, 32)
 }
 
 function isMissingFunction(error: { code?: string; message: string }) {

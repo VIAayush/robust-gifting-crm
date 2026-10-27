@@ -9,6 +9,8 @@ import { requirePermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
 import { notifyOrderStatusChanged } from '@/lib/notifications'
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 const PROCUREMENT_STATUSES = [
   'not_assigned', 'supplier_selected', 'po_pending', 'po_raised', 'confirmed',
   'in_production', 'ready', 'dispatched', 'received', 'cancelled',
@@ -30,6 +32,18 @@ export async function assignOrderItemSupplier(formData: FormData) {
   const orderId = String(formData.get('order_id') || '')
   const supplierId = String(formData.get('supplier_id') || '') || null
   if (!orderItemId || !orderId) return { error: 'Order item is required' }
+  if (!UUID.test(orderItemId) || !UUID.test(orderId) || (supplierId && !UUID.test(supplierId))) return { error: 'Order item is required' }
+
+  // The line must belong to the order named in the form: otherwise the audit trail and the page refresh would
+  // describe a different order from the one actually changed.
+  const { data: line } = await supabase.from('order_items').select('id, product_id, supplier_id, procurement_status').eq('id', orderItemId).eq('order_id', orderId).maybeSingle()
+  if (!line) return { error: 'Order item not found on this order.' }
+
+  if (supplierId) {
+    const { data: supplier } = await supabase.from('suppliers').select('id, status').eq('id', supplierId).maybeSingle()
+    if (!supplier) return { error: 'Supplier not found.' }
+    if (supplier.status !== 'active') return { error: 'This supplier is not active, so it cannot be assigned to an order.' }
+  }
 
   let snapshot: { supplier_sku_snapshot: string | null; supplier_cost_snapshot: number | null; supplier_lead_time_snapshot: number | null } = {
     supplier_sku_snapshot: null,
@@ -38,7 +52,7 @@ export async function assignOrderItemSupplier(formData: FormData) {
   }
 
   if (supplierId) {
-    const { data: item } = await supabase.from('order_items').select('product_id').eq('id', orderItemId).maybeSingle()
+    const item = line
     if (item?.product_id) {
       // The cost is read with the service role (the permission to assign suppliers was checked above); the ordinary
       // API role cannot read product_suppliers.supplier_cost after migration 20261037.
@@ -69,13 +83,23 @@ export async function assignOrderItemSupplier(formData: FormData) {
       supplier_assigned_by: supplierId ? access.profile.id : null,
     })
     .eq('id', orderItemId)
-  if (error) return { error: error.message }
+    .eq('order_id', orderId)
+  if (error) return { error: 'Could not assign the supplier. Please try again.' }
 
   await writeAudit(supabase, {
     action: 'assign_supplier',
     entity: 'order_items',
     entityId: orderItemId,
-    next: { order_id: orderId, supplier_id: supplierId, ...snapshot },
+    // The cost snapshot itself is never written to the audit log (see lib/audit-redact.ts); only that one was recorded.
+    previous: { order_id: orderId, supplier_id: line.supplier_id ?? null, procurement_status: line.procurement_status ?? null },
+    next: {
+      order_id: orderId,
+      supplier_id: supplierId,
+      procurement_status: supplierId ? 'supplier_selected' : 'not_assigned',
+      supplier_sku_snapshot: snapshot.supplier_sku_snapshot,
+      supplier_lead_time_snapshot: snapshot.supplier_lead_time_snapshot,
+      cost_snapshot_recorded: snapshot.supplier_cost_snapshot !== null,
+    },
     userId: access.profile.id,
   })
   revalidatePath(`/crm/orders/${orderId}`)
@@ -93,17 +117,25 @@ export async function updateOrderItemProcurement(formData: FormData) {
   const notes = String(formData.get('procurement_notes') || '').trim() || null
   if (!orderItemId || !orderId) return { error: 'Order item is required' }
   if (!(PROCUREMENT_STATUSES as readonly string[]).includes(status)) return { error: 'Invalid procurement status' }
+  if (!UUID.test(orderItemId) || !UUID.test(orderId)) return { error: 'Order item is required' }
+
+  const { data: line } = await supabase.from('order_items').select('id, supplier_id, procurement_status').eq('id', orderItemId).eq('order_id', orderId).maybeSingle()
+  if (!line) return { error: 'Order item not found on this order.' }
+  // Progress beyond "not assigned" needs a supplier; otherwise the status would describe work nobody is doing.
+  if (status !== 'not_assigned' && status !== 'cancelled' && !line.supplier_id) return { error: 'Assign a supplier to this item before updating its procurement status.' }
 
   const { error } = await supabase
     .from('order_items')
     .update({ procurement_status: status, procurement_notes: notes })
     .eq('id', orderItemId)
-  if (error) return { error: error.message }
+    .eq('order_id', orderId)
+  if (error) return { error: 'Could not update the procurement status. Please try again.' }
 
   await writeAudit(supabase, {
     action: 'update_procurement_status',
     entity: 'order_items',
     entityId: orderItemId,
+    previous: { order_id: orderId, procurement_status: line.procurement_status ?? null },
     next: { order_id: orderId, procurement_status: status },
     userId: access.profile.id,
   })

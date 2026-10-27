@@ -205,11 +205,16 @@ export async function updateSampleRequestStatus(formData: FormData) {
   if (!requestId) failRequests('Missing sample request.')
   if (status !== 'approved' && status !== 'rejected') failRequests('Invalid status.')
 
-  const { error } = await supabase
+  // Only an open request (pending or approved) can be approved or rejected; a shipped one is final.
+  const { data: changed, error } = await supabase
     .from('sample_requests')
     .update({ status, assigned_to: access.profile.id })
     .eq('id', requestId)
+    .in('status', ['pending', 'approved'])
+    .select('id')
+    .maybeSingle()
   if (error) failRequests(error.message)
+  if (!changed) failRequests('This request has already been handled.')
 
   okRequests('updated')
 }
@@ -230,10 +235,12 @@ export async function fulfillSampleRequest(formData: FormData) {
 
   const { data: request, error: requestError } = await supabase
     .from('sample_requests')
-    .select('id, product_id, company_id, quantity')
+    .select('id, product_id, company_id, quantity, status')
     .eq('id', requestId)
     .single()
   if (requestError || !request) failRequests(requestError?.message || 'Sample request not found.')
+  // A request is fulfilled once: shipped or rejected requests never move stock again.
+  if (request.status !== 'pending' && request.status !== 'approved') failRequests('This request has already been handled.')
 
   const { data: stock, error: stockError } = await supabase
     .from('sample_stock')
@@ -243,6 +250,17 @@ export async function fulfillSampleRequest(formData: FormData) {
   if (stockError) failRequests(stockError.message)
   if (!stock) failRequests('No samples in office for this product yet — receive some first.')
 
+  const previousStatus = request.status
+  // Claim the request BEFORE moving stock: of two simultaneous clicks only one wins, so stock is never moved twice.
+  const { data: claimed } = await supabase
+    .from('sample_requests')
+    .update({ status: 'shipped', assigned_to: access.profile.id })
+    .eq('id', requestId)
+    .in('status', ['pending', 'approved'])
+    .select('id')
+    .maybeSingle()
+  if (!claimed) failRequests('This request has already been handled.')
+
   const result = await performSampleMovement(supabase, access.profile.id, {
     stockId: stock.id,
     from: 'office',
@@ -251,11 +269,15 @@ export async function fulfillSampleRequest(formData: FormData) {
     companyId: request.company_id,
     note: 'Fulfilled from customer sample request',
   })
-  if ('error' in result) failRequests(result.error)
+  if ('error' in result) {
+    // Nothing moved, so the request goes back to what it was and can be tried again.
+    await supabase.from('sample_requests').update({ status: previousStatus }).eq('id', requestId).eq('status', 'shipped')
+    failRequests(result.error)
+  }
 
   const { error: updateError } = await supabase
     .from('sample_requests')
-    .update({ status: 'shipped', assigned_to: access.profile.id, fulfilled_via_movement_id: result.movementId })
+    .update({ fulfilled_via_movement_id: result.movementId })
     .eq('id', requestId)
   if (updateError) failRequests(updateError.message)
 

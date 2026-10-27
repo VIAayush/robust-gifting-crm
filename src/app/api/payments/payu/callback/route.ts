@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { PayuPaymentProvider } from '@/lib/payments'
 import { createOrderFromCheckout } from '@/app/checkout/order'
 import { notifyPaymentResult } from '@/lib/notifications'
+import { markCheckoutFailedIfUnpaid } from '@/lib/payments/checkout-state'
 
 /**
  * PayU's surl AND furl both point here (same fields either way,
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
 
   if (!verification.ok) {
     // Could not reach PayU / ambiguous response — leave status as 'processing' rather than guessing paid or failed.
-    await admin.from('storefront_payments').update({ status: 'processing', raw_response: fields }).eq('id', payment.id)
+    await admin.from('storefront_payments').update({ status: 'processing', raw_response: fields }).eq('id', payment.id).in('status', ['pending', 'processing'])
     return NextResponse.redirect(checkoutUrl, 303)
   }
 
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
       .select('id')
       .maybeSingle()
     if (!claimed) return NextResponse.redirect(checkoutUrl, 303)
-    await admin.from('storefront_checkouts').update({ status: 'failed' }).eq('id', payment.checkout_id)
+    await markCheckoutFailedIfUnpaid(admin, payment.checkout_id)
     await notifyPaymentResult(payment.id)
   }
 

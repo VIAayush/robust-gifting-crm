@@ -4,13 +4,15 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { getProfile } from '@/lib/auth'
 import { writeAudit } from '@/lib/audit'
+import { friendlyVendorError } from '@/lib/vendors/errors'
 
 const PARTNER_ROLES = ['admin', 'operations', 'management'] as const
-const PARTNER_TABLES = ['suppliers', 'printing_vendors', 'courier_partners'] as const
+// Suppliers are NOT managed here: they have their own screens, statuses (active / inactive / blocked) and the
+// suppliers.* permissions. Accepting 'suppliers' in this action would let admin/operations/management bypass them.
+const PARTNER_TABLES = ['printing_vendors', 'courier_partners'] as const
 type PartnerTable = (typeof PARTNER_TABLES)[number]
 
 const PATHS: Record<PartnerTable, string> = {
-  suppliers: '/crm/suppliers',
   printing_vendors: '/crm/printing-vendors',
   courier_partners: '/crm/courier-partners',
 }
@@ -19,6 +21,9 @@ function partnerTable(formData: FormData): PartnerTable | null {
   const table = String(formData.get('table') || '')
   return PARTNER_TABLES.includes(table as PartnerTable) ? (table as PartnerTable) : null
 }
+
+const SUPPLIER_REFUSAL = 'Suppliers are managed on the Suppliers page, not here.'
+const isSupplierRequest = (formData: FormData) => String(formData.get('table') || '') === 'suppliers'
 
 async function requirePartnerEditor() {
   const profile = await getProfile()
@@ -40,13 +45,6 @@ function partnerPayload(formData: FormData, table: PartnerTable) {
     notes: String(formData.get('notes') || '') || null,
     is_active: String(formData.get('is_active') || 'true') !== 'false',
   }
-  if (table === 'suppliers') {
-    return {
-      ...base,
-      category: String(formData.get('category') || '') || null,
-      credit_period_days: Number(formData.get('credit_period_days') || 0) || 0,
-    }
-  }
   if (table === 'printing_vendors') {
     return {
       ...base,
@@ -63,6 +61,7 @@ function partnerPayload(formData: FormData, table: PartnerTable) {
 export async function createPartner(formData: FormData) {
   const access = await requirePartnerEditor()
   if ('error' in access) return { error: access.error }
+  if (isSupplierRequest(formData)) return { error: SUPPLIER_REFUSAL }
   const table = partnerTable(formData)
   if (!table) return { error: 'Vendor type is required' }
   const payload = partnerPayload(formData, table)
@@ -70,7 +69,7 @@ export async function createPartner(formData: FormData) {
 
   const supabase = await createClient()
   const { data, error } = await supabase.from(table).insert(payload as never).select('id').single()
-  if (error || !data) return { error: error?.message || 'Could not create vendor' }
+  if (error || !data) return { error: error ? friendlyVendorError(error) : 'Could not create vendor' }
   await writeAudit(supabase, {
     action: 'create',
     entity: table,
@@ -85,6 +84,7 @@ export async function createPartner(formData: FormData) {
 export async function updatePartner(formData: FormData) {
   const access = await requirePartnerEditor()
   if ('error' in access) return { error: access.error }
+  if (isSupplierRequest(formData)) return { error: SUPPLIER_REFUSAL }
   const table = partnerTable(formData)
   const id = String(formData.get('id') || '')
   if (!table || !id) return { error: 'Vendor is required' }
@@ -93,7 +93,7 @@ export async function updatePartner(formData: FormData) {
 
   const supabase = await createClient()
   const { error } = await supabase.from(table).update(payload as never).eq('id', id)
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyVendorError(error) }
   await writeAudit(supabase, {
     action: 'update',
     entity: table,
@@ -108,6 +108,7 @@ export async function updatePartner(formData: FormData) {
 export async function removePartner(formData: FormData) {
   const access = await requirePartnerEditor()
   if ('error' in access) return { error: access.error }
+  if (isSupplierRequest(formData)) return { error: SUPPLIER_REFUSAL }
   if (access.profile.role !== 'admin') return { error: 'Only an admin can remove a vendor' }
   const table = partnerTable(formData)
   const id = String(formData.get('id') || '')
@@ -118,15 +119,10 @@ export async function removePartner(formData: FormData) {
   if (!row) return { error: 'Vendor not found' }
 
   const fkColumn =
-    table === 'suppliers' ? 'supplier_id' : table === 'printing_vendors' ? 'printing_vendor_id' : 'courier_partner_id'
-  const [{ count: orderCount }, { count: productCount }] = await Promise.all([
-    supabase.from('orders').select('id', { count: 'exact', head: true }).eq(fkColumn, id),
-    table === 'suppliers'
-      ? supabase.from('products').select('id', { count: 'exact', head: true }).eq('supplier_id', id)
-      : Promise.resolve({ count: 0 }),
-  ])
+    table === 'printing_vendors' ? 'printing_vendor_id' : 'courier_partner_id'
+  const { count: orderCount } = await supabase.from('orders').select('id', { count: 'exact', head: true }).eq(fkColumn, id)
 
-  if (orderCount || productCount) {
+  if (orderCount) {
     const { error } = await supabase.from(table).update({ is_active: false }).eq('id', id)
     if (error) return { error: error.message }
     revalidatePath(PATHS[table])

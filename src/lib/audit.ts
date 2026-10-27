@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { redactAuditValue } from '@/lib/audit-redact'
 
 export async function writeAudit(
   supabase: SupabaseClient,
@@ -16,8 +17,9 @@ export async function writeAudit(
     action: params.action,
     entity: params.entity,
     entity_id: params.entityId || null,
-    previous_value: params.previous ?? null,
-    new_value: params.next ?? null,
+    // Cost and margin figures never go into the audit log (see audit-redact.ts).
+    previous_value: redactAuditValue(params.entity, params.previous) ?? null,
+    new_value: redactAuditValue(params.entity, params.next) ?? null,
   })
   if (error) {
     console.error('audit_logs insert failed', error.message)

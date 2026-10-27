@@ -1,7 +1,11 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { exactIlike } from '@/lib/security/like'
 import { b2bOnlyProductIds } from '@/lib/catalogue/channel'
+import { baseDeliveryCharge, freeDeliveryThreshold } from '@/lib/checkout/delivery'
+import { RATE_LIMIT_MESSAGE } from '@/lib/security/rate-limit'
+import { RATE_RULES, isRateLimited } from '@/lib/security/rate-limit-server'
 
 function clean(value: FormDataEntryValue | null) {
   return String(value || '').trim()
@@ -45,6 +49,7 @@ async function findOrCreateOwner(admin: ReturnType<typeof createAdminClient>) {
  */
 export async function submitCartQuote(formData: FormData): Promise<{ error?: string; success?: boolean }> {
   if (clean(formData.get('fax'))) return { success: true }
+  if (await isRateLimited(RATE_RULES.enquiry)) return { error: RATE_LIMIT_MESSAGE }
 
   const fullName = clean(formData.get('full_name'))
   const email = clean(formData.get('email')).toLowerCase()
@@ -71,7 +76,7 @@ export async function submitCartQuote(formData: FormData): Promise<{ error?: str
 
   const ownerId = await findOrCreateOwner(admin)
 
-  const { data: existingCompany } = await admin.from('companies').select('id').ilike('name', companyName).limit(1).maybeSingle()
+  const { data: existingCompany } = await admin.from('companies').select('id').ilike('name', exactIlike(companyName)).limit(1).maybeSingle()
   let companyId = existingCompany?.id as string | undefined
   if (!companyId) {
     const { data: created, error } = await admin
@@ -120,6 +125,7 @@ export async function submitCartQuote(formData: FormData): Promise<{ error?: str
  */
 export async function submitCartOrder(formData: FormData): Promise<{ error?: string; success?: boolean }> {
   if (clean(formData.get('fax'))) return { success: true }
+  if (await isRateLimited(RATE_RULES.order)) return { error: RATE_LIMIT_MESSAGE }
 
   const fullName = clean(formData.get('full_name'))
   const email = clean(formData.get('email')).toLowerCase()
@@ -220,8 +226,8 @@ export async function refreshCartPrices(
   const b2bOnly = await b2bOnlyProductIds(admin, productIds)
 
   return {
-    deliveryCharge: Number(settings?.delivery_charge) || 0,
-    freeDeliveryAbove: settings?.free_delivery_above != null ? Number(settings.free_delivery_above) : null,
+    deliveryCharge: baseDeliveryCharge(settings),
+    freeDeliveryAbove: freeDeliveryThreshold(settings),
     lines: lines.map((line) => {
       const product = productById.get(line.id)
       if (!product || product.status !== 'active' || !(Number(product.price) > 0) || b2bOnly.has(line.id)) {

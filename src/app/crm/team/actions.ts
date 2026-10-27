@@ -1,5 +1,6 @@
 'use server'
 
+import { exactIlike } from '@/lib/security/like'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -108,7 +109,7 @@ export async function inviteTeamMember(formData: FormData): Promise<InviteResult
     if (!dept) return { error: 'That department no longer exists.' }
   }
 
-  const { data: existing } = await admin.from('profiles').select('id, role').ilike('email', email).limit(1)
+  const { data: existing } = await admin.from('profiles').select('id, role').ilike('email', exactIlike(email)).limit(1)
   if (existing && existing.length > 0) {
     return { error: 'Someone with this email already has an account. Change their role in the table below instead.' }
   }

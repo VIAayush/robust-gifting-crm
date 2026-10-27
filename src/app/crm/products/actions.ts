@@ -5,7 +5,7 @@ import { validateProductForm, friendlyProductDbError } from '@/lib/products/vali
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { getProfile } from '@/lib/auth'
+import { getProfile, canSeeCosts } from '@/lib/auth'
 import { writeAudit } from '@/lib/audit'
 import { notifyProductsAvailable } from '@/lib/notifications'
 import { resyncPrimaryImage } from '@/lib/products/gallery'
@@ -62,8 +62,10 @@ export async function createProduct(formData: FormData) {
   const description = (formData.get('description') as string) || null
   const price = parseFloat(formData.get('price') as string) || 0
   const mrp = formData.get('mrp') ? parseFloat(formData.get('mrp') as string) : null
-  const supplier_cost = formData.get('supplier_cost') ? parseFloat(formData.get('supplier_cost') as string) : null
-  const internal_margin = formData.get('internal_margin') ? parseFloat(formData.get('internal_margin') as string) : null
+  // Cost and margin are only accepted from roles that may see them; a hand-built request from anyone else is ignored.
+  const mayWriteCosts = canSeeCosts(profile.role)
+  const supplier_cost = mayWriteCosts && formData.get('supplier_cost') ? parseFloat(formData.get('supplier_cost') as string) : null
+  const internal_margin = mayWriteCosts && formData.get('internal_margin') ? parseFloat(formData.get('internal_margin') as string) : null
   const moq = parseInt(formData.get('moq') as string, 10) || 1
   const image_url = ((formData.get('image_url') as string) || '').trim() || null
   const hsn_code = ((formData.get('hsn_code') as string) || '').trim() || null
@@ -330,8 +332,10 @@ export async function updateProduct(productId: string, formData: FormData) {
   text('hsn_code')
   number('price', 'price', 0)
   number('mrp')
-  number('supplier_cost')
-  number('internal_margin')
+  if (canSeeCosts(profile.role)) {
+    number('supplier_cost')
+    number('internal_margin')
+  }
   number('moq', 'moq', 1)
 
   const nextPrice = 'price' in update ? Number(update.price) : Number(existing.price)

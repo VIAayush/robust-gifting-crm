@@ -50,7 +50,7 @@ export default async function PayablesPage() {
                   <td className="p-3 text-sm">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${
                       payable.status === 'paid' ? 'bg-green-100 text-green-800' :
-                      (payable.status === 'partial' || payable.status === 'partially_paid') ? 'bg-blue-100 text-blue-800' :
+                      payable.status === 'partial' ? 'bg-blue-100 text-blue-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
                       {String(payable.status || '').replace(/_/g, ' ')}
