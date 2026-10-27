@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CUSTOMIZATION_FIELDS } from '@/lib/products/customization'
+import { CUSTOMIZATION_FIELDS, CUSTOMIZATION_MAX_LENGTH, REQUIRED_CUSTOMIZATION_FIELDS } from '@/lib/products/customization'
 import { uploadCustomizationFile } from '@/app/personalized/customization-actions'
 import type { CustomizationData } from '@/lib/site/cart'
 
@@ -44,7 +44,7 @@ export function ProductCustomizer({
           if (field.type === 'file') {
             return (
               <label key={field.key} className="block">
-                <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#5C6570]">{field.label}</span>
+                <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#5C6570]">{field.label}{REQUIRED_CUSTOMIZATION_FIELDS.includes(field.key) ? ' *' : ''}</span>
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/webp,application/pdf"
@@ -84,8 +84,8 @@ export function ProductCustomizer({
           }
           return (
             <label key={field.key} className="block">
-              <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#5C6570]">{field.label}</span>
-              <input type="text" maxLength={80} className={inputClass} onChange={(event) => setValue(field.key, event.target.value)} />
+              <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#5C6570]">{field.label}{REQUIRED_CUSTOMIZATION_FIELDS.includes(field.key) ? ' *' : ''}</span>
+              <input type="text" required={REQUIRED_CUSTOMIZATION_FIELDS.includes(field.key)} maxLength={CUSTOMIZATION_MAX_LENGTH[field.key] ?? 80} className={inputClass} onChange={(event) => setValue(field.key, event.target.value)} />
             </label>
           )
         })}

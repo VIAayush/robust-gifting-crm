@@ -14,6 +14,9 @@ Written while the Supabase project was unavailable. Nothing marked BLOCKED or NO
 | 6 | `20261031_product_sales_channel.sql` | `products.sales_channel` (default `both`) and the B2B portal view filter | every product counts as `both` |
 | 7 | `20261032_site_banners.sql` | `site_banners` table with RLS | no banners shown; admin page explains |
 | 8 | `20261033_quotation_item_decisions.sql` | item-by-item quotation acceptance; order from accepted items only | whole-quotation response only |
+| 10 | `20261035_order_cost_protection.sql` | order costs readable only through permission-checked functions | direct API reads of costs stay open |
+| 11 | `20261036_rate_limits.sql` | shared rate limiting for public forms | in-memory limiter per server instance |
+| 12 | `20261037_product_cost_protection.sql` | product and supplier costs readable only through permission-checked functions | direct API reads of product costs (including with the anon key) stay open |
 | 9 | `20261034_order_history_handoff_and_sample_team.sql` | assignee/due date in order history, no duplicate history rows, sample moves to/from the team location | history without assignee/due; team moves fail |
 
 All are additive and idempotent. Verification queries are at the bottom of each file. Migration 2 is the only one the shipped code depends on (the full scope-of-work audit is in `docs/SOW_COMPLIANCE_MATRIX.md`); apply 1 and 2 first.

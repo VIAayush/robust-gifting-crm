@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { totalGrossProfit } from '@/lib/orders/costs'
 import { requireStaff, canSeeFinance, applyOrderScope, applyOwnerScope, applyCompanyScope, seesAllSalesRecords } from '@/lib/auth'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { ORDER_LIFECYCLE, ORDER_STATUS_LABELS, orderHealth } from '@/lib/order-workflow'
@@ -27,7 +28,6 @@ type DashOrder = {
   stage_due_at: string | null
   owner_id: string | null
   company_id: string | null
-  gross_profit: number | null
   created_at: string
 }
 type DashLead = { id: string; stage: string; owner_id: string | null; created_at: string; estimated_value: number | null }
@@ -71,7 +71,7 @@ export default async function DashboardPage({
   let orderQuery = applyOrderScope(
     supabase
       .from('orders')
-      .select('id, status, order_value, expected_delivery_date, assigned_to, current_department_id, stage_due_at, owner_id, company_id, gross_profit, created_at'),
+      .select('id, status, order_value, expected_delivery_date, assigned_to, current_department_id, stage_due_at, owner_id, company_id, created_at'),
     profile
   )
   let leadQuery = applyOwnerScope(
@@ -185,7 +185,8 @@ export default async function DashboardPage({
   }
   const liveOrders = orderRows.filter((o) => o.status !== 'cancelled')
   const totalOrderValue = liveOrders.reduce((s, o) => s + Number(o.order_value || 0), 0)
-  const margin = liveOrders.reduce((s, o) => s + Number(o.gross_profit || 0), 0)
+  // Margin comes through a permission-checked database function, only for roles that may see finance figures.
+  const margin = canSeeFinance(profile.role) ? await totalGrossProfit(supabase, liveOrders.map((o) => o.id)) : 0
   const inProgress = orderRows.filter((o) => !['delivered', 'cancelled'].includes(o.status))
   const delayed = inProgress.filter((o) => orderHealth(o.status, o.expected_delivery_date, o.stage_due_at) === 'delayed')
   const atRisk = inProgress.filter((o) => orderHealth(o.status, o.expected_delivery_date, o.stage_due_at) === 'at_risk')

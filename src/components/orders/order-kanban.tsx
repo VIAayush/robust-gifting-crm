@@ -28,12 +28,29 @@ export function OrderKanban({
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
+  // A dropped card waits for confirmation so the move carries a comment and due date into the order history.
+  const [move, setMove] = useState<{ orderId: string; status: string } | null>(null)
+  const [comment, setComment] = useState('')
+  const [due, setDue] = useState('')
+
   const onDrop = (status: string, orderId: string) => {
     if (!canDrag) return
+    const card = orders.find((o) => o.id === orderId)
+    if (!card || card.status === status) return
+    setError(null)
+    setComment('')
+    setDue('')
+    setMove({ orderId, status })
+  }
+
+  const confirmMove = () => {
+    if (!move || pending) return
+    const { orderId, status } = move
     setError(null)
     start(async () => {
-      const result = await setOrderStage(orderId, status)
+      const result = await setOrderStage(orderId, status, comment, due)
       if (result?.error) setError(result.error)
+      else setMove(null)
     })
   }
 
@@ -41,6 +58,25 @@ export function OrderKanban({
     <div className="space-y-3">
       {error && <p className="text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>}
       {pending && <p className="text-[11px] text-[#4A5568]">Updating stage…</p>}
+      {move ? (
+        <div role="dialog" aria-label="Confirm stage change" className="space-y-2 rounded-xl border border-[#9C7A33]/40 bg-white p-3 text-xs">
+          <p className="font-semibold text-gray-900">
+            Move {orders.find((o) => o.id === move.orderId)?.order_number} to {ORDER_STATUS_LABELS[move.status] || move.status}
+          </p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <label className="sm:col-span-2 font-medium text-gray-700">Comment (optional)
+              <input value={comment} onChange={(e) => setComment(e.target.value)} maxLength={1000} className="mt-1 w-full rounded-md border px-2 py-1.5" />
+            </label>
+            <label className="font-medium text-gray-700">Stage due date (optional)
+              <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="mt-1 w-full rounded-md border px-2 py-1.5" />
+            </label>
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={confirmMove} disabled={pending} className="min-h-9 rounded-md bg-[#9C7A33] px-3 font-semibold text-white disabled:opacity-60">Confirm move</button>
+            <button type="button" onClick={() => setMove(null)} disabled={pending} className="min-h-9 rounded-md border px-3 font-semibold text-gray-700">Cancel</button>
+          </div>
+        </div>
+      ) : null}
       <div className="overflow-x-auto pb-2">
         <div className="flex gap-3 min-w-max">
           {ORDER_LIFECYCLE.map((column) => {

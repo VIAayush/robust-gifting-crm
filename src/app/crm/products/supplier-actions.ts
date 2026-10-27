@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { writeAudit } from '@/lib/audit'
 import { requirePermission } from '@/lib/permissions'
@@ -60,7 +61,8 @@ export async function updateProductSupplier(formData: FormData) {
   const productId = String(formData.get('product_id') || '')
   if (!id || !productId) return { error: 'Mapping is required' }
 
-  const { data: previous } = await supabase
+  // Previous cost is needed for the cost history; read with the service role after the permission check above.
+  const { data: previous } = await (createAdminClient() ?? supabase)
     .from('product_suppliers')
     .select('supplier_cost, is_preferred, status')
     .eq('id', id)

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { PRODUCT_COLUMNS, loadProductCosts } from '@/lib/products/costs'
 import Link from 'next/link'
 import { Plus, Search, Upload } from 'lucide-react'
 import { requireStaff, canSeeCosts } from '@/lib/auth'
@@ -30,7 +31,7 @@ export default async function ProductsPage({
 
   let query = supabase
     .from('products')
-    .select('*, category:categories(id, name), brand:brands(id, name), company_product_access(count)', { count: 'exact' })
+    .select(`${PRODUCT_COLUMNS}, category:categories(id, name), brand:brands(id, name), company_product_access(count)`, { count: 'exact' })
     .order('name')
 
   if (search) {
@@ -68,6 +69,9 @@ export default async function ProductsPage({
   ])
 
   const categories = sortProductCategories(categoryRows || [])
+  // Cost is not part of the ordinary product query; roles allowed to see it fetch it through a checked function.
+  const costMap = showCost ? await loadProductCosts(supabase, (products || []).map((p) => p.id as string)) : new Map()
+  const listItems = (products || []).map((p) => ({ ...p, supplier_cost: costMap.get(p.id as string)?.supplier_cost ?? null }))
   const total = count || 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const buildHref = (overrides: Record<string, string>) => {
@@ -193,7 +197,7 @@ export default async function ProductsPage({
         />
       </div>
 
-      <ProductsBrowser products={products || []} showCost={showCost} />
+      <ProductsBrowser products={listItems} showCost={showCost} />
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between">

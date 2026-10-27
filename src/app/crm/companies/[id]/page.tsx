@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { PRODUCT_EMBED_COLUMNS } from '@/lib/products/costs'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { BackButton } from '@/components/ui/back-button'
@@ -13,6 +14,7 @@ import { grantCompanyProductAccess, revokeCompanyProductAccess } from '@/app/crm
 import { ProductPicker } from '@/components/products/product-picker'
 import { fetchAllProducts } from '@/lib/products/all-products'
 import { requireStaff } from '@/lib/auth'
+import { ORDER_COLUMNS } from '@/lib/orders/costs'
 import { createContact } from '@/app/crm/contacts/actions'
 import { asFormAction } from '@/lib/form-action'
 import { PortalClientForm } from '../portal-client-form'
@@ -55,9 +57,9 @@ export default async function CompanyDetailPage({
     supabase.from('leads').select('*').eq('company_id', id).order('created_at', { ascending: false }),
     supabase.from('requirements').select('*').eq('company_id', id).order('created_at', { ascending: false }),
     supabase.from('quotations').select('*').eq('company_id', id).order('created_at', { ascending: false }),
-    supabase.from('orders').select('*').eq('company_id', id).order('created_at', { ascending: false }),
+    supabase.from('orders').select(ORDER_COLUMNS).eq('company_id', id).order('created_at', { ascending: false }),
     supabase.from('invoices').select('id, invoice_number, amount, status, created_at').eq('company_id', id).order('created_at', { ascending: false }),
-    supabase.from('company_product_access').select('*, product:products!inner(*)').eq('company_id', id).eq('product.status', 'active'),
+    supabase.from('company_product_access').select(`*, product:products!inner(${PRODUCT_EMBED_COLUMNS})`).eq('company_id', id).eq('product.status', 'active'),
     fetchAllProducts(supabase).then((data) => ({ data })),
     supabase.from('profiles').select('id, full_name, email, role, is_active').eq('company_id', id).in('role', ['client_admin', 'client_user']).order('full_name'),
     supabase.from('tasks').select('id, title, status, due_at, assigned_to, order_id, priority, assignee:profiles!assigned_to(full_name)').eq('company_id', id).order('due_at', { ascending: true }),

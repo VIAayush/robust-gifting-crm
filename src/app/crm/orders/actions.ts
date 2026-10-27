@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { getProfile, canChangeOrderStage, canSeeCosts, isOpsStaff } from '@/lib/auth'
 import { nextLifecycleStatus, STAGE_DEPARTMENT, ORDER_STATUS_LABELS } from '@/lib/order-workflow'
@@ -39,7 +40,9 @@ export async function assignOrderItemSupplier(formData: FormData) {
   if (supplierId) {
     const { data: item } = await supabase.from('order_items').select('product_id').eq('id', orderItemId).maybeSingle()
     if (item?.product_id) {
-      const { data: mapping } = await supabase
+      // The cost is read with the service role (the permission to assign suppliers was checked above); the ordinary
+      // API role cannot read product_suppliers.supplier_cost after migration 20261037.
+      const { data: mapping } = await (createAdminClient() ?? supabase)
         .from('product_suppliers')
         .select('supplier_sku, supplier_cost, lead_time_days')
         .eq('product_id', item.product_id)
@@ -171,13 +174,18 @@ export async function handOffOrder(formData: FormData) {
   return { success: true }
 }
 
-export async function setOrderStage(orderId: string, status: string) {
+export async function setOrderStage(orderId: string, status: string, comment?: string, stageDue?: string) {
   const profile = await getProfile()
   if (!profile) return { error: 'Not authenticated' }
   if (!canChangeOrderStage(profile.role)) return { error: 'Not permitted to change order stages' }
 
   const allowed = new Set([...Object.keys(STAGE_DEPARTMENT), 'cancelled', 'in_progress'])
   if (!allowed.has(status)) return { error: 'Invalid stage' }
+
+  const cleanComment = String(comment ?? '').trim().slice(0, 1000)
+  const dueRaw = String(stageDue ?? '').trim()
+  if (dueRaw && (!/^\d{4}-\d{2}-\d{2}$/.test(dueRaw) || Number.isNaN(Date.parse(dueRaw)))) return { error: 'Enter a valid due date.' }
+  const dueDate = dueRaw || null
 
   const supabase = await createClient()
   const { data: dept } = await supabase
@@ -191,7 +199,8 @@ export async function setOrderStage(orderId: string, status: string) {
     p_status: status,
     p_assigned_to: dept?.manager_id || null,
     p_department_id: dept?.id || null,
-    p_comment: `Moved to ${status} from Order Control Kanban`,
+    p_comment: cleanComment || `Moved to ${ORDER_STATUS_LABELS[status] || status} from Order Control Center`,
+    p_stage_due: dueDate,
   })
   if (error) return { error: error.message }
   await notifyOrderStatusChanged(orderId, ORDER_STATUS_LABELS[status] || status)

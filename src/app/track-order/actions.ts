@@ -2,6 +2,8 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { CLIENT_STATUS_LABELS } from '@/lib/order-workflow'
+import { headers } from 'next/headers'
+import { RATE_LIMIT_MESSAGE, RATE_RULES, checkRateLimit, clientKeyFromHeaders } from '@/lib/security/rate-limit'
 import { isValidTrackingLookup, normalizeOrderNumber } from '@/lib/orders/tracking-lookup'
 
 export type TrackedOrder = {
@@ -23,6 +25,10 @@ const NOT_FOUND = 'We could not find an order with those details. Check the orde
  * cost, margin or internal notes).
  */
 export async function trackOrder(orderNumberRaw: string, emailRaw: string): Promise<TrackResult> {
+  // Order lookups are rate limited so the form cannot be used to guess order numbers and emails.
+  const limitKey = clientKeyFromHeaders(await headers(), RATE_RULES.track.bucket)
+  if (!(await checkRateLimit(createAdminClient(), RATE_RULES.track, limitKey))) return { error: RATE_LIMIT_MESSAGE }
+
   const lookup = isValidTrackingLookup(orderNumberRaw, emailRaw)
   if (!lookup) return { error: 'Enter your order number and the email address used at checkout.' }
 

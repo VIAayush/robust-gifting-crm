@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { PRODUCT_COLUMNS, loadProductCosts, loadSupplierMappingCosts } from '@/lib/products/costs'
 import { formatCurrency, formatUnits, isUuid } from '@/lib/utils'
 import { notFound } from 'next/navigation'
 import { sortProductCategories } from '@/lib/products/categories'
@@ -33,8 +34,18 @@ export default async function ProductDetailPage({
   if (!isUuid(id)) notFound()
   const supabase = await createClient()
 
+  // sales_channel exists only after its own migration: try with it, fall back without.
+  const loadProduct = async () => {
+    const relations = 'category:categories(id, name), brand:brands(id, name), supplier:suppliers(id, name)'
+    const first = await supabase.from('products').select(`${PRODUCT_COLUMNS}, sales_channel, ${relations}`).eq('id', id).maybeSingle()
+    if (first.error && (first.error.code === '42703' || /sales_channel/.test(first.error.message))) {
+      return supabase.from('products').select(`${PRODUCT_COLUMNS}, ${relations}`).eq('id', id).maybeSingle()
+    }
+    return first
+  }
+
   const [
-    { data: product },
+    { data: productBase },
     { data: categories },
     { data: subcategories },
     { data: brands },
@@ -47,7 +58,7 @@ export default async function ProductDetailPage({
     canManageSuppliers,
     canSeeSupplierCost,
   ] = await Promise.all([
-    supabase.from('products').select('*, category:categories(id, name), brand:brands(id, name), supplier:suppliers(id, name)').eq('id', id).maybeSingle(),
+    loadProduct(),
     supabase.from('categories').select('id, name'),
     supabase.from('subcategories').select('id, name, category_id').order('name'),
     supabase.from('brands').select('id, name').order('name'),
@@ -58,14 +69,28 @@ export default async function ProductDetailPage({
     supabase.from('product_images').select('*').eq('product_id', id).order('sort_order'),
     supabase
       .from('product_suppliers')
-      .select('id, supplier_id, variant_id, supplier_sku, supplier_cost, moq, lead_time_days, is_preferred, status, supplier:suppliers(name)')
+      .select('id, supplier_id, variant_id, supplier_sku, moq, lead_time_days, is_preferred, status, supplier:suppliers(name)')
       .eq('product_id', id)
       .order('is_preferred', { ascending: false }),
     hasPermission(supabase, profile, 'products.supplier_manage'),
     hasPermission(supabase, profile, 'suppliers.cost_view'),
   ])
 
-  if (!product) notFound()
+  if (!productBase) notFound()
+
+  // Cost, margin and per-supplier cost are not in the ordinary product query (database-level protection): authorised
+  // roles fetch them through checked functions, everyone else never receives them. A cost field is only shown as an
+  // editable input when it actually loaded, so saving can never overwrite a real cost with a blank.
+  const costRow = showCost ? (await loadProductCosts(supabase, [id])).get(id) : undefined
+  const costsLoaded = Boolean(costRow)
+  const product = {
+    ...productBase,
+    supplier_cost: costRow?.supplier_cost ?? null,
+    internal_margin: costRow?.internal_margin ?? null,
+    internal_notes: costRow?.internal_notes ?? null,
+  }
+  const mappingCosts = canSeeSupplierCost ? await loadSupplierMappingCosts(supabase, (productSuppliers || []).map((m) => m.id as string)) : new Map<string, number | null>()
+  const mappingCostsLoaded = canSeeSupplierCost && (mappingCosts.size > 0 || (productSuppliers || []).length === 0)
 
   const supplierMappings = (productSuppliers || []).map((m) => {
     const s = Array.isArray(m.supplier) ? m.supplier[0] : m.supplier
@@ -75,7 +100,7 @@ export default async function ProductDetailPage({
       variant_id: m.variant_id,
       supplier_name: s?.name || 'Unknown supplier',
       supplier_sku: m.supplier_sku,
-      supplier_cost: m.supplier_cost,
+      supplier_cost: mappingCosts.get(m.id as string) ?? null,
       moq: m.moq,
       lead_time_days: m.lead_time_days,
       is_preferred: m.is_preferred,
@@ -190,7 +215,7 @@ export default async function ProductDetailPage({
               <p className="text-lg font-semibold text-gray-700">{formatCurrency(product.mrp)}</p>
             </div>
             )}
-            {showCost && product.supplier_cost != null && (
+            {showCost && costsLoaded && product.supplier_cost != null && (
             <div>
               <p className="text-[10px] text-gray-400 uppercase font-semibold">Supplier Cost</p>
               <p className="text-lg font-semibold text-gray-700">{formatCurrency(product.supplier_cost)}</p>
@@ -280,7 +305,7 @@ export default async function ProductDetailPage({
                   className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg"
                 />
               </div>
-              {showCost && (
+              {showCost && costsLoaded && (
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">Cost (₹)</label>
                 <input
@@ -323,7 +348,7 @@ export default async function ProductDetailPage({
                   name="sales_channel"
                   label="Sold through"
                   showDesktopLabel
-                  defaultValue={product.sales_channel || 'both'}
+                  defaultValue={(product as { sales_channel?: string }).sales_channel || 'both'}
                   emptyLabel="B2B catalogue and B2C store"
                   options={[
                     { value: 'both', label: 'B2B catalogue and B2C store' },
@@ -461,7 +486,7 @@ export default async function ProductDetailPage({
               suppliers={suppliers || []}
               variants={productVariants.map((v) => ({ id: v.id, label: v.display_name || v.colour || 'Colour' }))}
               canManage={canManageSuppliers}
-              canSeeCost={canSeeSupplierCost}
+              canSeeCost={canSeeSupplierCost && mappingCostsLoaded}
             />
           </div>
         </div>

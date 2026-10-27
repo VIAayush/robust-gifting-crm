@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
@@ -124,7 +125,9 @@ async function buildPlan(supabase: SupabaseServer, formData: FormData): Promise<
   const productIds = Array.from(new Set(productBySku.values()))
   const mappingsByProduct = new Map<string, ExistingMapping[]>()
   for (let i = 0; i < productIds.length; i += CHUNK) {
-    const { data, error } = await supabase
+    // Existing costs are read with the service role: authorise() above already required products.supplier_manage AND
+    // suppliers.cost_view, and the ordinary API role cannot read supplier_cost after migration 20261037.
+    const { data, error } = await (createAdminClient() ?? supabase)
       .from('product_suppliers')
       .select('id, product_id, supplier_id, supplier_cost, supplier_sku, lead_time_days, moq, is_preferred, status')
       .in('product_id', productIds.slice(i, i + CHUNK))

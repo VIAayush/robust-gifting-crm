@@ -2,6 +2,8 @@
 --     stage change through advance_order_stage writes ONE history row instead of two.
 -- (2) Sample movements to or from the team location are recorded (SOW 3.8). The old CHECK constraints only
 --     allowed supplier/office/client, so a "team" move changed stock and then failed to log the movement.
+-- (3) move_sample / receive_sample are atomic (row-locked, one transaction); the app now calls them instead of
+--     reading and then writing the stock counts itself.
 -- Additive and idempotent. Apply after 20261033_quotation_item_decisions.sql, manually in the SQL Editor.
 
 -- ---------------------------------------------------------------------------
@@ -143,15 +145,21 @@ alter table public.sample_movements add constraint sample_movements_from_holder_
 alter table public.sample_movements add constraint sample_movements_to_holder_check
   check (to_holder = any (array['supplier'::text, 'office'::text, 'client'::text, 'team'::text]));
 
-create or replace function public.move_sample(
+-- The return type changes (void -> uuid, the movement id the app links fulfilled requests to), which CREATE OR
+-- REPLACE cannot do, so the old definition is dropped first. Same arguments, same permission check.
+drop function if exists public.move_sample(uuid, integer, text, text, uuid, uuid, numeric, text);
+
+create function public.move_sample(
   p_product_id uuid, p_quantity integer, p_from text, p_to text,
   p_company_id uuid default null, p_requirement_id uuid default null, p_cost numeric default 0, p_note text default null
-) returns void
+) returns uuid
 language plpgsql
 security definer
 set search_path = public
 as $fn$
-declare v_row public.sample_stock%rowtype;
+declare
+  v_row public.sample_stock%rowtype;
+  v_movement uuid;
 begin
   if not public.has_any_role(array['admin','sales','operations']::public.app_role[]) then
     raise exception 'Not permitted';
@@ -161,6 +169,7 @@ begin
     raise exception 'Invalid sample location';
   end if;
   insert into public.sample_stock (product_id) values (p_product_id) on conflict (product_id) do nothing;
+  -- The row lock makes concurrent moves of the same product queue up, so counts can never go wrong.
   select * into v_row from public.sample_stock where product_id = p_product_id for update;
   if p_from = 'office' and v_row.in_office < p_quantity then raise exception 'Not enough samples in office'; end if;
   if p_from = 'client' and v_row.with_client < p_quantity then raise exception 'Not enough samples with client'; end if;
@@ -172,11 +181,49 @@ begin
     pending_supplier = pending_supplier + case when p_to = 'supplier' then p_quantity else 0 end - case when p_from = 'supplier' then p_quantity else 0 end,
     with_team = with_team + case when p_to = 'team' then p_quantity else 0 end - case when p_from = 'team' then p_quantity else 0 end
   where product_id = p_product_id;
+  -- Stock change and ledger row are one transaction: if the insert fails, the stock change is rolled back too.
   insert into public.sample_movements (product_id, quantity, from_holder, to_holder, company_id, requirement_id, cost, note, created_by)
-  values (p_product_id, p_quantity, p_from, p_to, p_company_id, p_requirement_id, coalesce(p_cost, 0), p_note, auth.uid());
+  values (p_product_id, p_quantity, p_from, p_to, p_company_id, p_requirement_id, coalesce(p_cost, 0), p_note, auth.uid())
+  returning id into v_movement;
+  return v_movement;
 end;
 $fn$;
 
+revoke all on function public.move_sample(uuid, integer, text, text, uuid, uuid, numeric, text) from public, anon;
+grant execute on function public.move_sample(uuid, integer, text, text, uuid, uuid, numeric, text) to authenticated;
+
+-- Receiving samples into the office (supplier -> office) as one transaction: stock row created or topped up,
+-- unit cost kept when none is given, and the ledger row written together with it.
+create or replace function public.receive_sample(p_product_id uuid, p_quantity integer, p_unit_cost numeric default 0, p_note text default null)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $fn$
+declare
+  v_movement uuid;
+begin
+  if not public.has_any_role(array['admin','sales','operations']::public.app_role[]) then
+    raise exception 'Not permitted';
+  end if;
+  if p_quantity is null or p_quantity < 1 then raise exception 'Quantity must be positive'; end if;
+  if p_unit_cost is null or p_unit_cost < 0 then raise exception 'Unit cost cannot be negative'; end if;
+  insert into public.sample_stock (product_id, in_office, unit_cost)
+  values (p_product_id, p_quantity, coalesce(p_unit_cost, 0))
+  on conflict (product_id) do update
+    set in_office = public.sample_stock.in_office + excluded.in_office,
+        unit_cost = coalesce(nullif(p_unit_cost, 0), public.sample_stock.unit_cost);
+  insert into public.sample_movements (product_id, quantity, from_holder, to_holder, cost, note, created_by)
+  values (p_product_id, p_quantity, 'supplier', 'office', coalesce(p_unit_cost, 0), coalesce(p_note, 'Received into office sample stock'), auth.uid())
+  returning id into v_movement;
+  return v_movement;
+end;
+$fn$;
+
+revoke all on function public.receive_sample(uuid, integer, numeric, text) from public, anon;
+grant execute on function public.receive_sample(uuid, integer, numeric, text) to authenticated;
+
 -- Verification:
+-- select proname, prorettype::regtype from pg_proc where proname in ('move_sample', 'receive_sample');   -- both uuid
 -- select column_name from information_schema.columns where table_name = 'order_status_history' and column_name in ('assigned_to','department_id','stage_due_at');
 -- select conname, pg_get_constraintdef(oid) from pg_constraint where conname like 'sample_movements_%_holder_check';

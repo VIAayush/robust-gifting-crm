@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { buildVendorLines, type VendorLine } from '@/lib/suppliers/vendor-report'
 
 const MAX_LINES = 20000
@@ -8,14 +9,18 @@ function one<T>(value: T | T[] | null | undefined): T | null {
 }
 
 /**
- * Loads order lines for the vendor report through the caller's own session, so row-level security still
- * applies. Cancelled orders are excluded. The caller must already have checked suppliers.cost_view.
+ * Loads order lines for the vendor report. Cancelled orders are excluded. The caller MUST already have checked
+ * suppliers.view and suppliers.cost_view (see the note below on why the service role is used).
  */
 export async function loadVendorReport(
   supabase: SupabaseClient,
   filters: { from: string | null; to: string | null; supplierId: string | null },
 ): Promise<{ lines: VendorLine[]; truncated: boolean } | { error: string }> {
-  let query = supabase
+  // supplier_cost_snapshot is not readable through the ordinary API role (migration 20261035), so the report is
+  // loaded with the service role. This is only safe because every caller (page and CSV export) has already
+  // verified suppliers.view AND suppliers.cost_view for the signed-in user before calling this function.
+  const reader = createAdminClient() ?? supabase
+  let query = reader
     .from('order_items')
     .select(
       'description, quantity, unit_price, line_total, supplier_cost_snapshot, supplier:suppliers(id, name), product:products(sku), order:orders!inner(order_number, status, created_at, company:companies(name))',

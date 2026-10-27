@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { dispatchNotifications } from '@/lib/notifications'
+import { dispatchNotifications, requeueSkippedNotifications } from '@/lib/notifications'
 
 /**
  * Retries anything still pending in notification_outbox (e.g. after a
@@ -16,6 +16,8 @@ export async function GET(request: Request) {
   }
   const admin = createAdminClient()
   if (!admin) return NextResponse.json({ error: 'Service unavailable' }, { status: 503 })
+  // Messages skipped before a provider was connected get a second chance (only when one is connected now).
+  const requeue = await requeueSkippedNotifications(admin)
   const summary = await dispatchNotifications(admin)
-  return NextResponse.json(summary)
+  return NextResponse.json({ ...summary, requeued: requeue.requeued })
 }

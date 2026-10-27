@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { formatCurrency, formatDate, asRows, oneRelation } from '@/lib/utils'
 import { ORDER_STATUS_LABELS } from '@/lib/order-workflow'
+import { ORDER_COLUMNS } from '@/lib/orders/costs'
 
 const STATUS_COLORS: Record<string, string> = {
   created: 'bg-blue-100 text-blue-800',
@@ -46,7 +47,7 @@ export default async function OrdersPage(props: { searchParams: Promise<{ status
 
   let query = supabase
     .from('orders')
-    .select('*, company:companies(id, name), owner:profiles!orders_owner_id_fkey(id, full_name)')
+    .select(`${ORDER_COLUMNS}, company:companies(id, name), owner:profiles!orders_owner_id_fkey(id, full_name)`)
     .order('created_at', { ascending: false })
   query = applyOrderScope(query, profile)
 

@@ -2,6 +2,8 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sniffFileType } from '@/lib/site/upload-rules'
+import { headers } from 'next/headers'
+import { RATE_LIMIT_MESSAGE, RATE_RULES, checkRateLimit, clientKeyFromHeaders } from '@/lib/security/rate-limit'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -24,6 +26,8 @@ const MAX_BYTES = 5 * 1024 * 1024
  */
 export async function uploadCustomizationFile(formData: FormData): Promise<{ error?: string; path?: string }> {
   const productId = String(formData.get('product_id') || '')
+  const limitKey = clientKeyFromHeaders(await headers(), RATE_RULES.upload.bucket)
+  if (!(await checkRateLimit(createAdminClient(), RATE_RULES.upload, limitKey))) return { error: RATE_LIMIT_MESSAGE }
   const file = formData.get('file')
   if (!UUID_RE.test(productId)) return { error: 'Missing product.' }
   if (!(file instanceof File) || file.size === 0) return { error: 'Please choose a file.' }

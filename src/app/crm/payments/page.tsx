@@ -2,9 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import { formatCurrency, formatDate, oneRelation } from '@/lib/utils'
 import Link from 'next/link'
 import { requireStaff } from '@/lib/auth'
+import { ReconcileButton } from './reconcile-button'
 
 export default async function PaymentsPage() {
-  await requireStaff(['admin', 'accounts', 'management'])
+  const profile = await requireStaff(['admin', 'accounts', 'management'])
   const supabase = await createClient()
 
   const { data: payments } = await supabase.from('payments').select('*, invoices(invoice_number, companies(name))').order('payment_date', { ascending: false })
@@ -16,6 +17,7 @@ export default async function PaymentsPage() {
     <div>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-[var(--color-primary)]">Payments Received</h1>
+        {profile.role === 'admin' || profile.role === 'accounts' ? <ReconcileButton /> : null}
         <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-green-800 shadow-sm">
           <span className="mr-2 text-sm font-medium">Total This Month:</span>
           <span className="text-lg font-bold">{formatCurrency(totalThisMonth)}</span>

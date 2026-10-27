@@ -1,6 +1,8 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { headers } from 'next/headers'
+import { RATE_LIMIT_MESSAGE, RATE_RULES, checkRateLimit, clientKeyFromHeaders } from '@/lib/security/rate-limit'
 import { validateEnquiry } from '@/lib/site/upload-rules'
 import { getProfile } from '@/lib/auth'
 import { isUuid } from '@/lib/utils'
@@ -13,6 +15,10 @@ export async function submitPublicQuote(formData: FormData): Promise<{ error?: s
   if (clean(formData.get('fax'))) {
     return { success: true }
   }
+
+  // Public form: limit how often one connection can submit (shared database counter, memory fallback).
+  const limitKey = clientKeyFromHeaders(await headers(), RATE_RULES.enquiry.bucket)
+  if (!(await checkRateLimit(createAdminClient(), RATE_RULES.enquiry, limitKey))) return { error: RATE_LIMIT_MESSAGE }
 
   const fullName = clean(formData.get('full_name'))
   const email = clean(formData.get('email')).toLowerCase()

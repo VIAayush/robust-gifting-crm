@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { ORDER_COLUMNS, loadItemSupplierCosts, loadOrderCosts } from '@/lib/orders/costs'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { BackButton } from '@/components/ui/back-button'
@@ -63,7 +64,7 @@ export default async function OrderDetailPage({
       supabase
         .from('orders')
         .select(`
-          *,
+          ${ORDER_COLUMNS},
           company:companies(id, name),
           supplier:suppliers(id, name),
           printing_vendor:printing_vendors(id, name),
@@ -80,7 +81,7 @@ export default async function OrderDetailPage({
     supabase
       .from('order_items')
       .select(
-        'id, description, quantity, unit_price, line_total, product_id, supplier_id, supplier_sku_snapshot, supplier_cost_snapshot, procurement_status, procurement_notes, product:products(id, name, sku, image_url, status), item_supplier:supplier_id(name)'
+        'id, description, quantity, unit_price, line_total, product_id, supplier_id, supplier_sku_snapshot, procurement_status, procurement_notes, product:products(id, name, sku, image_url, status), item_supplier:supplier_id(name)'
       )
       .eq('order_id', id),
     supabase.from('order_status_history').select('*, changer:changed_by(id, full_name)').eq('order_id', id).order('changed_at', { ascending: false }),
@@ -94,12 +95,25 @@ export default async function OrderDetailPage({
     hasPermission(supabase, profile, 'orders.procurement'),
   ])
 
-  const order = orderRes.data
-  if (!order) notFound()
+  const orderBase = orderRes.data
+  if (!orderBase) notFound()
 
+  const showCosts = canSeeCosts(profile.role)
+  // Cost figures are not part of the ordinary order query: authorised roles fetch them through checked database
+  // functions, everyone else never receives them.
+  const costRow = showCosts ? (await loadOrderCosts(supabase, [id])).get(id) : undefined
+  const order = {
+    ...orderBase,
+    product_cost: costRow?.product_cost ?? null,
+    printing_cost: costRow?.printing_cost ?? null,
+    courier_cost: costRow?.courier_cost ?? null,
+    other_cost: costRow?.other_cost ?? null,
+    total_cost: costRow?.total_cost ?? null,
+    gross_profit: costRow?.gross_profit ?? null,
+  }
+  const itemSupplierCosts = await loadItemSupplierCosts(supabase, id)
   const isDelivered = order.status === 'delivered' || order.status === 'cancelled'
   const health = orderHealth(order.status, order.expected_delivery_date, order.stage_due_at)
-  const showCosts = canSeeCosts(profile.role)
   const canStage = canChangeOrderStage(profile.role)
   const assignee = oneRelation(order.assignee)
   const department = oneRelation(order.department)
@@ -115,7 +129,6 @@ export default async function OrderDetailPage({
     product?: { id?: string; name?: string } | { id?: string; name?: string }[] | null
     supplier_id?: string | null
     supplier_sku_snapshot?: string | null
-    supplier_cost_snapshot?: number | null
     procurement_status?: string | null
     procurement_notes?: string | null
     item_supplier?: { name?: string } | { name?: string }[] | null
@@ -127,7 +140,7 @@ export default async function OrderDetailPage({
       productName: product?.name || item.description || 'Product',
       supplierId: item.supplier_id || null,
       supplierName: itemSupplier?.name || null,
-      supplierCostSnapshot: item.supplier_cost_snapshot ?? null,
+      supplierCostSnapshot: itemSupplierCosts.get(item.id) ?? null,
       supplierSkuSnapshot: item.supplier_sku_snapshot || null,
       procurementStatus: item.procurement_status || 'not_assigned',
       procurementNotes: item.procurement_notes || null,

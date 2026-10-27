@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { isClientPortalUser } from '@/lib/auth/client-guard'
 import { b2bOnlyProductIds } from '@/lib/catalogue/channel'
 import { isValidCustomizationPath } from '@/lib/site/upload-rules'
+import { validateCustomization } from '@/lib/products/customization'
 import { isUuid } from '@/lib/utils'
 import type { CartItem } from '@/lib/site/cart'
 import { validateCheckoutCustomer, type CheckoutCustomer, type CheckoutFieldErrors } from '@/lib/checkout/validation'
@@ -87,16 +88,15 @@ export async function createCheckout(
     // Customization is only accepted for a product that has it enabled, and only
     // for the fields that product actually offers - anything else the browser
     // sends is dropped, and every value is length-capped.
-    const allowedKeys = new Set<string>(product.customization_fields || [])
-    const cleanedEntries =
-      product.customization_enabled && item.customization && typeof item.customization === 'object'
-        ? Object.entries(item.customization)
-            .filter(([key, value]) => allowedKeys.has(key) && typeof value === 'string' && value.trim())
-            .map(([key, value]) => [key, String(value).trim().slice(0, 500)] as const)
-        : []
-    const customization = cleanedEntries.length > 0 ? Object.fromEntries(cleanedEntries) : null
     // Only a path our own upload action could have produced for THIS product is accepted; anything else is dropped.
     const customizationFilePath = product.customization_enabled && isValidCustomizationPath(item.customizationFilePath, item.id) ? item.customizationFilePath! : null
+    let customization: Record<string, string> | null = null
+    if (product.customization_enabled) {
+      // Required fields, lengths and formats are enforced here, whatever the browser did.
+      const checked = validateCustomization(product.customization_fields || [], item.customization as Record<string, unknown> | null, Boolean(customizationFilePath))
+      if (!checked.ok) return { error: `Personalisation for "${item.name}": ${checked.error}` }
+      customization = Object.keys(checked.cleaned).length > 0 ? checked.cleaned : null
+    }
 
     resolvedItems.push({
       product_id: product.id,

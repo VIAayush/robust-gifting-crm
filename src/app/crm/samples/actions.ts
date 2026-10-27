@@ -34,6 +34,22 @@ const HOLDERS = {
 
 type Holder = keyof typeof HOLDERS
 
+/** Pre-migration path (read, then write). Only used while receive_sample is not installed. */
+async function receiveSampleLegacy(supabase: Awaited<ReturnType<typeof createClient>>, productId: string, quantity: number, unitCost: number) {
+  const { data: existing, error: existingError } = await supabase.from('sample_stock').select('id, in_office, unit_cost').eq('product_id', productId).maybeSingle()
+  if (existingError) fail(existingError.message)
+  if (existing) {
+    const { error } = await supabase.from('sample_stock').update({ in_office: (existing.in_office || 0) + quantity, unit_cost: unitCost || existing.unit_cost }).eq('id', existing.id)
+    if (error) fail(error.message)
+  } else {
+    const { error } = await supabase.from('sample_stock').insert({ product_id: productId, in_office: quantity, with_team: 0, with_client: 0, pending_supplier: 0, unit_cost: unitCost || 0 })
+    if (error) fail(error.message)
+  }
+  const { data: { user } } = await supabase.auth.getUser()
+  const { error: movementError } = await supabase.from('sample_movements').insert({ product_id: productId, quantity, from_holder: 'supplier', to_holder: 'office', cost: unitCost || 0, note: 'Received into office sample stock', created_by: user?.id })
+  if (movementError) fail(movementError.message)
+}
+
 export async function receiveSample(formData: FormData) {
   const access = await requireSampleAccess()
   if (!access.ok) fail(access.error)
@@ -46,47 +62,21 @@ export async function receiveSample(formData: FormData) {
   if (!Number.isInteger(quantity) || quantity < 1) fail('Enter a positive whole quantity.')
   if (!Number.isFinite(unitCost) || unitCost < 0) fail('Unit cost cannot be negative.')
 
-  const { data: existing, error: existingError } = await supabase
-    .from('sample_stock')
-    .select('id, in_office, unit_cost')
-    .eq('product_id', productId)
-    .maybeSingle()
-  if (existingError) fail(existingError.message)
-
-  if (existing) {
-    const { error } = await supabase
-      .from('sample_stock')
-      .update({
-        in_office: (existing.in_office || 0) + quantity,
-        unit_cost: unitCost || existing.unit_cost,
-      })
-      .eq('id', existing.id)
-    if (error) fail(error.message)
-  } else {
-    const { error } = await supabase.from('sample_stock').insert({
-      product_id: productId,
-      in_office: quantity,
-      with_team: 0,
-      with_client: 0,
-      pending_supplier: 0,
-      unit_cost: unitCost || 0,
-    })
-    if (error) fail(error.message)
-  }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const { error: movementError } = await supabase.from('sample_movements').insert({
-    product_id: productId,
-    quantity,
-    from_holder: 'supplier',
-    to_holder: 'office',
-    cost: unitCost || 0,
-    note: 'Received into office sample stock',
-    created_by: user?.id,
+  const { error: rpcError } = await supabase.rpc('receive_sample', {
+    p_product_id: productId,
+    p_quantity: quantity,
+    p_unit_cost: unitCost || 0,
+    p_note: 'Received into office sample stock',
   })
-  if (movementError) fail(movementError.message)
+  if (rpcError) {
+    const missing = rpcError.code === 'PGRST202' || rpcError.code === '42883' || /could not find the function/i.test(rpcError.message)
+    if (!missing) {
+      console.error('[samples] receive_sample failed', rpcError.message)
+      fail(friendlyMoveError(rpcError.message))
+    }
+    // Migration 20261034 not applied yet: keep the previous behaviour until it is.
+    await receiveSampleLegacy(supabase, productId, quantity, unitCost)
+  }
 
   ok('received')
 }
@@ -134,49 +124,47 @@ async function performSampleMovement(
   }
   if (to === 'client' && !companyId) return { error: 'Select the client receiving the sample.' }
 
-  const { data: stock, error: stockError } = await supabase.from('sample_stock').select('*').eq('id', stockId).single()
-  if (stockError || !stock) return { error: stockError?.message || 'Sample stock not found.' }
+  const { data: stock, error: stockError } = await supabase.from('sample_stock').select('product_id, unit_cost').eq('id', stockId).single()
+  if (stockError || !stock) return { error: 'Sample stock not found.' }
 
-  const stockRow = stock as Record<string, number | string | null>
-  const fromCol = HOLDERS[from]
-  const toCol = HOLDERS[to]
-  const available = Number(stockRow[fromCol] || 0)
-  if (available < quantity) return { error: `Only ${available} available at ${from}.` }
-
-  const { error } = await supabase
-    .from('sample_stock')
-    .update({
-      [fromCol]: available - quantity,
-      [toCol]: Number(stockRow[toCol] || 0) + quantity,
-    })
-    .eq('id', stockId)
-  if (error) return { error: error.message }
-
-  const { data: movement, error: movementError } = await supabase
-    .from('sample_movements')
-    .insert({
-      product_id: stock.product_id,
-      quantity,
-      from_holder: from,
-      to_holder: to,
-      company_id: to === 'client' || from === 'client' ? companyId : null,
-      cost: stock.unit_cost || 0,
-      note,
-      created_by: userId,
-    })
-    .select('id')
-    .single()
-  if (movementError || !movement) {
-    // Never leave stock changed without its ledger row: put the counts back exactly as they were.
-    await supabase
-      .from('sample_stock')
-      .update({ [fromCol]: Number(stockRow[fromCol] || 0), [toCol]: Number(stockRow[toCol] || 0) })
-      .eq('id', stockId)
-    console.error('[samples] movement insert failed, stock restored', movementError?.message)
-    return { error: 'Could not record the movement. Nothing was changed.' }
+  // One database transaction: the row is locked, the counts change and the ledger row is written together, so two
+  // people moving the same product at once can never corrupt the counts or leave a movement unrecorded.
+  const { data, error } = await supabase.rpc('move_sample', {
+    p_product_id: stock.product_id,
+    p_quantity: quantity,
+    p_from: from,
+    p_to: to,
+    p_company_id: to === 'client' || from === 'client' ? companyId : null,
+    p_requirement_id: null,
+    p_cost: Number(stock.unit_cost) || 0,
+    p_note: note,
+  })
+  if (error) {
+    console.error('[samples] move_sample failed', error.message)
+    return { error: friendlyMoveError(error.message) }
   }
 
-  return { movementId: movement.id as string }
+  // The current function returns the movement id. Before the migration it returned nothing, so look the row up.
+  let movementId = typeof data === 'string' ? data : null
+  if (!movementId) {
+    const { data: latest } = await supabase
+      .from('sample_movements')
+      .select('id')
+      .eq('product_id', stock.product_id)
+      .eq('created_by', userId ?? '')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    movementId = (latest?.id as string | undefined) ?? null
+  }
+  if (!movementId) return { error: 'The sample was moved, but its history entry could not be found.' }
+  return { movementId }
+}
+
+/** Messages raised on purpose by the database functions are safe to show; anything else gets a generic line. */
+function friendlyMoveError(message: string) {
+  if (/not enough samples|quantity must be positive|invalid sample location|not permitted|unit cost/i.test(message)) return message
+  return 'Could not record the movement. Nothing was changed.'
 }
 
 export async function moveSample(formData: FormData) {

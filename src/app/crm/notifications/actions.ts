@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { requirePermission } from '@/lib/permissions'
-import { dispatchNotifications } from '@/lib/notifications'
+import { dispatchNotifications, requeueSkippedNotifications } from '@/lib/notifications'
 
 /** In-app bell notifications (public.notifications) - used by the CRM top bar. */
 export async function markNotificationRead(id: string) {
@@ -45,4 +45,17 @@ export async function dispatchPendingNotifications() {
   const summary = await dispatchNotifications(admin)
   revalidatePath('/crm/notifications')
   return { success: true, ...summary }
+}
+
+/** Re-queues recent WhatsApp messages that were skipped only because no provider was connected, then sends them. */
+export async function requeueSkipped() {
+  const supabase = await createClient()
+  const access = await requirePermission(supabase, 'notifications.manage')
+  if ('error' in access) return access
+  const admin = createAdminClient()
+  if (!admin) return { error: 'Service unavailable' }
+  const result = await requeueSkippedNotifications(admin)
+  if (!result.providerReady) return { error: 'WhatsApp is not connected yet, so nothing was re-queued.' }
+  revalidatePath('/crm/notifications')
+  return { success: true, ...result }
 }

@@ -56,7 +56,7 @@ export function PersonalizedPurchaseActions({
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <div className="sm:max-w-xs sm:flex-1">
-          <AddToCartControl product={cartProduct} customization={customization} customizationFilePath={customizationFilePath} />
+          <AddToCartControl product={cartProduct} customization={customization} customizationFilePath={customizationFilePath} customizationFields={customizationEnabled ? customizationFields : null} />
         </div>
         <div className="sm:w-48">
           <WishlistHeartButton variant="detail" product={product} />

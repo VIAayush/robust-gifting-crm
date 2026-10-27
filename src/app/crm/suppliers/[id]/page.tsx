@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { loadSupplierMappingCosts } from '@/lib/products/costs'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { requireStaff } from '@/lib/auth'
@@ -25,11 +26,13 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
     supabase.from('suppliers').select('*').eq('id', id).maybeSingle(),
     supabase
       .from('product_suppliers')
-      .select('id, supplier_cost, supplier_sku, moq, lead_time_days, is_preferred, status, product:products(id, name, sku), variant:product_variants(id, colour, display_name)')
+      .select('id, supplier_sku, moq, lead_time_days, is_preferred, status, product:products(id, name, sku), variant:product_variants(id, colour, display_name)')
       .eq('supplier_id', id)
       .order('is_preferred', { ascending: false }),
   ])
   if (!supplier) notFound()
+  // Per-mapping supplier cost comes through a checked function (suppliers.cost_view), never the ordinary query.
+  const mappingCosts = canSeeCost ? await loadSupplierMappingCosts(supabase, (mappings || []).map((m) => m.id as string)) : new Map<string, number | null>()
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 pb-10">
@@ -79,7 +82,7 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
                     </td>
                     <td className="py-2 text-gray-500">{variant?.display_name || variant?.colour || '—'}</td>
                     <td className="py-2 font-mono text-gray-500">{m.supplier_sku || '—'}</td>
-                    {canSeeCost && <td className="py-2 text-gray-700">{m.supplier_cost != null ? formatCurrency(m.supplier_cost) : '—'}</td>}
+                    {canSeeCost && <td className="py-2 text-gray-700">{mappingCosts.get(m.id as string) != null ? formatCurrency(mappingCosts.get(m.id as string) as number) : '—'}</td>}
                     <td className="py-2 text-gray-500">{m.moq ?? '—'}</td>
                     <td className="py-2 text-gray-500">{m.lead_time_days != null ? `${m.lead_time_days}d` : '—'}</td>
                     <td className="py-2">{m.is_preferred ? '★' : ''}</td>

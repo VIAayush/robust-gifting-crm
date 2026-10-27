@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { formatCurrency } from '@/lib/utils'
 import { renderTemplate, type TemplateKey } from './templates'
 import { getNotificationProvider } from './providers'
+import { PROVIDER_SKIP_PREFIX, PROVIDER_SKIP_REASON, REQUEUE_BATCH_LIMIT, isRequeueable, requeueMaxAgeMs } from './requeue'
 import { requestOrigin } from '@/lib/auth/request-origin'
 import { sendEmail } from '@/lib/email/resend'
 import { orderEmail, productAvailableEmail, requirementUpdateEmail, staffAlertEmail } from '@/lib/email/templates'
@@ -89,7 +90,7 @@ export async function dispatchNotifications(admin: SupabaseClient, ids?: string[
     if (!provider) {
       await admin
         .from('notification_outbox')
-        .update({ status: 'skipped', last_error: 'No WhatsApp provider configured (set WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID)' })
+        .update({ status: 'skipped', last_error: PROVIDER_SKIP_REASON })
         .eq('id', row.id)
       summary.skipped++
       continue
@@ -625,4 +626,51 @@ async function emailB2cCustomer(
     entity: 'orders',
     entityId: orderId,
   })
+}
+
+/**
+ * Once a WhatsApp provider is connected, messages that were skipped ONLY because none was configured get a
+ * second chance: they go back to pending (attempts reset) and are dispatched. Only recent, WhatsApp, has-a-phone
+ * rows qualify (see requeue.ts), so stale or undeliverable messages are never sent. Safe to run repeatedly.
+ */
+export async function requeueSkippedNotifications(
+  admin: SupabaseClient,
+): Promise<{ requeued: number; sent: number; failed: number; skipped: number; providerReady: boolean }> {
+  const providerReady = Boolean(getNotificationProvider())
+  if (!providerReady) return { requeued: 0, sent: 0, failed: 0, skipped: 0, providerReady }
+
+  const maxAgeMs = requeueMaxAgeMs(process.env.WHATSAPP_REQUEUE_MAX_AGE_DAYS)
+  const since = new Date(Date.now() - maxAgeMs).toISOString()
+  const { data: rows } = await admin
+    .from('notification_outbox')
+    .select('id, status, channel, recipient_phone, last_error, created_at')
+    .eq('status', 'skipped')
+    .like('last_error', `${PROVIDER_SKIP_PREFIX}%`)
+    .gte('created_at', since)
+    .order('created_at')
+    .limit(REQUEUE_BATCH_LIMIT)
+
+  const now = Date.now()
+  const ids: string[] = []
+  for (const row of rows || []) {
+    const candidate = {
+      status: row.status as string,
+      channel: row.channel as string | null,
+      recipient_phone: row.recipient_phone as string | null,
+      last_error: row.last_error as string | null,
+      created_at: row.created_at as string,
+    }
+    if (!isRequeueable(candidate, now, maxAgeMs)) continue
+    // Conditional update: a row another process already moved is left alone.
+    const { data: moved } = await admin
+      .from('notification_outbox')
+      .update({ status: 'pending', attempts: 0, last_error: null })
+      .eq('id', row.id)
+      .eq('status', 'skipped')
+      .select('id')
+      .maybeSingle()
+    if (moved) ids.push(moved.id as string)
+  }
+  const summary = ids.length > 0 ? await dispatchNotifications(admin, ids) : { sent: 0, failed: 0, skipped: 0 }
+  return { requeued: ids.length, ...summary, providerReady }
 }

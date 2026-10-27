@@ -2,7 +2,7 @@
 
 Reference: `Robust Gifting CRM - Scope of Work-final.pdf` (7 pages, 26 October 2026). Section and page numbers below refer to that PDF.
 
-**How to read this.** The audit was a code review of the repository plus local checks: `npx tsc --noEmit`, 17 unit test files (`scripts/test-*.mts`), `npm run build`, and browser/HTTP checks of public routes at 375px. No database was available, so nothing that reads or writes Supabase, depends on RLS, sends a real email/WhatsApp message or takes a real payment has been exercised.
+**How to read this.** The audit was a code review of the repository plus local checks: `npx tsc --noEmit`, 21 unit test files (`scripts/test-*.mts`), `npm run build`, and browser/HTTP checks of public routes at 375px. No database was available, so nothing that reads or writes Supabase, depends on RLS, sends a real email/WhatsApp message or takes a real payment has been exercised.
 
 Statuses: **PASS** (implemented and verified in this environment), **PARTIAL**, **MISSING**, **BLOCKED** (needs Supabase, credentials or client data), **NOT VERIFIED** (code exists, behaviour not exercised). A feature is never PASS only because a file or test exists: most rows are therefore NOT VERIFIED or BLOCKED for the database-backed part, with the pure logic covered by unit tests where noted.
 
@@ -20,9 +20,12 @@ Statuses: **PASS** (implemented and verified in this environment), **PARTIAL**, 
 | 6 | `20261031_product_sales_channel.sql` | B2B / B2C / both per product and the portal view filter |
 | 7 | `20261032_site_banners.sql` | CRM-managed festival/occasion banners |
 | 8 | `20261033_quotation_item_decisions.sql` | item-by-item quotation acceptance; order built from accepted items only |
-| 9 | `20261034_order_history_handoff_and_sample_team.sql` | assignee/department/due date kept per stage change, no duplicate history rows, sample moves to/from the team location |
+| 9 | `20261034_order_history_handoff_and_sample_team.sql` | assignee/department/due date kept per stage change, no duplicate history rows, sample moves to/from the team location, atomic `move_sample` / `receive_sample` |
+| 10 | `20261035_order_cost_protection.sql` | order cost columns and supplier cost per order line no longer readable through the data API (permission-checked functions instead) |
+| 11 | `20261036_rate_limits.sql` | shared rate limiting for the enquiry form, personalisation uploads and order lookup |
+| 12 | `20261037_product_cost_protection.sql` | product cost, margin, internal notes and per-supplier cost no longer readable through the data API (including with the public anon key) |
 
-All are additive and idempotent, enable RLS where they add a table, and have verification queries at the bottom. The application tolerates 3 to 9 being absent (feature simply inactive or, for quotations, whole-quotation response only); 2 is required for the client requirement screens. **None has been applied.**
+All are additive and idempotent, enable RLS where they add a table, and have verification queries at the bottom. The application tolerates 3 to 12 being absent (feature simply inactive or, for quotations, whole-quotation response only); 2 is required for the client requirement screens. **None has been applied.** Migrations 10 and 12 change API privileges: apply them together with this version of the code (the code already lists columns explicitly), then run their verification queries with the anon key and as a client, sales and operations user.
 
 ---
 
@@ -45,11 +48,11 @@ All are additive and idempotent, enable RLS where they add a table, and have ver
 | Requirement | Code | Status | Evidence / gap | Fix w/o DB | Integration test later |
 |---|---|---|---|---|---|
 | Personalised catalogue, prices, Add to Cart | `catalogue-listing.tsx`, `quick-add-to-cart.tsx` | NOT VERIFIED | Purchasable only in personalized mode | n/a | Add to cart from card and detail |
-| Personalisation: logo upload, name/initials, text, packaging/special instructions | `lib/products/customization.ts`, `product-customizer.tsx`, `personalized/customization-actions.ts`, `checkout/actions.ts` | PARTIAL, **FIXED (local)** | Upload now checks real file type from content, product exists/active/personalisable, UUID; checkout accepts only a path our upload could produce for that product. Still missing: required-field enforcement and an upload rate limit | partly | Upload PNG/PDF; try renamed .exe (refused); buy a personalised item |
+| Personalisation: logo upload, name/initials, text, packaging/special instructions | `lib/products/customization.ts`, `product-customizer.tsx`, `personalized/customization-actions.ts`, `checkout/actions.ts` | PARTIAL, **FIXED (local)** | Upload now checks real file type from content, product exists/active/personalisable, UUID; checkout accepts only a path our upload could produce for that product. Required fields and an upload rate limit are now enforced | partly | Upload PNG/PDF; try renamed .exe (refused); buy a personalised item |
 | Cart quantity changes; checkout validation (phone, PIN, email); review; payment | `cart/actions.ts`, `lib/checkout/validation.ts`, `checkout/*` | NOT VERIFIED | Server re-validates email, 10-digit Indian phone starting 6-9, six-digit PIN not starting with 0; prices re-resolved server-side | n/a | Walk the whole checkout with invalid inputs |
 | MRP and discount on the personalised store only | `site-product-card.tsx`, `price-display.tsx`, `lib/catalogue/channel.ts` | PARTIAL, **FIXED (local)** | MRP is rendered only in personalised views and is now nulled out of corporate page data; unit-tested. Quotation "Discount" on portal is a quote discount, not MRP | done | View B2B pages and page source: no MRP |
 | Delivery charge and free-delivery limit from Settings | `crm/settings/*`, `cart/actions.ts`, `checkout/actions.ts` | NOT VERIFIED | Read server-side; no values invented (client dependency 8.3) | n/a | Set values, confirm cart and checkout totals |
-| Paid order auto-created with invoice and payment entry; unpaid creates no customer records | `checkout/order.ts`, `api/payments/payu/callback/route.ts`, `checkout/[id]/actions.ts` | PARTIAL, **FIXED (local)** | Order, invoice and payment are created only after a claimed paid payment. Order creation is now resumable (missing items/invoice/payment repaired on retry after 60 s) and a bad-hash POST no longer fails a payment. Remaining gaps: a payment stuck in `processing` is never re-polled; if order creation fails after payment is marked paid there is no automatic reconcile | reconcile job needs design | Demo payment end to end; kill step mid-way and retry; duplicate callback |
+| Paid order auto-created with invoice and payment entry; unpaid creates no customer records | `checkout/order.ts`, `api/payments/payu/callback/route.ts`, `checkout/[id]/actions.ts` | PARTIAL, **FIXED (local)** | Order, invoice and payment are created only after a claimed paid payment. Order creation is now resumable (missing items/invoice/payment repaired on retry after 60 s) and a bad-hash POST no longer fails a payment. A payment stuck in `processing` or a paid payment without an order is now reconciled (route + finance button, unit-tested rules) | reconcile job needs design | Demo payment end to end; kill step mid-way and retry; duplicate callback |
 
 ## Section 3.3 Company and client management (p. 2)
 
@@ -71,7 +74,7 @@ All are additive and idempotent, enable RLS where they add a table, and have ver
 | Visibility: all / selected / internal | `catalogue_access`, `client_products` view | BLOCKED | UI and view exist; selected-company access is enforced in the DB | n/a | Selected product visible only to its companies |
 | Catalogues: by search or by supplier, build, assign, publish, duplicate, edit | `crm/products/catalogues/*`, `lib/catalogues/candidates.ts` | NOT VERIFIED | Search and supplier modes, per-company assignment, publish/unpublish, duplicate all present in actions | n/a | Build from a supplier, assign two companies, publish, duplicate |
 | Product channel (B2B / B2C / both) | `lib/catalogue/channel.ts` and call sites | PARTIAL (built, tested) | Hidden from the other storefront and refused by cart/checkout; rules unit-tested | n/a | Set each channel (migration 6), check storefront, portal, cart, checkout |
-| Clients never see supplier names, costs, margins | portal pages, `client_products`, exports | PARTIAL | Portal catalogue reads a narrow view; portal quotation page now selects explicit columns; no supplier/cost fields found in client pages or exports. **Known gap:** RLS lets a client or sales user read cost columns of `orders`/`order_items` through a direct API query (pages hide them, the API does not) — needs a database-level design (views or column privileges) and cannot be changed safely without testing | needs DB design | As client and as sales: direct select of cost columns must fail |
+| Clients never see supplier names, costs, margins | portal pages, `client_products`, exports | BLOCKED (DB layer) / PASS by code review (pages, exports) | Portal catalogue reads a narrow view; portal quotation page now selects explicit columns; no supplier/cost fields found in client pages or exports. **Order costs are now protected at the database level by migration 10 (written, not run); product and supplier cost fields are protected the same way by migration 12 (written, not run; found and closed in the final audit: the public anon key could previously read `products.supplier_cost`) | SQL needs DB | As client, sales and operations: direct select of order cost columns must fail; as admin/accounts/management the Financials tab still works |
 
 ## Section 3.5 Requirements and quotations (p. 3)
 
@@ -132,7 +135,7 @@ All are additive and idempotent, enable RLS where they add a table, and have ver
 |---|---|---|---|---|---|
 | PayU in demo mode, goes live with client details | `lib/payments/*`, `api/payments/payu/callback` | PARTIAL (demo) / BLOCKED (live) | Unit tests (no network): request hash, response hash, tamper rejection, fallback to demo. Amount-mismatch guard added; unverifiable callbacks no longer change payment state. Live PayU not integrated: credentials not supplied | n/a | PayU test then live checklist in `PENDING_WORK_AND_LAUNCH_CHECKLIST.md` |
 | Email: password reset, invitations, system messages | `lib/email/*` | NOT VERIFIED | Templates and Resend sender exist; delivery not tested | n/a | Receive each email |
-| WhatsApp to customers and staff for new orders, payment results, status changes, sample requests | `lib/notifications/*` | PARTIAL (outbox only) | Events queue in `notification_outbox` and are marked `skipped` without a provider or phone; extra events added (requirement, quotation, product available). Gap: `skipped` rows are never retried once a provider is connected | retry sweeper not built | Each event creates one outbox row; no duplicates |
+| WhatsApp to customers and staff for new orders, payment results, status changes, sample requests | `lib/notifications/*` | PARTIAL (outbox only) | Events queue in `notification_outbox` and are marked `skipped` without a provider or phone; extra events added (requirement, quotation, product available). `skipped` rows are re-queued once a provider is connected (safe rules, unit-tested) | done | Each event creates one outbox row; no duplicates |
 | Staff email destination | `getStaffNotificationEmail` | PARTIAL | Used only when an admin saves an address; nothing invented | n/a | Alerts arrive at the saved address |
 
 ## Section 4 User roles and access (p. 4)
@@ -177,16 +180,26 @@ All are additive and idempotent, enable RLS where they add a table, and have ver
 
 ---
 
-## Known gaps that remain (not fixed in this audit)
+## Gaps closed in the second pass (all need the database tests below)
 
-1. Cost columns on `orders` / `order_items` are readable by clients and sales through a direct API query. Needs a tested database design (restricted views or column privileges).
-2. A payment stuck in `processing`, or a paid payment whose order creation failed, has no automatic reconcile job.
-3. WhatsApp rows marked `skipped` (no provider yet) are not retried when a provider is connected.
-4. Required-field enforcement for personalisation, and rate limits for anonymous uploads and the enquiry form.
-5. Sample stock updates in the app are read-then-write (can race); the atomic `move_sample` function exists but is not yet the path the app uses.
-6. Kanban stage moves use a canned comment and the department manager as assignee.
-7. Whether operations and sales may see order costing is a policy decision for the client.
-8. Self sign-up users are not linked to a company by domain (decision needed).
+| Gap | What was done | Status |
+|---|---|---|
+| Order cost columns readable through the data API | Migration 10 withdraws table-wide SELECT on `orders` / `order_items` and grants every column except the six cost columns and `supplier_cost_snapshot`. Authorised staff read costs through two permission-checked functions (`order_cost_summary`, `order_item_supplier_costs`). App code lists columns explicitly, reads costs through those functions (falling back to direct reads only until the migration is applied) and the vendor report now reads with the service role behind its two permission checks | **BLOCKED**: SQL not run. Rule defaults: admin, accounts, management see costs and margin; `suppliers.cost_view` holders see line supplier cost |
+| Payment stuck in `processing`/`pending`, or paid with no order | `lib/payments/reconcile.ts` (tested): re-asks PayU's Verify Payment API for stale PayU payments (never marks paid without PayU confirming, amount compared), repairs paid payments with no order through the idempotent resumable order function, never touches demo payments, safe to repeat. Run by a CRON_SECRET-protected route `/api/payments/reconcile` and a finance-only button on Payments | Logic PASS (unit tests); live behaviour **BLOCKED** (needs database and PayU); scheduler to be set up after launch |
+| WhatsApp messages skipped because no provider was connected | `lib/notifications/requeue.ts` (tested): only WhatsApp rows skipped for "no provider", with a phone, created within 7 days (`WHATSAPP_REQUEUE_MAX_AGE_DAYS`) go back to pending; email ledger rows, failed rows and rows with no phone are never touched. Runs from the existing dispatch cron route and from a "Re-send recent skipped messages" button (only shown when WhatsApp is connected) | Logic PASS; live **BLOCKED** (needs WhatsApp account) |
+| Personalisation required fields | `validateCustomization` (tested) enforced at checkout on the server and in the add-to-cart button: logo, personalised text and initials are required when a product offers them; instruction boxes optional; length and format limits (initials 1-6 letters). **Assumption** recorded in code: which fields are required | PASS (rules); needs a client check of the assumption |
+| Rate limiting of anonymous actions | Enquiry form (5 per 10 min), personalisation upload (10 per 10 min), order lookup (20 per 10 min). Shared database counter (migration 11, hashed client key, advisory-locked) with an in-memory fallback. Verified in the browser at 375px: the 6th enquiry in a row is refused with a clear message | In-memory path PASS in browser; database path **BLOCKED** |
+| Sample stock read-then-write | `move_sample` and new `receive_sample` are single transactions with a row lock and return the movement id; the app calls them (with a fallback to the old path only until migration 9 is applied) | **BLOCKED** (SQL not run); concurrent-move test required |
+| Product cost fields exposed (found during the audit: `products.supplier_cost`, `internal_margin`, `internal_notes` were readable with the public anon key through the public-catalogue policy, and `product_suppliers.supplier_cost` by every internal role) | Migration 12 withdraws API read access to those four columns (anon, clients and internal roles alike) and grants every other column. Authorised staff read them through `product_cost_summary` (admin, accounts, management) and `product_supplier_costs` (suppliers.cost_view). All wildcard product reads were replaced by explicit column lists; the product list, detail, requirement and company pages overlay costs only for permitted roles, and an editable cost field is shown only when the cost actually loaded (saving can never wipe a cost). Server-side cost reads (supplier assignment snapshot, cost history, bulk assignment) use the service role after their permission checks | **BLOCKED** (SQL not run). Isolated tests: stub-client tests for authorised, unauthorised, missing-function and error paths (an unauthorised refusal never falls back to a direct read); a drift test that the code's column lists equal the real table columns; a test that the migrations withhold exactly the cost columns and never grant them to anon; a source scan that fails on any wildcard read of products, orders, order_items or product_suppliers or any cost column named in a normal select |
+| Kanban moves used a canned comment | Dropping a card now asks for an optional comment and stage due date, which go into the hand-off history | PASS (code), needs DB test |
+
+## Known gaps that remain
+
+1. Operations and sales cannot see order costing in the app today (secure default). **Decision needed** from you on which roles may see costs and margins; the one-line change location is documented in migration 10.
+2. **Decision needed:** whether a self-registered user whose email domain is on a company's allowed list should be linked to that company automatically. Not implemented; an admin or the client's own administrator creates the link.
+3. Cron scheduling is not configured (no `vercel.json`): `/api/payments/reconcile` and `/api/notifications/dispatch` need `CRON_SECRET` set and a scheduler pointed at them (every 10-15 minutes) after launch.
+4. Rate limits are per client connection (IP); users behind one shared IP share the allowance.
+5. **Decision needed:** sample purchase cost (`sample_stock.unit_cost`, `sample_movements.cost`) is readable by internal roles that handle samples (admin, sales, operations) and the page shows it to finance roles only. It was deliberately left unchanged because sales and operations enter it; tell me if it should be restricted like the other costs.
 
 ## Tests to run when Supabase returns
 
@@ -200,4 +213,13 @@ All are additive and idempotent, enable RLS where they add a table, and have ver
 
 **Security matrix:** every role x direct URL x server action x export; client A cannot read client B's orders, requirements, quotations, team or documents; client user cannot call team actions; non-finance cannot record payments, create invoices or payables; no supplier name, cost or margin in any client-facing page, email, export or API response (including a direct query as a client).
 
-**Per-migration checks:** run the verification query at the bottom of each of the nine files.
+**Second-pass checks:**
+- Product cost protection (migration 12): with the anon key `GET /rest/v1/products?select=supplier_cost,internal_margin,internal_notes` and `select=*` are refused while `select=id,name,price` still returns public-catalogue products; the same as a client, sales and operations user; `product_suppliers?select=supplier_cost` refused; as admin/accounts/management the product page and list show cost, as sales/operations they do not; a user with suppliers.cost_view sees supplier costs on the product and supplier pages and one without does not; edit a product and a supplier mapping cost and confirm nothing is blanked; assign a supplier to an order line and confirm the cost snapshot is recorded.
+- Cost protection (migration 10): as client, sales and operations call `GET /rest/v1/orders?select=product_cost` and `select=*` (both refused) and `select=id,order_value` (works, rows still limited by RLS); as admin, accounts and management the order Financials tab and the dashboard margin card still show figures; vendor report still loads for a user with the cost permission and is refused for one without.
+- Reconciliation: create a PayU test payment and abandon it; after 15 minutes run the finance button, the payment resolves from PayU's answer; break order creation after a verified payment, run it again, exactly one order, invoice and payment entry result; run twice, no duplicates.
+- Requeue: with no WhatsApp credentials create an order (message skipped), connect WhatsApp, run the cron route or button, only recent messages with a phone are sent once.
+- Personalisation: buy a product with each required field missing (refused on the server even if the button is bypassed).
+- Rate limiting: with migration 11, six enquiries from one connection in 10 minutes, the sixth is refused; counters survive a server restart.
+- Samples: two people move the same product at the same time, counts stay correct; a move to or from the team location is recorded.
+
+**Per-migration checks:** run the verification query at the bottom of each of the twelve files.
