@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { BrandName } from '@/components/brand/brand-name'
 import { CatalogueBrowser } from '@/components/site/catalogue-browser'
 import { MobileCatalogueFilters } from '@/components/site/mobile-catalogue-filters'
-import { getPublicCatalogueProducts, getPublicCategories, sanitiseCatalogueSearch } from '@/lib/catalogue/products'
+import { filterProductsForMode, getPublicCatalogueProducts, getPublicCategories, sanitiseCatalogueSearch } from '@/lib/catalogue/products'
 import { BUDGET_BANDS } from '@/lib/catalogue/collections'
 import { isUuid, stableShuffleKey } from '@/lib/utils'
 import { catalogueBase, productHrefBase, type GiftMode } from '@/lib/site/gift-mode'
@@ -44,7 +44,8 @@ export async function CatalogueListing({ mode, searchParams }: { mode: GiftMode;
   const { q = '', category = '', budget = '', sort = 'name' } = searchParams
   const search = sanitiseCatalogueSearch(q)
   const basePath = catalogueBase(mode)
-  const [products, allCategories] = await Promise.all([getPublicCatalogueProducts(), getPublicCategories()])
+  const [allProducts, allCategories] = await Promise.all([getPublicCatalogueProducts(), getPublicCategories()])
+  const products = filterProductsForMode(allProducts, mode)
   const categoryCounts = new Map<string, number>()
   for (const product of products) {
     if (!product.category_id) continue

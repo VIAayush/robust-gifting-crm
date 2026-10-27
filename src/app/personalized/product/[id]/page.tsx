@@ -7,7 +7,7 @@ import { ProductDetailProvider, ProductGallerySlot, ColorSelectorSlot } from '@/
 import { PersonalizedPurchaseActions } from '@/components/site/personalized-purchase-actions'
 import { isUuid } from '@/lib/utils'
 import { PriceDisplay } from '@/components/site/price-display'
-import { getPublicProductWithVariants } from '@/lib/catalogue/products'
+import { getPublicProductWithVariants, visibleInMode } from '@/lib/catalogue/products'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -36,7 +36,7 @@ export default async function PersonalizedProductPage({ params }: Props) {
   const { id } = await params
   if (!isUuid(id)) notFound()
   const product = await getPublicProductWithVariants(id)
-  if (!product) notFound()
+  if (!product || !visibleInMode(product.salesChannel, 'personalized')) notFound()
 
   return (
     <SiteShell mode="personalized">

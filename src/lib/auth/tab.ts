@@ -70,7 +70,7 @@ export function isPublicAuthPath(pathname: string) {
 
 /** Anonymous-accessible public catalogue pages. CRM and portal stay authenticated. */
 export function isPublicSitePath(pathname: string) {
-  if (pathname === '/') return true
+  if (pathname === '/' || pathname === '/robots.txt' || pathname === '/sitemap.xml') return true
   const prefixes = ['/home', '/catalogue', '/categories', '/collections', '/request-quote', '/about', '/personalized', '/wishlist', '/cart', '/checkout', '/track-order']
   return prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
 }

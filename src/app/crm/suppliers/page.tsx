@@ -51,6 +51,11 @@ export default async function SuppliersPage() {
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-3 text-xs">
+        <Link href="/crm/suppliers/bulk" className="rounded-lg border bg-white px-3 py-2 font-semibold text-[#9C7A33] hover:bg-gray-50">Bulk supplier assignment</Link>
+        {canSeeCost ? <Link href="/crm/suppliers/vendor-report" className="rounded-lg border bg-white px-3 py-2 font-semibold text-[#9C7A33] hover:bg-gray-50">Orders &amp; cost by vendor</Link> : null}
+      </div>
+
       {canCreate && <SupplierCreateForm />}
 
       <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -80,7 +85,11 @@ export default async function SuppliersPage() {
                 <td className="p-3 text-gray-600">{s.city || '—'}</td>
                 <td className="p-3 text-gray-600">{s.lead_time_days != null ? `${s.lead_time_days}d` : '—'}</td>
                 <td className="p-3 text-gray-600">{s.moq ?? '—'}</td>
-                <td className="p-3 text-gray-600">{countBySupplier.get(s.id) || 0}</td>
+                <td className="p-3 text-gray-600">
+                  {(countBySupplier.get(s.id) || 0) > 0 ? (
+                    <Link href={`/crm/products?supplier=${s.id}&status=all`} className="font-semibold text-[#9C7A33] hover:underline">{countBySupplier.get(s.id)}</Link>
+                  ) : 0}
+                </td>
                 <td className="p-3">
                   <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold capitalize ${STATUS_STYLES[s.status] || STATUS_STYLES.active}`}>
                     {s.status || 'active'}

@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getProfile } from '@/lib/auth'
 import { writeAudit } from '@/lib/audit'
+import { notifyProductsAvailable } from '@/lib/notifications'
 import { resyncPrimaryImage } from '@/lib/products/gallery'
 import { CUSTOMIZATION_FIELDS } from '@/lib/products/customization'
 
@@ -41,6 +42,8 @@ async function subcategoryError(supabase: Awaited<ReturnType<typeof createClient
   if (!categoryId || data.category_id !== categoryId) return 'The selected subcategory does not belong to the selected category.'
   return null
 }
+
+const SALES_CHANNELS = ['b2b', 'b2c', 'both']
 
 export async function createProduct(formData: FormData) {
   const profile = await getProfile()
@@ -78,6 +81,9 @@ export async function createProduct(formData: FormData) {
   if (Object.keys(fieldErrors).length > 0) {
     return { error: 'Please fix the highlighted fields.', fieldErrors }
   }
+  // Only sent by the form when the column exists (migration applied), so saving never fails before then.
+  const sales_channel = formData.has('sales_channel') ? String(formData.get('sales_channel') || 'both') : null
+  if (sales_channel !== null && !SALES_CHANNELS.includes(sales_channel)) return { error: 'Choose where this product is shown: B2C store, B2B catalogue or both.' }
   const subError = await subcategoryError(supabase, subcategory_id, category_id)
   if (subError) return { error: subError }
   const { data: skuTaken } = await supabase.from('products').select('id').eq('sku', sku.toUpperCase()).limit(1)
@@ -111,6 +117,7 @@ export async function createProduct(formData: FormData) {
       sku: sku.trim().toUpperCase(),
       category_id,
       subcategory_id,
+      ...(sales_channel !== null ? { sales_channel } : {}),
       brand_id,
       supplier_id,
       description,
@@ -143,6 +150,7 @@ export async function createProduct(formData: FormData) {
       await supabase.from('products').delete().eq('id', product.id)
       return { error: `Product was not saved because company visibility could not be stored: ${accessError.message}` }
     }
+    await notifyProductsAvailable(selectedCompanies, [product.id])
   }
 
   let imageHint = ''
@@ -306,6 +314,11 @@ export async function updateProduct(productId: string, formData: FormData) {
   }
   text('brand_id')
   text('subcategory_id')
+  if (formData.has('sales_channel')) {
+    const channel = String(formData.get('sales_channel') || 'both')
+    if (!SALES_CHANNELS.includes(channel)) return { error: 'Choose where this product is shown: B2C store, B2B catalogue or both.' }
+    update.sales_channel = channel
+  }
   if ('subcategory_id' in update || 'category_id' in update) {
     const nextCategory = 'category_id' in update ? (update.category_id as string | null) : (existing.category_id as string | null)
     // Changing the category without re-picking a subcategory clears the old one rather than leaving a mismatch.
@@ -557,6 +570,7 @@ export async function saveCatalogueVisibility(productId: string, mode: string, c
     .eq('id', productId)
   if (updateError) return { error: 'Unable to update catalogue visibility. Please try again.' }
 
+  const { data: previousAccess } = await supabase.from('company_product_access').select('company_id').eq('product_id', productId)
   const { error: clearError } = await supabase
     .from('company_product_access')
     .delete()
@@ -567,6 +581,9 @@ export async function saveCatalogueVisibility(productId: string, mode: string, c
     const rows = [...new Set(companyIds)].map((company_id) => ({ product_id: productId, company_id }))
     const { error: insertError } = await supabase.from('company_product_access').insert(rows)
     if (insertError) return { error: 'Unable to update catalogue visibility. Please try again.' }
+    // Only companies that did not already have this product are told about it.
+    const already = new Set((previousAccess || []).map((r) => r.company_id as string))
+    await notifyProductsAvailable(rows.map((r) => r.company_id).filter((id) => !already.has(id)), [productId])
   }
 
   await writeAudit(supabase, {
@@ -643,6 +660,8 @@ export async function grantCompanyProductAccess(productId: string, companyId: st
       .eq('id', productId)
     if (updateError) return { error: updateError.message }
   }
+
+  await notifyProductsAvailable([companyId], [productId])
 
   revalidatePath('/crm/products/' + productId)
   revalidatePath('/crm/companies/' + companyId)

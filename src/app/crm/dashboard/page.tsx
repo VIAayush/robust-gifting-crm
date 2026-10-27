@@ -58,10 +58,12 @@ function asList<T>(data: unknown): T[] {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string }>
+  searchParams: Promise<{ from?: string; to?: string; view?: string }>
 }) {
   const profile = await requireStaff()
-  const { from, to } = await searchParams
+  const { from, to, view: viewParam } = await searchParams
+  // B2B = corporate clients (leads, requirements, quotations, samples, corporate orders); B2C = online store orders.
+  const view: 'all' | 'b2b' | 'b2c' = viewParam === 'b2b' || viewParam === 'b2c' ? viewParam : 'all'
   const supabase = await createClient()
   const today = new Date().toISOString().slice(0, 10)
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
@@ -89,6 +91,7 @@ export default async function DashboardPage({
     profile
   )
 
+  if (view !== 'all') orderQuery = orderQuery.eq('order_type', view)
   if (from) {
     orderQuery = orderQuery.gte('created_at', from)
     leadQuery = leadQuery.gte('created_at', from)
@@ -169,6 +172,17 @@ export default async function DashboardPage({
   const wonQuotes = quoteRows.filter((q) => q.status === 'accepted')
 
   // Cancelled orders are not revenue: they would otherwise inflate both order value and margin.
+  // B2C view: payments actually received through the online store (paid only), within the same date range.
+  let b2cPaidTotal = 0
+  let b2cPaidCount = 0
+  if (view === 'b2c' && canSeeFinance(profile.role)) {
+    let paymentQuery = supabase.from('storefront_payments').select('amount').eq('status', 'paid')
+    if (from) paymentQuery = paymentQuery.gte('created_at', from)
+    if (to) paymentQuery = paymentQuery.lte('created_at', `${to}T23:59:59`)
+    const { data: paidRows } = await paymentQuery
+    b2cPaidCount = (paidRows || []).length
+    b2cPaidTotal = (paidRows || []).reduce((s: number, r: { amount: number | string | null }) => s + Number(r.amount || 0), 0)
+  }
   const liveOrders = orderRows.filter((o) => o.status !== 'cancelled')
   const totalOrderValue = liveOrders.reduce((s, o) => s + Number(o.order_value || 0), 0)
   const margin = liveOrders.reduce((s, o) => s + Number(o.gross_profit || 0), 0)
@@ -304,6 +318,38 @@ export default async function DashboardPage({
       </div>
 
       {(profile.role === 'admin' || profile.role === 'management') && (
+        <div className="flex flex-wrap items-center gap-2 text-xs" role="tablist" aria-label="Dashboard view">
+          {([['all', 'All'], ['b2b', 'B2B (corporate)'], ['b2c', 'B2C (online store)']] as const).map(([key, label]) => (
+            <Link
+              key={key}
+              href={`/crm/dashboard${key === 'all' ? '' : `?view=${key}`}${from ? `${key === 'all' ? '?' : '&'}from=${from}` : ''}${to ? `${key === 'all' && !from ? '?' : '&'}to=${to}` : ''}`}
+              role="tab"
+              aria-selected={view === key}
+              className={`rounded-full border px-3 py-1.5 font-semibold ${view === key ? 'border-[#9C7A33] bg-[#9C7A33] text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {(profile.role === 'admin' || profile.role === 'management') && view === 'b2c' && (
+        <section>
+          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[#4A5568] mb-3">Online store (B2C)</h2>
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-4">
+            <Card label="Online orders" value={orderRows.length} href="/crm/orders" />
+            <Card label="Delivered orders" value={delivered.length} />
+            <Card label="Cancelled orders" value={cancelled.length} />
+            <Card label="Individual customers" value={new Set(orderRows.map((o) => o.company_id).filter(Boolean)).size} />
+            <Card label="Order value (excl. cancelled)" value={formatCurrency(totalOrderValue)} />
+            {canSeeFinance(profile.role) && <Card label="Payments received" value={b2cPaidCount} href="/crm/payments" />}
+            {canSeeFinance(profile.role) && <Card label="Paid revenue" value={formatCurrency(b2cPaidTotal)} href="/crm/payments" />}
+          </div>
+          <p className="mt-2 text-[11px] text-gray-500">Leads, requirements, quotations and samples are corporate (B2B) activity and appear in the B2B and All views.</p>
+        </section>
+      )}
+
+      {(profile.role === 'admin' || profile.role === 'management') && view !== 'b2c' && (
         <>
           <section>
             <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[#4A5568] mb-3">Business overview</h2>

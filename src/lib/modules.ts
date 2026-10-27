@@ -38,7 +38,7 @@ export const CRM_MODULES: CrmModule[] = [
   { key: 'goals', label: 'Goal Tracker', group: 'Sales', prefixes: ['/crm/goals'], defaultRoles: SALES, eligibleRoles: SALES },
   { key: 'requirements', label: 'Requirements', group: 'Sales', prefixes: ['/crm/requirements'], defaultRoles: SALES, eligibleRoles: SALES },
   { key: 'products', label: 'Products', group: 'Sales', prefixes: ['/crm/products'], defaultRoles: [...SALES, 'operations'], eligibleRoles: [...SALES, 'operations'] },
-  { key: 'catalogues', label: 'Catalogues', group: 'Sales', prefixes: ['/crm/products/catalogues', '/crm/campaigns'], defaultRoles: SALES, eligibleRoles: SALES },
+  { key: 'catalogues', label: 'Catalogues', group: 'Sales', prefixes: ['/crm/products/catalogues', '/crm/campaigns', '/crm/banners'], defaultRoles: SALES, eligibleRoles: SALES },
   { key: 'pricing', label: 'Pricing & MRP', group: 'Sales', prefixes: ['/crm/products/pricing'], defaultRoles: SALES, eligibleRoles: [...SALES, 'operations'] },
   { key: 'mockups', label: 'Mockup Storage', group: 'Sales', prefixes: ['/crm/mockups'], defaultRoles: SALES, eligibleRoles: [...SALES, 'operations'] },
   { key: 'quotations', label: 'Quotations', group: 'Sales', prefixes: ['/crm/quotations'], defaultRoles: SALES, eligibleRoles: SALES },

@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { SiteShell } from '@/components/site/site-shell'
 import { ProductImage } from '@/components/ui/product-image'
-import { getPublicCatalogueProducts, getPublicCategories } from '@/lib/catalogue/products'
+import { filterProductsForMode, getPublicCatalogueProducts, getPublicCategories } from '@/lib/catalogue/products'
 import { slugify } from '@/lib/utils'
 import { PRODUCT_CATEGORY_ORDER, sortProductCategories } from '@/lib/products/categories'
 import { getGiftMode } from '@/lib/site/gift-mode-server'
@@ -14,7 +14,8 @@ export const metadata: Metadata = {
 }
 
 export default async function CategoriesPage() {
-  const [products, live, mode] = await Promise.all([getPublicCatalogueProducts(), getPublicCategories(), getGiftMode()])
+  const [allProducts, live, mode] = await Promise.all([getPublicCatalogueProducts(), getPublicCategories(), getGiftMode()])
+  const products = filterProductsForMode(allProducts, mode)
   const named = PRODUCT_CATEGORY_ORDER.map((name) => live.find((item) => item.name === name) || { id: name, name })
   const extra = live.filter((item) => !PRODUCT_CATEGORY_ORDER.includes(item.name as (typeof PRODUCT_CATEGORY_ORDER)[number]))
   // Display only: a category with no live products is not shown (nothing is deleted).

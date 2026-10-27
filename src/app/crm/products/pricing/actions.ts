@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache'
 import { parseCsv, normalizeHeader } from '@/lib/csv'
 import { requirePermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
+import { planRollback } from '@/lib/pricing/rollback'
+import { randomUUID } from 'node:crypto'
 
 const MAX_ROWS = 5000
 const BATCH_SIZE = 50
@@ -34,6 +36,19 @@ function parseAmount(raw: string): { value: number | null; blank: boolean; inval
   const n = Number(cleaned)
   if (!Number.isFinite(n) || n < 0) return { value: null, blank: false, invalid: true }
   return { value: Math.round(n * 100) / 100, blank: false, invalid: false }
+}
+
+type SupabaseServer = Awaited<ReturnType<typeof createClient>>
+
+/** Inserts history rows with batch columns; if the batch migration is not applied yet, records them without. */
+async function insertHistory(supabase: SupabaseServer, rows: Record<string, unknown>[], extra: Record<string, unknown>) {
+  const { error } = await supabase.from('product_price_history').insert(rows.map((row) => ({ ...row, ...extra })))
+  if (error?.code === '42703' || /batch_id|rollback_of/.test(error?.message || '')) {
+    const retry = await supabase.from('product_price_history').insert(rows)
+    if (retry.error) console.error('[pricing] history insert failed', retry.error.message)
+  } else if (error) {
+    console.error('[pricing] history insert failed', error.message)
+  }
 }
 
 async function buildPreview(csvText: string): Promise<PricePreview | { error: string }> {
@@ -101,7 +116,7 @@ export async function previewPriceUpdate(formData: FormData): Promise<PricePrevi
 }
 
 /** Re-validates from scratch (never trusts the preview) and applies only valid, changed rows. */
-export async function applyPriceUpdate(formData: FormData): Promise<{ applied: number; skipped: number; errors: number } | { error: string }> {
+export async function applyPriceUpdate(formData: FormData): Promise<{ applied: number; skipped: number; errors: number; batchId: string } | { error: string }> {
   const supabase = await createClient()
   const access = await requirePermission(supabase, 'pricing.manage')
   if ('error' in access) return access
@@ -115,6 +130,7 @@ export async function applyPriceUpdate(formData: FormData): Promise<{ applied: n
   const { data: products } = await supabase.from('products').select('id, sku').in('sku', toApply.map((r) => r.sku))
   const idBySku = new Map((products || []).map((p) => [String(p.sku).toUpperCase(), p.id]))
   const now = new Date().toISOString()
+  const batchId = randomUUID()
   let applied = 0
 
   for (let i = 0; i < toApply.length; i += BATCH_SIZE) {
@@ -139,7 +155,7 @@ export async function applyPriceUpdate(formData: FormData): Promise<{ applied: n
         changed_by: access.profile.id,
       })
     }
-    if (history.length > 0) await supabase.from('product_price_history').insert(history)
+    if (history.length > 0) await insertHistory(supabase, history, { batch_id: batchId })
   }
 
   await writeAudit(supabase, {
@@ -151,7 +167,7 @@ export async function applyPriceUpdate(formData: FormData): Promise<{ applied: n
   })
   revalidatePath('/crm/products')
   revalidatePath('/crm/products/pricing')
-  return { applied, skipped: preview.unchanged, errors: preview.errors }
+  return { applied, skipped: preview.unchanged, errors: preview.errors, batchId }
 }
 
 /** Current SKU / name / price / MRP for every product, as CSV - edit it and upload it back. */
@@ -166,4 +182,64 @@ export async function exportPriceSheet(): Promise<{ csv: string } | { error: str
   }
   const lines = ['sku,name,price,mrp,status', ...(data || []).map((p) => [p.sku, p.name, p.price, p.mrp, p.status].map(escape).join(','))]
   return { csv: lines.join('\n') }
+}
+
+/**
+ * Restores every product in a bulk batch to its pre-batch price and MRP, but only products still
+ * holding the batch's values. Anything edited since is left alone and reported. Recorded as a new
+ * batch (source "rollback") so the rollback itself is in the history and cannot be applied twice.
+ */
+export async function rollbackPriceBatch(batchId: string): Promise<{ restored: number; conflicts: number; missing: number } | { error: string }> {
+  const supabase = await createClient()
+  const access = await requirePermission(supabase, 'pricing.manage')
+  if ('error' in access) return access
+  if (!/^[0-9a-f-]{36}$/i.test(batchId)) return { error: 'Batch not found.' }
+
+  const { data: rows, error } = await supabase
+    .from('product_price_history')
+    .select('product_id, old_price, new_price, old_mrp, new_mrp, source')
+    .eq('batch_id', batchId)
+  if (error) return { error: 'Rollback is not available until the latest database migration has been applied.' }
+  if (!rows || rows.length === 0) return { error: 'Batch not found.' }
+  if (rows.some((row) => row.source === 'rollback')) return { error: 'A rollback cannot itself be rolled back. Apply a new price update instead.' }
+
+  const { data: already } = await supabase.from('product_price_history').select('id').eq('rollback_of', batchId).limit(1)
+  if (already && already.length > 0) return { error: 'This batch has already been rolled back.' }
+
+  const ids = rows.map((row) => row.product_id as string)
+  const { data: products } = await supabase.from('products').select('id, price, mrp').in('id', ids)
+  const current = new Map((products || []).map((p) => [p.id as string, { price: p.price as number | null, mrp: p.mrp as number | null }]))
+  const plan = planRollback(rows, current)
+
+  const now = new Date().toISOString()
+  const rollbackBatch = randomUUID()
+  const history: Record<string, unknown>[] = []
+  for (const item of plan.revert) {
+    const { error: updateError } = await supabase
+      .from('products')
+      .update({ price: item.price, mrp: item.mrp, price_updated_at: now, updated_at: now })
+      .eq('id', item.product_id)
+    if (updateError) continue
+    history.push({
+      product_id: item.product_id,
+      old_price: item.from.price,
+      new_price: item.price,
+      old_mrp: item.from.mrp,
+      new_mrp: item.mrp,
+      source: 'rollback',
+      changed_by: access.profile.id,
+    })
+  }
+  if (history.length > 0) await insertHistory(supabase, history, { batch_id: rollbackBatch, rollback_of: batchId })
+
+  await writeAudit(supabase, {
+    action: 'price_batch_rollback',
+    entity: 'products',
+    entityId: null,
+    next: { batch_id: batchId, restored: history.length, conflicts: plan.conflicts.length },
+    userId: access.profile.id,
+  })
+  revalidatePath('/crm/products')
+  revalidatePath('/crm/products/pricing')
+  return { restored: history.length, conflicts: plan.conflicts.length, missing: plan.missing.length }
 }

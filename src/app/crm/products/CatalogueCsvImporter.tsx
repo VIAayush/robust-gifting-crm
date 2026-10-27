@@ -21,6 +21,7 @@ const FIELD_LABELS: { key: string; label: string; required?: boolean }[] = [
   { key: 'image_url', label: 'Image URL' },
   { key: 'image_filename', label: 'Image filename' },
   { key: 'catalogue_access', label: 'Visibility (all / selected / none)' },
+  { key: 'sales_channel', label: 'Sold through (b2b / b2c / both)' },
   { key: 'companies', label: 'Companies (semicolon-separated names)' },
   { key: 'colour', label: 'Colour' },
   { key: 'size', label: 'Size' },

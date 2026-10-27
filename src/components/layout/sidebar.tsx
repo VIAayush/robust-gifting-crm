@@ -58,6 +58,7 @@ const navGroups: NavGroup[] = [
       { label: 'Requirements', href: '/crm/requirements', matchPrefix: '/crm/requirements', icon: ClipboardList },
       { label: 'Products', href: '/crm/products', matchPrefix: '/crm/products', icon: Package },
       { label: 'Catalogues', href: '/crm/products/catalogues', matchPrefix: '/crm/products/catalogues', icon: FolderGit2 },
+      { label: 'Banners', href: '/crm/banners', matchPrefix: '/crm/banners', icon: ImageIcon },
       { label: 'Pricing & MRP', href: '/crm/products/pricing', matchPrefix: '/crm/products/pricing', icon: Tags },
       { label: 'Mockup Storage', href: '/crm/mockups', matchPrefix: '/crm/mockups', icon: ImageIcon },
       { label: 'Quotations', href: '/crm/quotations', matchPrefix: '/crm/quotations', icon: FileText },

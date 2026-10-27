@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { BackButton } from '@/components/ui/back-button'
 import { PermissionMatrix } from '@/components/crm/permission-matrix'
 import { ModuleMatrix } from '@/components/crm/module-matrix'
+import { RoleTemplates } from '@/components/crm/role-templates'
 import { MODULE_PERMISSION_PREFIX, defaultModulesForRole, modulePermissionKey } from '@/lib/modules'
 
 const ROLES = ['admin', 'sales', 'operations', 'accounts', 'management'] as const
@@ -44,6 +45,7 @@ export default async function PermissionsPage() {
           suppliers, procurement, pricing and notifications.
         </p>
       </div>
+      <RoleTemplates ready={moduleRowsReady} />
       <ModuleMatrix roles={ROLES.filter((r) => r !== 'admin')} granted={moduleGranted} ready={moduleRowsReady} />
       <PermissionMatrix
         roles={ROLES.filter((r) => r !== 'admin')}

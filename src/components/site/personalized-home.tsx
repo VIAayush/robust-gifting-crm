@@ -4,11 +4,14 @@ import { BrandName } from '@/components/brand/brand-name'
 import { ProductImage } from '@/components/ui/product-image'
 import { SiteProductCard } from '@/components/site/site-product-card'
 import { HeroStage } from '@/components/site/hero-stage'
+import { SiteBanners } from '@/components/site/site-banners'
+import { mergeTrending } from '@/lib/catalogue/trending'
+import { getTrendingProductIds } from '@/lib/catalogue/trending-data'
 import { ProductRail } from '@/components/site/product-rail'
 import { Reveal } from '@/components/site/reveal'
 import { GiftFinder } from '@/components/site/gift-finder'
 import { BUDGET_BANDS, CATALOGUE_COLLECTIONS, PERSONAL_OCCASIONS, productsForOccasion } from '@/lib/catalogue/collections'
-import { getPublicCatalogueProducts, getPublicCategories } from '@/lib/catalogue/products'
+import { filterProductsForMode, getPublicCatalogueProducts, getPublicCategories } from '@/lib/catalogue/products'
 import { curatePublicHome, homeCategoryTiles, withLiveProducts } from '@/lib/catalogue/curate'
 
 const ARROW = '→'
@@ -34,16 +37,18 @@ const PERSONAL_COLLECTIONS = CATALOGUE_COLLECTIONS.filter((c) =>
  * cart and checkout (Shop Gifts leads to /personalized/catalogue).
  */
 export async function PersonalizedHome() {
-  const products = await getPublicCatalogueProducts()
+  const products = filterProductsForMode(await getPublicCatalogueProducts(), 'personalized')
   const categories = homeCategoryTiles(withLiveProducts(await getPublicCategories(), products), 6)
   const {
     heroProducts,
     categorySamples,
     collectionSamples,
     occasionSamples,
-    trending,
+    trending: curatedTrending,
     featured,
   } = curatePublicHome(products, categories, PERSONAL_COLLECTIONS, PERSONAL_OCCASIONS)
+  // Real order/shortlist activity first; curated picks only fill the gaps and the heading says so.
+  const { products: trending, isReal: trendingIsReal } = mergeTrending(await getTrendingProductIds(), products, curatedTrending)
 
   // Bounded to HERO_POOL_LIMIT (not the full catalogue) so the rotating hero
   // stops pulling a fresh original from Storage every 3.5s indefinitely -
@@ -96,6 +101,10 @@ export async function PersonalizedHome() {
         productHrefBase="/personalized/product"
       />
 
+      <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
+        <SiteBanners surface="public" />
+      </div>
+
       {/* Shop by occasion */}
       <section className="bg-white py-10 sm:py-14 lg:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -141,8 +150,8 @@ export async function PersonalizedHome() {
           <Reveal>
             <div className="flex items-end justify-between gap-4">
               <div>
-                <p className="store-eyebrow">Popular right now</p>
-                <h2 className="store-section-title mt-2">Loved by gift-givers.</h2>
+                <p className="store-eyebrow">{trendingIsReal ? 'Popular right now' : 'Featured picks'}</p>
+                <h2 className="store-section-title mt-2">{trendingIsReal ? 'Loved by gift-givers.' : 'Hand-picked gifts to start with.'}</h2>
               </div>
               <Link href="/personalized/catalogue?sort=newest" className="store-link shrink-0">
                 View all {ARROW}

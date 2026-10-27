@@ -79,6 +79,8 @@ type PreparedRow = {
   category_id: string | null
   /** undefined = the CSV has no subcategory column, so the product's current subcategory is left alone. */
   subcategory_id?: string | null
+  /** undefined = no sales_channel column in the CSV, so the product's current channel is left alone. */
+  sales_channel?: 'b2b' | 'b2c' | 'both'
   supplier_id: string | null
   price: number
   mrp: number | null
@@ -291,6 +293,16 @@ async function buildImportPlan(formData: FormData, supabase: SupabaseClient, pro
         }
       }
     }
+    let sales_channel: 'b2b' | 'b2c' | 'both' | undefined = undefined
+    if (mapping.sales_channel) {
+      const raw = cell(row, 'sales_channel').toLowerCase()
+      if (!raw) sales_channel = 'both'
+      else if (raw === 'b2b' || raw === 'b2c' || raw === 'both') sales_channel = raw
+      else {
+        failures.push({ row: rowNumber, sku: rawSku, reason: `Sold through must be b2b, b2c or both (got "${raw}")` })
+        return
+      }
+    }
     const supplier_id = supplierName ? supplierByName.get(supplierName.toLowerCase()) || null : null
     if (supplierName && !supplier_id) {
       failures.push({ row: rowNumber, sku: rawSku, reason: `Supplier not found: ${supplierName}` })
@@ -379,6 +391,7 @@ async function buildImportPlan(formData: FormData, supabase: SupabaseClient, pro
       description: cell(row, 'description') || null,
       category_id,
       subcategory_id,
+      sales_channel,
       supplier_id,
       price,
       mrp,
@@ -547,6 +560,7 @@ async function commitGroup(
     description: first.description,
     category_id: first.category_id,
     ...(first.subcategory_id !== undefined ? { subcategory_id: first.subcategory_id } : {}),
+    ...(first.sales_channel !== undefined ? { sales_channel: first.sales_channel } : {}),
     supplier_id: first.supplier_id,
     price: first.price,
     ...(first.mrp != null ? { mrp: first.mrp } : {}),

@@ -318,6 +318,21 @@ export default async function ProductDetailPage({
                 ]}
               />
 
+              {'sales_channel' in product ? (
+                <MobileSheetSelect
+                  name="sales_channel"
+                  label="Sold through"
+                  showDesktopLabel
+                  defaultValue={product.sales_channel || 'both'}
+                  emptyLabel="B2B catalogue and B2C store"
+                  options={[
+                    { value: 'both', label: 'B2B catalogue and B2C store' },
+                    { value: 'b2b', label: 'B2B catalogue only' },
+                    { value: 'b2c', label: 'B2C store only' },
+                  ]}
+                />
+              ) : null}
+
               <MobileSheetSelect
                 name="subcategory_id"
                 label="Subcategory"

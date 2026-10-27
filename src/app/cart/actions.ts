@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { b2bOnlyProductIds } from '@/lib/catalogue/channel'
 
 function clean(value: FormDataEntryValue | null) {
   return String(value || '').trim()
@@ -216,13 +217,14 @@ export async function refreshCartPrices(
   ])
   const productById = new Map((products || []).map((p) => [p.id, p]))
   const variantById = new Map((variants || []).map((v) => [v.id, v]))
+  const b2bOnly = await b2bOnlyProductIds(admin, productIds)
 
   return {
     deliveryCharge: Number(settings?.delivery_charge) || 0,
     freeDeliveryAbove: settings?.free_delivery_above != null ? Number(settings.free_delivery_above) : null,
     lines: lines.map((line) => {
       const product = productById.get(line.id)
-      if (!product || product.status !== 'active' || !(Number(product.price) > 0)) {
+      if (!product || product.status !== 'active' || !(Number(product.price) > 0) || b2bOnly.has(line.id)) {
         return { lineId: line.lineId, available: false, unitPrice: null, mrp: null }
       }
       let extra = 0

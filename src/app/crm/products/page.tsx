@@ -12,7 +12,7 @@ const PAGE_SIZE = 50
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; access?: string; category?: string; page?: string; removed?: string }>
+  searchParams: Promise<{ q?: string; status?: string; access?: string; category?: string; supplier?: string; page?: string; removed?: string }>
 }) {
   const profile = await requireStaff(['admin', 'sales', 'management', 'operations'])
   const showCost = canSeeCosts(profile.role)
@@ -22,6 +22,7 @@ export default async function ProductsPage({
   const statusFilter = params.status || 'active'
   const accessFilter = params.access ?? ''
   const categoryFilter = isUuid(params.category) ? params.category! : ''
+  const supplierFilter = isUuid(params.supplier) ? params.supplier! : ''
   const currentPage = Math.max(1, Number.parseInt(params.page || '1', 10) || 1)
   const from = (currentPage - 1) * PAGE_SIZE
 
@@ -48,6 +49,19 @@ export default async function ProductsPage({
     query = query.eq('category_id', categoryFilter)
   }
 
+  // Supplier-wise list: products with an active mapping to the chosen supplier (RLS limits who can read mappings).
+  let supplierName: string | null = null
+  if (supplierFilter) {
+    const [{ data: mapped }, { data: supplierRow }] = await Promise.all([
+      supabase.from('product_suppliers').select('product_id').eq('supplier_id', supplierFilter).eq('status', 'active'),
+      supabase.from('suppliers').select('name').eq('id', supplierFilter).maybeSingle(),
+    ])
+    supplierName = (supplierRow?.name as string | undefined) || 'selected supplier'
+    const ids = Array.from(new Set((mapped || []).map((m) => m.product_id as string)))
+    // An empty list must show nothing, not everything.
+    query = query.in('id', ids.length > 0 ? ids : ['00000000-0000-0000-0000-000000000000'])
+  }
+
   const [{ data: products, count }, { data: categoryRows }] = await Promise.all([
     query.range(from, from + PAGE_SIZE - 1),
     supabase.from('categories').select('id, name'),
@@ -62,6 +76,7 @@ export default async function ProductsPage({
     if (statusFilter !== 'active') next.set('status', statusFilter)
     if (accessFilter) next.set('access', accessFilter)
     if (categoryFilter) next.set('category', categoryFilter)
+    if (supplierFilter) next.set('supplier', supplierFilter)
     Object.entries(overrides).forEach(([key, value]) => {
       if (value) next.set(key, value)
       else next.delete(key)
@@ -78,6 +93,12 @@ export default async function ProductsPage({
           <p className="mt-0.5 text-xs text-gray-500">
             Every product carries a unique SKU and its own client visibility. {total} in this view.
           </p>
+          {supplierName ? (
+            <p className="mt-1 text-xs font-semibold text-[#9C7A33]">
+              Supplier: {supplierName} ·{' '}
+              <Link href={buildHref({ supplier: '' })} className="underline">clear</Link>
+            </p>
+          ) : null}
         </div>
         {['admin', 'sales'].includes(profile.role) && (
         <div className="flex flex-wrap items-center gap-2">

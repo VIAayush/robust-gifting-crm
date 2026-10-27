@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { SiteShell } from '@/components/site/site-shell'
 import { CatalogueBrowser } from '@/components/site/catalogue-browser'
-import { getPublicCatalogueProducts } from '@/lib/catalogue/products'
+import { filterProductsForMode, getPublicCatalogueProducts } from '@/lib/catalogue/products'
 import { PRODUCT_CATEGORY_ORDER } from '@/lib/products/categories'
 import { slugify } from '@/lib/utils'
 import { getGiftMode } from '@/lib/site/gift-mode-server'
@@ -21,7 +21,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CategoryDetailPage({ params }: Props) {
   const { slug } = await params
-  const [products, mode] = await Promise.all([getPublicCatalogueProducts(), getGiftMode()])
+  const [allProducts, mode] = await Promise.all([getPublicCatalogueProducts(), getGiftMode()])
+  const products = filterProductsForMode(allProducts, mode)
   const names = Array.from(new Set([...PRODUCT_CATEGORY_ORDER, ...products.map((p) => p.category_name || '')])).filter(
     Boolean,
   )

@@ -37,6 +37,7 @@ function toProduct(item: RecentlyViewedItem): PublicProduct {
     variantColours: [],
     customizationEnabled: false,
     customizationFields: [],
+    salesChannel: 'both',
   }
 }
 

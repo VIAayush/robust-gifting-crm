@@ -8,7 +8,7 @@ import { WishlistHeartButton } from '@/components/site/wishlist-heart-button'
 import { BulkOrderEstimator } from '@/components/site/bulk-order-estimator'
 import { BrandingPreviewer } from '@/components/site/branding-previewer'
 import { formatCurrency, formatUnits, isUuid } from '@/lib/utils'
-import { getPublicProductWithVariants } from '@/lib/catalogue/products'
+import { getPublicProductWithVariants, visibleInMode } from '@/lib/catalogue/products'
 import { RecentlyViewedRail, RecentlyViewedTracker } from '@/components/site/recently-viewed'
 
 type Props = { params: Promise<{ id: string }> }
@@ -33,7 +33,7 @@ export default async function PublicProductPage({ params }: Props) {
   const { id } = await params
   if (!isUuid(id)) notFound()
   const product = await getPublicProductWithVariants(id)
-  if (!product) notFound()
+  if (!product || !visibleInMode(product.salesChannel, 'corporate')) notFound()
 
   return (
     <SiteShell mode="corporate">

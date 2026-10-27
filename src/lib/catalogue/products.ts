@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { oneRelation } from '@/lib/utils'
 import { sortProductCategories } from '@/lib/products/categories'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { normaliseSalesChannel, type SalesChannel } from '@/lib/catalogue/channel'
 
 /**
  * Every public page (home, catalogue, categories, collections, product
@@ -17,8 +18,21 @@ import type { SupabaseClient } from '@supabase/supabase-js'
  */
 const CATALOGUE_REVALIDATE_SECONDS = 60
 
-const PUBLIC_PRODUCT_SELECT =
+const PUBLIC_PRODUCT_SELECT_BASE =
   'id, name, sku, description, image_url, price, mrp, moq, category_id, brand_id, status, created_at, customization_enabled, customization_fields, category:categories(id, name), brand:brands(id, name)'
+// sales_channel arrives with migration 20261031; until then the plain select is used and every product counts as 'both'.
+const PUBLIC_PRODUCT_SELECT = `${PUBLIC_PRODUCT_SELECT_BASE}, sales_channel`
+
+export { normaliseSalesChannel, visibleInMode, filterProductsForMode, type SalesChannel } from '@/lib/catalogue/channel'
+
+/** Runs a products query with sales_channel selected; if the column does not exist yet, runs it again without. */
+async function withChannelFallback<T>(
+  run: (select: string) => PromiseLike<{ data: T | null; error: { code?: string; message: string } | null }>,
+): Promise<{ data: T | null; error: { code?: string; message: string } | null }> {
+  const first = await run(PUBLIC_PRODUCT_SELECT)
+  if (first.error && (first.error.code === '42703' || /sales_channel/.test(first.error.message))) return run(PUBLIC_PRODUCT_SELECT_BASE)
+  return first
+}
 
 export type PublicProduct = {
   id: string
@@ -39,6 +53,8 @@ export type PublicProduct = {
   variantColours: string[]
   customizationEnabled: boolean
   customizationFields: string[]
+  /** Which storefronts may show this product. Defaults to 'both'. */
+  salesChannel: SalesChannel
 }
 
 export type PublicProductImage = { id: string; url: string; alt: string }
@@ -51,6 +67,8 @@ export type PublicProductDetail = PublicProduct & {
 }
 
 type Named = { id: string; name: string }
+
+type ProductRow = Parameters<typeof toPublicProduct>[0]
 
 function toPublicProduct(
   row: {
@@ -67,6 +85,7 @@ function toPublicProduct(
     created_at?: string | null
     customization_enabled?: boolean | null
     customization_fields?: string[] | null
+    sales_channel?: string | null
     category?: Named | Named[] | null
     brand?: Named | Named[] | null
   },
@@ -89,6 +108,7 @@ function toPublicProduct(
     variantColours,
     customizationEnabled: Boolean(row.customization_enabled),
     customizationFields: row.customization_fields || [],
+    salesChannel: normaliseSalesChannel(row.sales_channel),
   }
 }
 
@@ -142,12 +162,9 @@ function isCatalogueReady(row: {
 async function fetchPublicCatalogueProducts(): Promise<PublicProduct[]> {
   const client = await publicDbClient()
   if (!client) return []
-  const { data, error } = await client
-    .from('products')
-    .select(PUBLIC_PRODUCT_SELECT)
-    .eq('status', 'active')
-    .eq('catalogue_access', 'all')
-    .order('name')
+  const { data, error } = await withChannelFallback((select) =>
+    client.from('products').select(select).eq('status', 'active').eq('catalogue_access', 'all').order('name'),
+  ).then((r) => ({ data: r.data as unknown as ProductRow[] | null, error: r.error }))
   if (error || !data) {
     console.error('[catalogue] public products fetch failed:', error?.message || 'no data')
     return []
@@ -165,13 +182,9 @@ export const getPublicCatalogueProducts = unstable_cache(fetchPublicCataloguePro
 async function fetchPublicProduct(id: string): Promise<PublicProduct | null> {
   const client = await publicDbClient()
   if (!client) return null
-  const { data, error } = await client
-    .from('products')
-    .select(PUBLIC_PRODUCT_SELECT)
-    .eq('id', id)
-    .eq('status', 'active')
-    .eq('catalogue_access', 'all')
-    .maybeSingle()
+  const { data, error } = await withChannelFallback((select) =>
+    client.from('products').select(select).eq('id', id).eq('status', 'active').eq('catalogue_access', 'all').maybeSingle(),
+  ).then((r) => ({ data: r.data as unknown as ProductRow | null, error: r.error }))
   if (error || !data || !isCatalogueReady(data)) return null
   const coloursByProduct = await loadVariantColoursByProduct(client, [data.id])
   return toPublicProduct(data, coloursByProduct.get(data.id) || [])
@@ -186,13 +199,9 @@ export const getPublicProduct = unstable_cache(fetchPublicProduct, ['public-prod
 async function fetchPublicProductWithVariants(id: string): Promise<PublicProductDetail | null> {
   const client = await publicDbClient()
   if (!client) return null
-  const { data, error } = await client
-    .from('products')
-    .select(PUBLIC_PRODUCT_SELECT)
-    .eq('id', id)
-    .eq('status', 'active')
-    .eq('catalogue_access', 'all')
-    .maybeSingle()
+  const { data, error } = await withChannelFallback((select) =>
+    client.from('products').select(select).eq('id', id).eq('status', 'active').eq('catalogue_access', 'all').maybeSingle(),
+  ).then((r) => ({ data: r.data as unknown as ProductRow | null, error: r.error }))
   if (error || !data || !isCatalogueReady(data)) return null
 
   const [{ data: variantRows }, { data: imageRows }] = await Promise.all([

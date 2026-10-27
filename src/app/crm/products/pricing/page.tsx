@@ -4,6 +4,7 @@ import { hasPermission } from '@/lib/permissions'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { BackButton } from '@/components/ui/back-button'
 import { PriceUpdateTool } from '@/components/products/price-update-tool'
+import { PriceBatches, type PriceBatchSummary } from '@/components/products/price-batches'
 
 export default async function PricingPage() {
   const profile = await requireStaff(['admin', 'sales', 'management', 'operations'])
@@ -15,6 +16,26 @@ export default async function PricingPage() {
     .select('id, old_price, new_price, old_mrp, new_mrp, source, changed_at, product:products(name, sku), changer:changed_by(full_name)')
     .order('changed_at', { ascending: false })
     .limit(25)
+
+  // Batch columns come from migration 20261029; before it runs this query errors and the panel is simply hidden.
+  const { data: batchRows, error: batchError } = await supabase
+    .from('product_price_history')
+    .select('batch_id, rollback_of, source, changed_at')
+    .not('batch_id', 'is', null)
+    .order('changed_at', { ascending: false })
+    .limit(2000)
+  const batches: PriceBatchSummary[] = []
+  if (!batchError) {
+    const rolledBack = new Set((batchRows || []).map((r) => r.rollback_of as string | null).filter(Boolean) as string[])
+    const byId = new Map<string, PriceBatchSummary>()
+    for (const row of batchRows || []) {
+      const id = row.batch_id as string
+      const existing = byId.get(id)
+      if (existing) existing.products += 1
+      else byId.set(id, { id, when: formatDateTime(row.changed_at), source: String(row.source), products: 1, rolledBack: rolledBack.has(id) })
+    }
+    batches.push(...Array.from(byId.values()).slice(0, 10))
+  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 pb-10">
@@ -33,6 +54,8 @@ export default async function PricingPage() {
           You can view price history, but your role cannot change prices.
         </div>
       )}
+
+      {!batchError ? <PriceBatches batches={batches} canManage={canManage} /> : null}
 
       <div className="rounded-2xl border border-gray-200 bg-white p-5">
         <h2 className="mb-3 text-sm font-bold text-gray-900">Recent price changes</h2>
@@ -64,7 +87,7 @@ export default async function PricingPage() {
                       </td>
                       <td className="py-2">{formatCurrency(h.old_price)} → {formatCurrency(h.new_price)}</td>
                       <td className="py-2">{formatCurrency(h.old_mrp)} → {formatCurrency(h.new_mrp)}</td>
-                      <td className="py-2 text-gray-500">{h.source === 'csv_bulk' ? 'Bulk CSV' : 'Manual edit'}</td>
+                      <td className="py-2 text-gray-500">{h.source === 'csv_bulk' ? 'Bulk CSV' : h.source === 'rollback' ? 'Rollback' : 'Manual edit'}</td>
                       <td className="py-2 text-gray-500">{changer?.full_name || '—'}</td>
                     </tr>
                   )

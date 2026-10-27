@@ -29,6 +29,10 @@ export default async function NewProductPage({
     excludeIndividualCompanies(supabase.from('companies').select('id, name').eq('status', 'active')).order('name'),
   ])
 
+  // The channel selector only appears once the sales_channel migration has been applied.
+  const { error: channelProbe } = await supabase.from('products').select('sales_channel').limit(1)
+  const channelReady = !channelProbe
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <BackButton href="/crm/products" label="Back to Products" />
@@ -87,6 +91,21 @@ export default async function NewProductPage({
                 ...sortProductCategories(categories || []).map((c) => ({ value: c.id, label: c.name })),
               ]}
             />
+
+            {channelReady ? (
+              <MobileSheetSelect
+                name="sales_channel"
+                label="Sold through"
+                showDesktopLabel
+                defaultValue="both"
+                emptyLabel="B2B catalogue and B2C store"
+                options={[
+                  { value: 'both', label: 'B2B catalogue and B2C store' },
+                  { value: 'b2b', label: 'B2B catalogue only' },
+                  { value: 'b2c', label: 'B2C store only' },
+                ]}
+              />
+            ) : null}
 
             <MobileSheetSelect
               name="subcategory_id"

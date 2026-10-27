@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { SiteShell } from '@/components/site/site-shell'
 import { CatalogueBrowser } from '@/components/site/catalogue-browser'
 import { collectionBySlug, productsInCollection } from '@/lib/catalogue/collections'
-import { getPublicCatalogueProducts } from '@/lib/catalogue/products'
+import { filterProductsForMode, getPublicCatalogueProducts } from '@/lib/catalogue/products'
 import { getGiftMode } from '@/lib/site/gift-mode-server'
 import { productHrefBase } from '@/lib/site/gift-mode'
 
@@ -23,7 +23,7 @@ export default async function CollectionDetailPage({ params }: Props) {
   const collection = collectionBySlug(slug)
   if (!collection) notFound()
   const [allProducts, mode] = await Promise.all([getPublicCatalogueProducts(), getGiftMode()])
-  const products = productsInCollection(allProducts, slug)
+  const products = productsInCollection(filterProductsForMode(allProducts, mode), slug)
 
   return (
     <SiteShell>

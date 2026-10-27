@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getProfile, type ProfileSession } from '@/lib/auth'
+import type { PermissionKey } from '@/lib/permission-keys'
 
 /**
  * Granular module.action permission keys, layered on top of the existing
@@ -7,22 +8,7 @@ import { getProfile, type ProfileSession } from '@/lib/auth'
  * Backed by role_permissions in the DB - this list exists so callers get
  * autocomplete/typo-safety, the DB row is still the source of truth.
  */
-export const PERMISSION_KEYS = [
-  'suppliers.view',
-  'suppliers.create',
-  'suppliers.edit',
-  'suppliers.delete',
-  'suppliers.cost_view',
-  'products.supplier_manage',
-  'orders.assign_supplier',
-  'orders.procurement',
-  'permissions.manage',
-  'notifications.view',
-  'notifications.manage',
-  'pricing.manage',
-] as const
-
-export type PermissionKey = (typeof PERMISSION_KEYS)[number]
+export { PERMISSION_KEYS, type PermissionKey } from '@/lib/permission-keys'
 
 /**
  * Checks role_permissions for the given profile's role. Admin always passes -

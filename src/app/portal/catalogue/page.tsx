@@ -8,6 +8,7 @@ import { sortProductCategories } from '@/lib/products/categories'
 import { swatchHex } from '@/lib/products/colours'
 import { MobileFilterBar } from '@/components/ui/mobile-filter-sheet'
 import { ShortlistButton } from '@/components/portal/shortlist-button'
+import { SiteBanners } from '@/components/site/site-banners'
 
 const PAGE_SIZE = 24
 
@@ -114,6 +115,7 @@ export default async function PortalCataloguePage({
 
   return (
     <div className="space-y-6">
+      <SiteBanners surface="portal" />
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Explore gifts</h1>
         <p className="mt-1 text-sm text-gray-500">Curated corporate gifting for your team, ready to personalise.</p>

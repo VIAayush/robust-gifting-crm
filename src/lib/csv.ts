@@ -68,6 +68,7 @@ export const CSV_FIELD_ALIASES: Record<string, string[]> = {
   sku: ['sku', 'product_code', 'code', 'item_code'],
   description: ['description', 'desc', 'notes', 'details'],
   category: ['category', 'category_name'],
+  sales_channel: ['sales_channel', 'channel', 'sold_through'],
   subcategory: ['subcategory', 'sub_category', 'subcategory_name', 'sub_category_name'],
   supplier: ['supplier', 'supplier_name', 'vendor'],
   price: ['price', 'selling_price', 'unit_price', 'sale_price'],

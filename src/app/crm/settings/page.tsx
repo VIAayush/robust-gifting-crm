@@ -57,6 +57,17 @@ export default async function SettingsPage() {
             </label>
           </div>
         </div>
+        <div className="border-t pt-4">
+          <p className="text-xs font-semibold text-gray-900">Staff notification email</p>
+          {settings && 'staff_notification_email' in settings ? (
+            <label className="block mt-2">
+              <span className="text-gray-500 text-xs">Internal alerts (new requirements, samples, orders, quotation outcomes) are emailed here</span>
+              <input name="staff_notification_email" type="email" defaultValue={settings.staff_notification_email ?? ''} placeholder="Leave blank to send no staff email" className="w-full border rounded-lg px-3 py-2 mt-1" />
+            </label>
+          ) : (
+            <p className="mt-1 text-xs text-amber-800">Available after the latest database migration is applied. Until then no staff email is sent.</p>
+          )}
+        </div>
         <button className="px-4 py-2 bg-[#9C7A33] text-white rounded-lg font-medium text-sm">Save settings</button>
       </form>
 

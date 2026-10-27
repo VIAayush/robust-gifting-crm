@@ -7,6 +7,9 @@ import { HeroStage } from '@/components/site/hero-stage'
 import { ProductRail } from '@/components/site/product-rail'
 import { Reveal } from '@/components/site/reveal'
 import { RecentlyViewedRail } from '@/components/site/recently-viewed'
+import { SiteBanners } from '@/components/site/site-banners'
+import { mergeTrending } from '@/lib/catalogue/trending'
+import { getTrendingProductIds } from '@/lib/catalogue/trending-data'
 import { GiftFinder } from '@/components/site/gift-finder'
 import { slugify } from '@/lib/utils'
 import {
@@ -15,7 +18,7 @@ import {
   CATALOGUE_OCCASIONS,
   productsForOccasion,
 } from '@/lib/catalogue/collections'
-import { getPublicCatalogueProducts, getPublicCategories, type PublicProduct } from '@/lib/catalogue/products'
+import { filterProductsForMode, getPublicCatalogueProducts, getPublicCategories, type PublicProduct } from '@/lib/catalogue/products'
 import { curatePublicHome, homeCategoryTiles, withLiveProducts } from '@/lib/catalogue/curate'
 
 const ARROW = '\u2192'
@@ -42,7 +45,7 @@ function pickNewArrivals(products: PublicProduct[]) {
 }
 
 export async function PublicHome() {
-  const products = await getPublicCatalogueProducts()
+  const products = filterProductsForMode(await getPublicCatalogueProducts(), 'corporate')
   const categories = homeCategoryTiles(withLiveProducts(await getPublicCategories(), products), 6)
   const collections = CATALOGUE_COLLECTIONS.slice(0, 6)
   const {
@@ -50,10 +53,12 @@ export async function PublicHome() {
     categorySamples,
     collectionSamples,
     occasionSamples,
-    trending,
+    trending: curatedTrending,
     featured,
     more,
   } = curatePublicHome(products, categories, collections, CATALOGUE_OCCASIONS)
+  // Real order/shortlist activity first; curated picks only fill the gaps and the heading says so.
+  const { products: trending, isReal: trendingIsReal } = mergeTrending(await getTrendingProductIds(), products, curatedTrending)
 
   const newArrivals = pickNewArrivals(products)
 
@@ -101,6 +106,10 @@ export async function PublicHome() {
     <div className="bg-white">
       <HeroStage products={heroSlideshow.length ? heroSlideshow : heroProducts} />
 
+      <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
+        <SiteBanners surface="public" />
+      </div>
+
       {newArrivals.length > 0 ? (
         <section className="bg-[#F1F4F9] py-10 sm:py-14 lg:py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -128,8 +137,8 @@ export async function PublicHome() {
           <Reveal>
             <div className="flex items-end justify-between gap-4">
               <div>
-                <p className="store-eyebrow">Top trending</p>
-                <h2 className="store-section-title mt-2">Products teams love.</h2>
+                <p className="store-eyebrow">{trendingIsReal ? 'Top trending' : 'Featured picks'}</p>
+                <h2 className="store-section-title mt-2">{trendingIsReal ? 'Products teams love.' : 'Hand-picked for corporate gifting.'}</h2>
               </div>
               <Link href="/catalogue?sort=newest" className="store-link shrink-0">
                 View all {ARROW}

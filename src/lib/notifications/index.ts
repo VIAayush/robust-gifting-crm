@@ -5,7 +5,7 @@ import { renderTemplate, type TemplateKey } from './templates'
 import { getNotificationProvider } from './providers'
 import { requestOrigin } from '@/lib/auth/request-origin'
 import { sendEmail } from '@/lib/email/resend'
-import { requirementUpdateEmail } from '@/lib/email/templates'
+import { orderEmail, productAvailableEmail, requirementUpdateEmail, staffAlertEmail } from '@/lib/email/templates'
 
 export { isWhatsAppConfigured } from './providers'
 
@@ -157,7 +157,7 @@ export function notifyOrderCreated(orderId: string) {
   return safely('order created', async (admin) => {
     const { data: order, error: orderError } = await admin
       .from('orders')
-      .select('id, order_number, order_type, order_value, owner_id, assigned_to, shipping_address, company:companies(name), contact:contacts(full_name, phone)')
+      .select('id, order_number, order_type, order_value, owner_id, assigned_to, shipping_address, storefront_checkout_id, company:companies(name), contact:contacts(full_name, phone)')
       .eq('id', orderId)
       .maybeSingle()
     if (orderError) throw new Error(orderError.message)
@@ -198,6 +198,16 @@ export function notifyOrderCreated(orderId: string) {
       })
     }
     await enqueueAndDispatch(admin, inputs)
+    await emailB2cCustomer(admin, order.id, order.storefront_checkout_id as string | null, order.order_number as string, 'order_created', `Thank you for your order ${order.order_number}`, [`We have received your order (${amount}).`, 'We will keep you posted as it progresses.'])
+    await emailStaff(admin, {
+      eventType: 'order_created',
+      dedupeKey: `email:order_created:${order.id}`,
+      entity: 'orders',
+      entityId: order.id,
+      title: `New ${typeLabel} order ${order.order_number}`,
+      lines: [`Customer: ${customerName}`, `Value: ${amount}`],
+      path: `/crm/orders/${order.id}`,
+    })
   })
 }
 
@@ -238,7 +248,7 @@ export function notifyOrderStatusChanged(orderId: string, statusLabel: string) {
   return safely('order status', async (admin) => {
     const { data: order, error: orderError } = await admin
       .from('orders')
-      .select('id, order_number, status, assigned_to, owner_id, shipping_address, contact:contacts(full_name, phone), company:companies(name)')
+      .select('id, order_number, status, assigned_to, owner_id, shipping_address, storefront_checkout_id, contact:contacts(full_name, phone), company:companies(name)')
       .eq('id', orderId)
       .maybeSingle()
     if (orderError) throw new Error(orderError.message)
@@ -275,6 +285,7 @@ export function notifyOrderStatusChanged(orderId: string, statusLabel: string) {
       })
     }
     await enqueueAndDispatch(admin, inputs)
+    await emailB2cCustomer(admin, order.id, order.storefront_checkout_id as string | null, order.order_number as string, `order_status_${order.status}`, `Your order ${order.order_number} is now: ${statusLabel}`, [`Your Robust Gifting order ${order.order_number} is now: ${statusLabel}.`])
   })
 }
 
@@ -323,6 +334,15 @@ export function notifySampleRequested(sampleRequestId: string) {
       })
     }
     await enqueueAndDispatch(admin, inputs)
+    await emailStaff(admin, {
+      eventType: 'sample_requested',
+      dedupeKey: `email:sample:${request.id}`,
+      entity: 'sample_requests',
+      entityId: request.id,
+      title: `New sample request from ${company?.name || 'a client'}`,
+      lines: [`Product: ${productName}`, `Quantity: ${request.quantity}`],
+      path: '/crm/samples',
+    })
   })
 }
 
@@ -415,5 +435,194 @@ export function notifyRequirementEvent(requirementId: string, event: string, not
       }
     }
     if (inputs.length > 0) await enqueueAndDispatch(admin, inputs)
+    if (update.audience === 'staff') {
+      await emailStaff(admin, {
+        eventType: `requirement_${event}`,
+        dedupeKey: `email:requirement:${requirement.id}:${event}:${round}`,
+        entity: 'requirements',
+        entityId: requirement.id,
+        title: `${companyName}: ${update.text}`,
+        lines: [`Requirement: ${requirement.name}`, ...(note ? [`Note: ${note}`] : [])],
+        path: `/crm/requirements/${requirement.id}`,
+      })
+    }
+  })
+}
+
+/**
+ * The configured internal alert address (Settings > staff notification email), or null.
+ * Tolerates the column not existing yet (migration not applied) - that simply means "not configured".
+ */
+export async function getStaffNotificationEmail(admin: SupabaseClient): Promise<string | null> {
+  const { data, error } = await admin.from('org_settings').select('staff_notification_email').limit(1).maybeSingle()
+  if (error) return null
+  const value = String((data as { staff_notification_email?: string | null } | null)?.staff_notification_email || '').trim()
+  return value || null
+}
+
+/**
+ * Emails the configured staff address once per dedupe key. Nothing is sent when no address is configured
+ * or e-mail is not set up. The notification_outbox row (channel 'email') is the ledger that prevents a
+ * repeated action from sending the same alert twice; it is inserted as 'skipped' so the WhatsApp
+ * dispatcher (which only picks up 'pending' rows) never touches it, then flipped to sent/failed.
+ */
+async function emailOnce(
+  admin: SupabaseClient,
+  input: {
+    recipientType: 'staff' | 'customer'
+    to: string
+    mail: { subject: string; html: string }
+    eventType: string
+    dedupeKey: string
+    entity: string
+    entityId: string
+  },
+) {
+  const { data: ledger, error } = await admin
+    .from('notification_outbox')
+    .insert({
+      event_type: input.eventType,
+      channel: 'email',
+      recipient_type: input.recipientType,
+      template_key: input.recipientType === 'staff' ? 'staff_email' : 'customer_email',
+      payload: { subject: input.mail.subject },
+      rendered_message: input.mail.subject,
+      status: 'skipped',
+      last_error: 'Email send in progress',
+      entity: input.entity,
+      entity_id: input.entityId,
+      dedupe_key: input.dedupeKey,
+    })
+    .select('id')
+    .maybeSingle()
+  if (error) {
+    if (error.code !== '23505') console.error('[notifications] email ledger failed:', error.message)
+    return
+  }
+  const sent = await sendEmail({ to: input.to, ...input.mail })
+  if (ledger?.id) {
+    await admin
+      .from('notification_outbox')
+      .update(sent.ok ? { status: 'sent', last_error: null, sent_at: new Date().toISOString(), provider: 'resend' } : { status: 'failed', last_error: sent.error, provider: 'resend' })
+      .eq('id', ledger.id)
+  }
+}
+
+async function emailStaff(
+  admin: SupabaseClient,
+  input: { eventType: string; dedupeKey: string; entity: string; entityId: string; title: string; lines: string[]; path: string },
+) {
+  const to = await getStaffNotificationEmail(admin)
+  if (!to) return
+  const origin = await requestOrigin()
+  await emailOnce(admin, {
+    recipientType: 'staff',
+    to,
+    mail: staffAlertEmail({ title: input.title, lines: input.lines, url: `${origin}${input.path}` }),
+    eventType: input.eventType,
+    dedupeKey: input.dedupeKey,
+    entity: input.entity,
+    entityId: input.entityId,
+  })
+}
+
+/** "Product A, Product B and 3 more": at most two names, never prices or supplier data. */
+export function summariseProductNames(names: string[]): string {
+  const clean = names.map((n) => n.trim()).filter(Boolean)
+  if (clean.length === 0) return 'new products'
+  if (clean.length <= 2) return clean.join(' and ')
+  return `${clean[0]}, ${clean[1]} and ${clean.length - 2} more`
+}
+
+/**
+ * Tells ONLY the given companies' active portal users that products were made visible to them:
+ * in-app notification, WhatsApp outbox entry (skipped without a phone) and email. Never sent to any other
+ * company. Deduped per company + product set + user, so re-saving the same visibility does not repeat it.
+ */
+export function notifyProductsAvailable(companyIds: string[], productIds: string[]) {
+  return safely('product available', async (admin) => {
+    const companies = Array.from(new Set(companyIds.filter(Boolean)))
+    const products = Array.from(new Set(productIds.filter(Boolean)))
+    if (companies.length === 0 || products.length === 0) return
+
+    const { data: productRows } = await admin.from('products').select('id, name').in('id', products).eq('status', 'active')
+    const names = (productRows || []).map((p) => String(p.name))
+    if (names.length === 0) return
+    const summary = summariseProductNames(names)
+    const setKey = [...products].sort().join(',').slice(0, 200)
+    const origin = await requestOrigin()
+
+    for (const companyId of companies) {
+      const { data: users } = await admin
+        .from('profiles')
+        .select('id, full_name, email, phone')
+        .eq('company_id', companyId)
+        .in('role', ['client_admin', 'client_user'])
+        .eq('is_active', true)
+      if (!users || users.length === 0) continue
+
+      const inputs: EnqueueInput[] = users.map((user) => ({
+        eventType: 'product_available',
+        recipientType: 'customer' as const,
+        recipientPhone: user.phone || null,
+        recipientName: user.full_name,
+        recipientProfileId: user.id,
+        templateKey: 'product_available_customer' as const,
+        payload: { customer_name: user.full_name || 'there', product_summary: summary },
+        entity: 'companies',
+        entityId: companyId,
+        dedupeKey: `product_available:${companyId}:${setKey}:${user.id}`,
+      }))
+      // The outbox row doubles as the "already told" ledger: only newly created rows trigger the in-app
+      // notification and the email, so saving the same visibility twice never repeats either.
+      const created = await Promise.all(inputs.map((input) => enqueue(admin, input)))
+      const fresh = created.filter((id): id is string => Boolean(id))
+      if (fresh.length === 0) continue
+
+      await admin.rpc('notify_users', {
+        p_audience: 'client',
+        p_company_id: companyId,
+        p_title: `New in your catalogue: ${summary}`,
+        p_body: null,
+        p_link: '/portal/catalogue',
+      })
+      await dispatchNotifications(admin, fresh)
+      for (let i = 0; i < users.length; i++) {
+        if (!created[i] || !users[i].email) continue
+        const mail = productAvailableEmail({ name: users[i].full_name || 'there', summary, url: `${origin}/portal/catalogue` })
+        const sent = await sendEmail({ to: users[i].email as string, ...mail })
+        if (!sent.ok) console.error('[notifications] product email failed:', sent.error)
+      }
+    }
+  })
+}
+
+/**
+ * Emails the online-store (B2C) customer about their order, once per event. Corporate (B2B) orders have
+ * no storefront checkout and are handled through the portal, so they are skipped here. Uses the checkout's
+ * own email address; nothing is sent when there is none or e-mail is not configured.
+ */
+async function emailB2cCustomer(
+  admin: SupabaseClient,
+  orderId: string,
+  checkoutId: string | null,
+  orderNumber: string,
+  eventKey: string,
+  title: string,
+  lines: string[],
+) {
+  if (!checkoutId) return
+  const { data: checkout } = await admin.from('storefront_checkouts').select('customer_name, customer_email').eq('id', checkoutId).maybeSingle()
+  const to = String(checkout?.customer_email || '').trim()
+  if (!to) return
+  const origin = await requestOrigin()
+  await emailOnce(admin, {
+    recipientType: 'customer',
+    to,
+    mail: orderEmail({ name: String(checkout?.customer_name || 'there'), title, lines, trackUrl: `${origin}/track-order`, orderNumber }),
+    eventType: eventKey,
+    dedupeKey: `email:order:${orderId}:${eventKey}`,
+    entity: 'orders',
+    entityId: orderId,
   })
 }

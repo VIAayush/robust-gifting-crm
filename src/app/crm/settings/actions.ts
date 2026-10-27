@@ -32,6 +32,15 @@ export async function updateOrgSettings(formData: FormData) {
     free_delivery_above: freeAbove,
   }
 
+  // Only present when the form rendered the field (i.e. the column exists). Empty clears it; nothing is ever invented.
+  if (formData.has('staff_notification_email')) {
+    const email = String(formData.get('staff_notification_email') || '').trim().toLowerCase()
+    if (email && (email.length > 254 || !/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email))) {
+      return { error: 'Enter a valid staff notification email address, or leave it blank.' }
+    }
+    Object.assign(payload, { staff_notification_email: email || null })
+  }
+
   const { data: existing } = await supabase.from('org_settings').select('id').limit(1).maybeSingle()
   const error = existing
     ? (await supabase.from('org_settings').update(payload).eq('id', existing.id)).error

@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isClientPortalUser } from '@/lib/auth/client-guard'
+import { b2bOnlyProductIds } from '@/lib/catalogue/channel'
 import { isUuid } from '@/lib/utils'
 import type { CartItem } from '@/lib/site/cart'
 import { validateCheckoutCustomer, type CheckoutCustomer, type CheckoutFieldErrors } from '@/lib/checkout/validation'
@@ -42,6 +43,9 @@ export async function createCheckout(
   ])
   if (productsError) return { error: productsError.message }
   if (variantsError) return { error: variantsError.message }
+
+  const b2bOnly = await b2bOnlyProductIds(admin, productIds)
+  if (b2bOnly.size > 0) return { error: 'Some items in your cart are available to corporate customers only. Please remove them or request a quote.' }
 
   const productById = new Map((products || []).map((p) => [p.id, p]))
   const variantById = new Map((variants || []).map((v) => [v.id, v]))
