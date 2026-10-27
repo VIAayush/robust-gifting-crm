@@ -1,9 +1,12 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { moduleActionGuard } from '@/lib/module-access'
 import { revalidatePath } from 'next/cache'
 
 export async function createGoal(formData: FormData) {
+  const moduleAccess = await moduleActionGuard('goals')
+  if (!moduleAccess.ok) return { error: moduleAccess.error }
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
@@ -27,6 +30,8 @@ export async function createGoal(formData: FormData) {
 }
 
 export async function updateGoal(formData: FormData) {
+  const moduleAccess = await moduleActionGuard('goals')
+  if (!moduleAccess.ok) return { error: moduleAccess.error }
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
@@ -50,6 +55,8 @@ export async function updateGoal(formData: FormData) {
 }
 
 export async function removeGoal(formData: FormData) {
+  const moduleAccess = await moduleActionGuard('goals')
+  if (!moduleAccess.ok) return { error: moduleAccess.error }
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }

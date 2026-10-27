@@ -3,6 +3,7 @@ import { formatCurrency, formatDate, oneRelation } from '@/lib/utils'
 import Link from 'next/link'
 import { requireStaff } from '@/lib/auth'
 import { MobileFilterBar } from '@/components/ui/mobile-filter-sheet'
+import { ReadyToInvoice, type ReadyOrder } from './ready-to-invoice'
 
 export default async function InvoicesPage({
   searchParams,
@@ -10,7 +11,7 @@ export default async function InvoicesPage({
   searchParams: Promise<{ status?: string }>
 }) {
   const params = await searchParams
-  await requireStaff(['admin', 'accounts', 'management'])
+  const profile = await requireStaff(['admin', 'accounts', 'management'])
   const supabase = await createClient()
   const statusFilter = params.status || ''
 
@@ -21,6 +22,17 @@ export default async function InvoicesPage({
   }
 
   const { data: invoices } = await query
+
+  // Delivered orders that have no invoice yet (finance can create it with one click).
+  let readyOrders: ReadyOrder[] = []
+  if (profile.role === 'admin' || profile.role === 'accounts') {
+    const [{ data: delivered }, { data: invoicedOrders }] = await Promise.all([
+      supabase.from('orders').select('id, order_number, order_value, company:companies(name)').eq('status', 'delivered').gt('order_value', 0).order('created_at', { ascending: false }).limit(100),
+      supabase.from('invoices').select('order_id').not('order_id', 'is', null),
+    ])
+    const invoiced = new Set((invoicedOrders || []).map((row) => row.order_id as string))
+    readyOrders = (delivered || []).filter((o) => !invoiced.has(o.id as string)).slice(0, 20).map((o) => ({ id: o.id as string, number: (o.order_number as string) || '', company: oneRelation(o.company as { name: string } | { name: string }[] | null)?.name || '—', value: formatCurrency(o.order_value) }))
+  }
   
   const totalIssued = invoices?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
   const totalPaid = invoices?.filter(i => i.status === 'paid').reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
@@ -30,6 +42,7 @@ export default async function InvoicesPage({
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-[var(--color-primary)]">Invoices</h1>
+      <ReadyToInvoice orders={readyOrders} />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-sm sm:p-4">
           <p className="text-xs text-[var(--color-text-secondary)] sm:text-sm">Total Issued</p>

@@ -3,8 +3,26 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { BackButton } from '@/components/ui/back-button'
 import { formatCurrency, formatDate, formatUnits, isUuid, oneRelation } from '@/lib/utils'
-import { QuotationActions } from './QuotationActions'
+import { QuotationItemDecisions } from './quotation-item-decisions'
 import { FileText, Calendar, CheckCircle2 } from 'lucide-react'
+
+type ItemRow = {
+  id: string
+  quantity: number
+  unit_price: number
+  line_total: number
+  client_decision?: string | null
+  product?: { name?: string; sku?: string } | { name?: string; sku?: string }[] | null
+}
+
+function DecisionBadge({ decision }: { decision?: string | null }) {
+  if (decision !== 'accepted' && decision !== 'rejected') return null
+  return (
+    <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${decision === 'accepted' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+      {decision === 'accepted' ? 'Accepted' : 'Rejected'}
+    </span>
+  )
+}
 
 export default async function PortalQuotationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -15,14 +33,10 @@ export default async function PortalQuotationDetailPage({ params }: { params: Pr
 
   const { data: companyId } = await supabase.rpc('client_company_id')
 
+  // Explicit columns: nothing internal (owner, internal ids) is pulled into a client page.
   const { data: quote } = await supabase
     .from('quotations')
-    .select(`
-      *,
-      items:quotation_items(
-        id, quantity, unit_price, line_total, product:products(name, sku, image_url)
-      )
-    `)
+    .select('id, company_id, quotation_number, status, created_at, valid_until, subtotal, discount_percent, discount_amount, tax_percent, tax_amount, total, notes')
     .eq('id', id)
     .maybeSingle()
 
@@ -30,6 +44,11 @@ export default async function PortalQuotationDetailPage({ params }: { params: Pr
     notFound()
   }
 
+  // client_decision exists after migration 20261033; before it, fall back to the plain item list.
+  const itemSelect = 'id, quantity, unit_price, line_total, product:products(name, sku, image_url)'
+  const withDecision = await supabase.from('quotation_items').select(`${itemSelect}, client_decision`).eq('quotation_id', id)
+  const plain = withDecision.error ? await supabase.from('quotation_items').select(itemSelect).eq('quotation_id', id) : null
+  const rawItems = ((withDecision.error ? plain?.data : withDecision.data) || []) as unknown as ItemRow[]
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <BackButton href="/portal/quotations" label="Back to Quotations" />
@@ -69,11 +88,11 @@ export default async function PortalQuotationDetailPage({ params }: { params: Pr
             <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-700">Itemized Quotation</h3>
 
             <div className="space-y-3 md:hidden">
-              {quote.items?.map((item: { id: string; quantity: number; unit_price: number; line_total: number; product?: { name?: string; sku?: string } | { name?: string; sku?: string }[] | null }) => {
+              {rawItems.map((item: ItemRow) => {
                 const product = oneRelation(item.product)
                 return (
                   <article key={item.id} className="rounded-xl border border-[#E2E8F0] bg-[#F5F7FA] p-4">
-                    <p className="text-sm font-semibold text-gray-900">{product?.name}</p>
+                    <p className="text-sm font-semibold text-gray-900">{product?.name}<DecisionBadge decision={item.client_decision} /></p>
                     <p className="mt-0.5 font-mono text-[10px] text-gray-400">{product?.sku}</p>
                     <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
                       <div>
@@ -105,12 +124,12 @@ export default async function PortalQuotationDetailPage({ params }: { params: Pr
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {quote.items?.map((item: { id: string; quantity: number; unit_price: number; line_total: number; product?: { name?: string; sku?: string } | { name?: string; sku?: string }[] | null }) => {
+                  {rawItems.map((item: ItemRow) => {
                     const product = oneRelation(item.product)
                     return (
                     <tr key={item.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
-                        <div className="font-bold text-gray-900">{product?.name}</div>
+                        <div className="font-bold text-gray-900">{product?.name}<DecisionBadge decision={item.client_decision} /></div>
                         <div className="font-mono text-[10px] text-gray-400">{product?.sku}</div>
                       </td>
                       <td className="px-4 py-3 text-center font-semibold text-gray-800">{formatUnits(item.quantity)}</td>
@@ -160,7 +179,15 @@ export default async function PortalQuotationDetailPage({ params }: { params: Pr
 
           {(quote.status === 'sent' || quote.status === 'viewed') && (
             <div className="pt-4 border-t border-gray-100">
-              <QuotationActions quotationId={quote.id} />
+              <QuotationItemDecisions
+                quotationId={quote.id}
+                discountPercent={Number(quote.discount_percent) || 0}
+                taxPercent={Number(quote.tax_percent) || 0}
+                items={rawItems.map((item) => {
+                  const product = oneRelation(item.product)
+                  return { id: item.id, name: product?.name || 'Item', sku: product?.sku || null, quantity: Number(item.quantity), unitPrice: Number(item.unit_price) }
+                })}
+              />
             </div>
           )}
         </div>

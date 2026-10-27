@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { formatCurrency, formatDate, asRows, oneRelation } from '@/lib/utils'
+import { ORDER_STATUS_LABELS } from '@/lib/order-workflow'
 
 const STATUS_COLORS: Record<string, string> = {
   created: 'bg-blue-100 text-blue-800',
@@ -34,10 +35,12 @@ type OrderRow = {
   owner?: OrderOwner | OrderOwner[] | null
 }
 
-export default async function OrdersPage(props: { searchParams: Promise<{ status?: string }> }) {
+export default async function OrdersPage(props: { searchParams: Promise<{ status?: string; type?: string; payment?: string }> }) {
   const profile = await requireStaff()
   const searchParams = await props.searchParams
   const statusFilter = searchParams.status || 'all'
+  const typeFilter = searchParams.type === 'b2b' || searchParams.type === 'b2c' ? searchParams.type : 'all'
+  const paymentFilter = ['paid', 'pending', 'failed', 'refunded', 'not_applicable'].includes(searchParams.payment || '') ? (searchParams.payment as string) : 'all'
   
   const supabase = await createClient()
 
@@ -50,6 +53,9 @@ export default async function OrdersPage(props: { searchParams: Promise<{ status
   if (statusFilter !== 'all') {
     query = query.eq('status', statusFilter)
   }
+  // order_type / payment_status arrive with migration 20260926 (already part of the live schema).
+  if (typeFilter !== 'all') query = query.eq('order_type', typeFilter)
+  if (paymentFilter !== 'all') query = query.eq('payment_status', paymentFilter)
 
   const { data: orders, error } = await query
   if (error) console.error('Orders list query failed', error.message)
@@ -81,8 +87,22 @@ export default async function OrdersPage(props: { searchParams: Promise<{ status
               emptyLabel: 'All',
               options: statuses.map((status) => ({
                 value: status,
-                label: status === 'all' ? 'All' : status.replace(/_/g, ' '),
+                label: status === 'all' ? 'All' : ORDER_STATUS_LABELS[status] || status.replace(/_/g, ' '),
               })),
+            },
+            {
+              key: 'type',
+              label: 'Order type',
+              value: typeFilter,
+              emptyLabel: 'All',
+              options: [{ value: 'all', label: 'All' }, { value: 'b2b', label: 'Corporate (B2B)' }, { value: 'b2c', label: 'Online (B2C)' }],
+            },
+            {
+              key: 'payment',
+              label: 'Payment',
+              value: paymentFilter,
+              emptyLabel: 'All',
+              options: [{ value: 'all', label: 'All' }, { value: 'paid', label: 'Paid' }, { value: 'pending', label: 'Pending' }, { value: 'failed', label: 'Failed' }, { value: 'refunded', label: 'Refunded' }],
             },
           ]}
         />
@@ -91,11 +111,22 @@ export default async function OrdersPage(props: { searchParams: Promise<{ status
         {statuses.map(status => (
           <Link 
             key={status}
-            href={`/crm/orders?status=${status}`}
-            className={`shrink-0 px-4 py-2.5 text-sm font-medium capitalize ${statusFilter === status ? 'border-b-2 border-[var(--color-primary)] text-[var(--color-primary)]' : 'text-gray-500 hover:text-gray-700'}`}
+            href={`/crm/orders?status=${status}&type=${typeFilter}&payment=${paymentFilter}`}
+            className={`shrink-0 px-4 py-2.5 text-sm font-medium ${statusFilter === status ? 'border-b-2 border-[var(--color-primary)] text-[var(--color-primary)]' : 'text-gray-500 hover:text-gray-700'}`}
           >
-            {status.replace(/_/g, ' ')}
+            {status === 'all' ? 'All' : ORDER_STATUS_LABELS[status] || status.replace(/_/g, ' ')}
           </Link>
+        ))}
+      </div>
+
+      <div className="mb-4 hidden flex-wrap items-center gap-2 text-xs md:flex">
+        <span className="font-semibold text-gray-500">Type</span>
+        {([['all', 'All'], ['b2b', 'Corporate'], ['b2c', 'Online']] as const).map(([key, label]) => (
+          <Link key={key} href={`/crm/orders?status=${statusFilter}&type=${key}&payment=${paymentFilter}`} className={`rounded-full border px-3 py-1 font-medium ${typeFilter === key ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white' : 'text-gray-600 hover:bg-gray-50'}`}>{label}</Link>
+        ))}
+        <span className="ml-3 font-semibold text-gray-500">Payment</span>
+        {([['all', 'All'], ['paid', 'Paid'], ['pending', 'Pending'], ['failed', 'Failed']] as const).map(([key, label]) => (
+          <Link key={key} href={`/crm/orders?status=${statusFilter}&type=${typeFilter}&payment=${key}`} className={`rounded-full border px-3 py-1 font-medium ${paymentFilter === key ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white' : 'text-gray-600 hover:bg-gray-50'}`}>{label}</Link>
         ))}
       </div>
 
@@ -142,7 +173,7 @@ export default async function OrdersPage(props: { searchParams: Promise<{ status
                   </td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[order.status] || 'bg-gray-100 text-gray-800'}`}>
-                      {(order.status || 'unknown').replace(/_/g, ' ')}
+                      {ORDER_STATUS_LABELS[order.status] || (order.status || 'unknown').replace(/_/g, ' ')}
                     </span>
                     <div className="mt-2 max-w-[140px]">
                       <OrderLifecycleBar status={order.status} compact />

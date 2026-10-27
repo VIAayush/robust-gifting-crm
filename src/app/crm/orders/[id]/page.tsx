@@ -515,14 +515,14 @@ export default async function OrderDetailPage({
             : {}),
           history: (
             <div className="bg-white p-6 rounded-2xl border space-y-4">
-              {(history || []).map((entry: { id: string; from_status?: string; to_status?: string; note?: string; changed_at?: string; created_at?: string; changer?: { full_name?: string } }) => {
+              {(history || []).map((entry: { id: string; from_status?: string; to_status?: string; note?: string; changed_at?: string; created_at?: string; stage_due_at?: string | null; changer?: { full_name?: string } }) => {
                 const changer = Array.isArray(entry.changer) ? entry.changer[0] : entry.changer
                 return (
                   <div key={entry.id} className="flex gap-3 text-xs">
                     <div className="w-2.5 h-2.5 mt-1 rounded-full bg-[#9C7A33]" />
                     <div>
                       <p className="font-bold">{ORDER_STATUS_LABELS[entry.from_status || ''] || entry.from_status || '—'} → {ORDER_STATUS_LABELS[entry.to_status || ''] || entry.to_status}</p>
-                      <p className="text-gray-400">{formatDateTime(entry.changed_at || entry.created_at)} · {changer?.full_name || 'Team'}</p>
+                      <p className="text-gray-400">{formatDateTime(entry.changed_at || entry.created_at)} · {changer?.full_name || 'Team'}{entry.stage_due_at ? ` · due ${formatDate(entry.stage_due_at)}` : ''}</p>
                       {entry.note && <p className="mt-1 bg-gray-50 p-2 rounded">{entry.note}</p>}
                     </div>
                   </div>

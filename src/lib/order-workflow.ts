@@ -26,13 +26,13 @@ export const ORDER_STATUS_LABELS: Record<string, string> = {
 
 export const CLIENT_STATUS_LABELS: Record<string, string> = {
   created: "Order Received",
-  confirmed: "Order Confirmed",
+  confirmed: "Planning",
   in_progress: "In Production",
   procurement: "Procurement",
-  printing: "Printing in Progress",
+  printing: "Printing",
   quality_check: "Quality Check",
-  ready_to_dispatch: "Ready to Dispatch",
-  dispatched: "Dispatched",
+  ready_to_dispatch: "Packing",
+  dispatched: "In Transit",
   delivered: "Delivered",
   cancelled: "Cancelled",
 }

@@ -141,7 +141,23 @@ async function recordOnlinePayment(
   reference: string | null,
 ) {
   const { data: existing } = await admin.from('invoices').select('id').eq('order_id', order.id).limit(1)
-  if (existing && existing.length > 0) return
+  if (existing && existing.length > 0) {
+    // The invoice survived an earlier attempt; make sure its payment entry did too.
+    const { data: paid } = await admin.from('payments').select('id').eq('invoice_id', existing[0].id).limit(1)
+    if (!paid || paid.length === 0) {
+      const repairDate = todayInIndia()
+      const { error: repairError } = await admin.from('payments').insert({
+        invoice_id: existing[0].id,
+        payment_date: repairDate,
+        amount: order.amount,
+        method: 'other',
+        reference,
+        notes: 'Online payment from the personalized-gifts checkout.',
+      })
+      if (repairError) console.error('[checkout] payment repair failed', repairError.message)
+    }
+    return
+  }
 
   const { data: invoiceNumber, error: numberError } = await admin.rpc('next_invoice_number')
   if (numberError || !invoiceNumber) {
@@ -178,6 +194,70 @@ async function recordOnlinePayment(
   if (paymentError) console.error('[checkout] payment insert failed', paymentError.message)
 }
 
+type CheckoutItemRow = {
+  product_id: string
+  variant_id: string | null
+  quantity: number
+  unit_price: number
+  mrp_snapshot: number | null
+  line_total: number
+  customization: Record<string, string> | null
+  product?: { name?: string } | { name?: string }[] | null
+  variant?: { colour?: string; display_name?: string } | { colour?: string; display_name?: string }[] | null
+}
+
+function buildOrderItems(orderId: string, items: CheckoutItemRow[]) {
+  return items.map((item) => {
+    const product = Array.isArray(item.product) ? item.product[0] : item.product
+    const variant = Array.isArray(item.variant) ? item.variant[0] : item.variant
+    const variantLabel = variant?.display_name || variant?.colour
+    const customizationSummary = formatCustomization(item.customization, '; ')
+    const descriptionParts = [product?.name || 'Product', variantLabel ? `Colour: ${variantLabel}` : '', customizationSummary].filter(Boolean)
+    return {
+      order_id: orderId,
+      product_id: item.product_id,
+      variant_id: item.variant_id,
+      description: descriptionParts.join(' — '),
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      mrp_snapshot: item.mrp_snapshot,
+      line_total: item.line_total,
+      customization: item.customization,
+    }
+  })
+}
+
+/** An order younger than this may still be mid-creation by a concurrent caller, so it is not repaired. */
+const REPAIR_AFTER_MS = 60_000
+
+/**
+ * A previous attempt created the order row but may have stopped before the items, the invoice or the
+ * payment entry were written (a transient database error). Fill in whatever is missing. Safe to repeat:
+ * items are only inserted when the order has none, and the invoice/payment step is idempotent.
+ */
+async function completeExistingOrder(
+  admin: SupabaseClient,
+  checkout: CheckoutRow,
+  existing: { id: string; order_number: string | null; company_id: string | null; created_at: string | null },
+  items: CheckoutItemRow[],
+  reference: string | null,
+): Promise<{ orderId: string }> {
+  const age = existing.created_at ? Date.now() - new Date(existing.created_at).getTime() : Infinity
+  if (age < REPAIR_AFTER_MS) return { orderId: existing.id }
+
+  const { count } = await admin.from('order_items').select('id', { count: 'exact', head: true }).eq('order_id', existing.id)
+  if (!count) {
+    const { error } = await admin.from('order_items').insert(buildOrderItems(existing.id, items))
+    if (error) console.error('[checkout] order items repair failed', error.message)
+    else await assignPreferredSuppliers(admin, existing.id)
+  }
+  if (!checkout.order_id) await admin.from('storefront_checkouts').update({ order_id: existing.id, status: 'paid' }).eq('id', checkout.id)
+  if (existing.company_id) {
+    await recordOnlinePayment(admin, { id: existing.id, number: existing.order_number || '', companyId: existing.company_id, amount: Number(checkout.total_amount) || 0 }, reference)
+  }
+  return { orderId: existing.id }
+}
+
 /**
  * Creates the real orders/order_items rows from a paid checkout, so
  * fulfilment staff see it in the exact same CRM pipeline as every other
@@ -201,14 +281,22 @@ export async function createOrderFromCheckout(
   if (checkoutError || !checkoutData) return { error: checkoutError?.message || 'Checkout not found.' }
   const checkout = checkoutData as CheckoutRow
 
-  if (checkout.order_id) return { orderId: checkout.order_id }
-
   const { data: items, error: itemsError } = await admin
     .from('storefront_checkout_items')
     .select('*, product:products(name), variant:product_variants(colour, display_name)')
     .eq('checkout_id', checkoutId)
   if (itemsError) return { error: itemsError.message }
   if (!items || items.length === 0) return { error: 'Checkout has no items.' }
+
+  // Already created (duplicate callback, or a retry after a partial failure): never create a second order,
+  // but do complete anything the first attempt left unfinished.
+  const { data: alreadyThere } = await admin
+    .from('orders')
+    .select('id, order_number, company_id, created_at')
+    .eq('storefront_checkout_id', checkout.id)
+    .maybeSingle()
+  if (alreadyThere) return completeExistingOrder(admin, checkout, alreadyThere, items as CheckoutItemRow[], payment?.reference || null)
+  if (checkout.order_id) return { orderId: checkout.order_id }
 
   const customer = await resolveCustomer(admin, checkout)
   if ('error' in customer) return { error: customer.error }
@@ -247,29 +335,12 @@ export async function createOrderFromCheckout(
 
   if (orderError?.code === '23505') {
     // Lost a race to a concurrent caller for this same checkout - return its order.
-    const { data: existing } = await admin.from('orders').select('id').eq('storefront_checkout_id', checkout.id).maybeSingle()
-    if (existing) return { orderId: existing.id }
+    const { data: existing } = await admin.from('orders').select('id, order_number, company_id, created_at').eq('storefront_checkout_id', checkout.id).maybeSingle()
+    if (existing) return completeExistingOrder(admin, checkout, existing, items as CheckoutItemRow[], payment?.reference || null)
   }
   if (orderError || !order) return { error: orderError?.message || 'Could not create the order.' }
 
-  const orderItems = items.map((item) => {
-    const product = Array.isArray(item.product) ? item.product[0] : item.product
-    const variant = Array.isArray(item.variant) ? item.variant[0] : item.variant
-    const variantLabel = variant?.display_name || variant?.colour
-    const customizationSummary = formatCustomization(item.customization as Record<string, string> | null, '; ')
-    const descriptionParts = [product?.name || 'Product', variantLabel ? `Colour: ${variantLabel}` : '', customizationSummary].filter(Boolean)
-    return {
-      order_id: order.id,
-      product_id: item.product_id,
-      variant_id: item.variant_id,
-      description: descriptionParts.join(' — '),
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      mrp_snapshot: item.mrp_snapshot,
-      line_total: item.line_total,
-      customization: item.customization,
-    }
-  })
+  const orderItems = buildOrderItems(order.id, items as CheckoutItemRow[])
 
   const { error: orderItemsError } = await admin.from('order_items').insert(orderItems)
   if (orderItemsError) return { error: orderItemsError.message }

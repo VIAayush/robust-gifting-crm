@@ -41,3 +41,15 @@ export async function requireModule(key: string) {
   if (role === 'client_admin' || role === 'client_user') redirect('/portal/catalogue')
   if (!modules.has(key)) redirect(`/crm/access-denied?module=${encodeURIComponent(key)}`)
 }
+
+/**
+ * Server-action twin of requireModule. Layouts only guard page navigation; a server action can be invoked
+ * directly, so actions call this first. Returns an error object instead of redirecting.
+ */
+export async function moduleActionGuard(key: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { role, modules } = await getAllowedModules()
+  if (!role) return { ok: false, error: 'Your session has expired. Please sign in again.' }
+  if (role === 'client_admin' || role === 'client_user') return { ok: false, error: 'Not permitted.' }
+  if (!modules.has(key)) return { ok: false, error: 'You do not have access to this area.' }
+  return { ok: true }
+}

@@ -24,6 +24,9 @@ export function visibleInMode(channel: SalesChannel, mode: 'corporate' | 'person
 }
 
 export function filterProductsForMode<T extends { salesChannel: SalesChannel }>(products: T[], mode: 'corporate' | 'personalized'): T[] {
-  return products.filter((product) => visibleInMode(product.salesChannel, mode))
+  const visible = products.filter((product) => visibleInMode(product.salesChannel, mode))
+  // MRP and discount belong to the personalised (B2C) store only. Corporate pages never receive the value,
+  // so it cannot appear in their page data either.
+  if (mode === 'corporate') return visible.map((product) => ('mrp' in product ? { ...product, mrp: null } : product))
+  return visible
 }
-

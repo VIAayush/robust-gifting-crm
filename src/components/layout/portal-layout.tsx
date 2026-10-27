@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, LogOut, PackageSearch, Heart, FileText, ShoppingBag, LayoutDashboard, FolderGit2, Files, ClipboardList } from 'lucide-react';
+import { Menu, X, LogOut, PackageSearch, Heart, FileText, ShoppingBag, LayoutDashboard, FolderGit2, Files, ClipboardList, Users } from 'lucide-react';
 import { BrandName } from '@/components/brand/brand-name';
 import { signOut } from '@/app/login/actions';
 import { forgetRememberedTab } from '@/lib/auth/remember-client';
@@ -14,11 +14,14 @@ interface PortalLayoutProps {
   user?: {
     name: string;
     company_name: string;
+    is_company_admin?: boolean;
     avatar_url?: string;
   };
 }
 
-const navItems = [
+const teamNavItem = { label: 'Team', href: '/portal/team', icon: Users };
+
+const baseNavItems = [
   { label: 'Products', href: '/portal/catalogue', icon: PackageSearch },
   { label: 'Catalogues', href: '/portal/catalogues', icon: FolderGit2 },
   { label: 'Dashboard', href: '/portal', icon: LayoutDashboard },
@@ -32,6 +35,7 @@ const navItems = [
 const SCROLL_KEY = 'giffter.portal.nav.scrollTop'
 
 export function PortalLayout({ children, user }: PortalLayoutProps) {
+  const navItems = user?.is_company_admin ? [...baseNavItems, teamNavItem] : baseNavItems;
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navRef = useRef<HTMLDivElement | null>(null)

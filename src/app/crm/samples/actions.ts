@@ -166,7 +166,15 @@ async function performSampleMovement(
     })
     .select('id')
     .single()
-  if (movementError || !movement) return { error: movementError?.message || 'Could not record the movement.' }
+  if (movementError || !movement) {
+    // Never leave stock changed without its ledger row: put the counts back exactly as they were.
+    await supabase
+      .from('sample_stock')
+      .update({ [fromCol]: Number(stockRow[fromCol] || 0), [toCol]: Number(stockRow[toCol] || 0) })
+      .eq('id', stockId)
+    console.error('[samples] movement insert failed, stock restored', movementError?.message)
+    return { error: 'Could not record the movement. Nothing was changed.' }
+  }
 
   return { movementId: movement.id as string }
 }

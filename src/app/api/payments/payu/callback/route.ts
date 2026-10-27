@@ -40,10 +40,11 @@ export async function POST(request: Request) {
   const provider = new PayuPaymentProvider()
 
   if (!provider.verifyRedirectHash(fields)) {
-    await admin
-      .from('storefront_payments')
-      .update({ status: 'failed', failure_reason: 'Response hash did not match — possible tampering.', raw_response: fields })
-      .eq('id', payment.id)
+    // An unverifiable POST is never allowed to change a payment's state: anyone who knows a transaction id
+    // could otherwise fail somebody else's pending payment. Only note it; the real outcome is confirmed
+    // with PayU's Verify Payment API or stays pending.
+    console.error('[payu] callback hash mismatch for transaction', txnId)
+    await admin.from('storefront_payments').update({ raw_response: { note: 'Callback hash mismatch ignored', received_at: new Date().toISOString() } }).eq('id', payment.id).in('status', ['pending', 'processing'])
     return NextResponse.redirect(checkoutUrl, 303)
   }
 

@@ -27,7 +27,7 @@ export default async function SamplesPage({
 
   const [{ data: samples }, { data: movements }, { data: products }, { data: companies }, { data: sampleRequests }] = await Promise.all([
     supabase.from('sample_stock').select('*, product:products(name, sku)'),
-    supabase.from('sample_movements').select('*, product:products(name), company:companies(name)').order('created_at', { ascending: false }).limit(25),
+    supabase.from('sample_movements').select('*, product:products(name), company:companies(name), mover:profiles!sample_movements_created_by_fkey(full_name)').order('created_at', { ascending: false }).limit(100),
     fetchAllProducts(supabase).then((data) => ({ data })),
     excludeIndividualCompanies(supabase.from('companies').select('id, name')).order('name'),
     supabase
@@ -356,10 +356,11 @@ export default async function SamplesPage({
         {(movements || []).map((m) => {
           const product = Array.isArray(m.product) ? m.product[0] : m.product
           const company = Array.isArray(m.company) ? m.company[0] : m.company
+          const mover = Array.isArray(m.mover) ? m.mover[0] : m.mover
           return (
             <p key={m.id} className="text-xs py-1 border-t">
               {formatDateTime(m.created_at)} · {product?.name} · {m.quantity} · {m.from_holder} → {m.to_holder}
-              {company?.name ? ` · ${company.name}` : ''} {m.note ? ` · ${m.note}` : ''}
+              {company?.name ? ` · ${company.name}` : ''}{mover?.full_name ? ` · by ${mover.full_name}` : ''} {m.note ? ` · ${m.note}` : ''}
             </p>
           )
         })}

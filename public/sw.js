@@ -1,8 +1,8 @@
 /* Robust Gifting PWA service worker */
 // Bumped from v1: v1 cached every page navigation, including signed-in CRM /
 // portal / checkout HTML. Activating v2 deletes that old cache.
-const CACHE = 'robust-gifting-pwa-v2'
-const PRECACHE = ['/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png']
+const CACHE = 'robust-gifting-pwa-v3'
+const PRECACHE = ['/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png', '/offline.html']
 
 // Only public, non-personal pages are ever stored for offline use. Anything
 // signed-in or per-customer (/crm, /portal, /checkout, /cart, /wishlist,
@@ -10,7 +10,11 @@ const PRECACHE = ['/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-to
 const OFFLINE_PAGE_PREFIXES = ['/about', '/catalogue', '/categories', '/collections', '/home', '/personalized', '/request-quote']
 
 function isOfflinePage(url) {
-  if (url.search) return false
+  // The installed app opens at /?source=pwa: treat that as the plain home page.
+  const onlySource = url.search === '?source=pwa'
+  if (url.search && !onlySource) return false
+  // Individual product pages carry prices that change, so only list pages are kept for offline use.
+  if (/^\/catalogue\/[^/]+$/.test(url.pathname) || url.pathname.startsWith('/personalized/product/')) return false
   if (url.pathname === '/') return true
   return OFFLINE_PAGE_PREFIXES.some((prefix) => url.pathname === prefix || url.pathname.startsWith(`${prefix}/`))
 }
@@ -64,7 +68,7 @@ self.addEventListener('fetch', (event) => {
           }
           return response
         })
-        .catch(async () => (isOfflinePage(url) && (await caches.match(request))) || (await caches.match('/')) || Response.error()),
+        .catch(async () => (isOfflinePage(url) && (await caches.match(request))) || (await caches.match('/')) || (await caches.match('/offline.html')) || Response.error()),
     )
     return
   }

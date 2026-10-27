@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { moduleActionGuard } from '@/lib/module-access'
 import { revalidatePath } from 'next/cache'
 import { getProfile } from '@/lib/auth'
 import { writeAudit } from '@/lib/audit'
@@ -20,6 +21,8 @@ function canManageAllTasks(role: string) {
 }
 
 export async function createTask(formData: FormData) {
+  const moduleAccess = await moduleActionGuard('tasks')
+  if (!moduleAccess.ok) return { error: moduleAccess.error }
   const profile = await getProfile()
   if (!profile) return { error: 'Not authenticated' }
 
@@ -59,6 +62,8 @@ export async function createTask(formData: FormData) {
 }
 
 export async function completeTask(formData: FormData) {
+  const moduleAccess = await moduleActionGuard('tasks')
+  if (!moduleAccess.ok) return { error: moduleAccess.error }
   const profile = await getProfile()
   if (!profile) return { error: 'Not authenticated' }
 
@@ -86,6 +91,8 @@ export async function completeTask(formData: FormData) {
 }
 
 export async function updateTaskStatus(formData: FormData) {
+  const moduleAccess = await moduleActionGuard('tasks')
+  if (!moduleAccess.ok) return { error: moduleAccess.error }
   const profile = await getProfile()
   if (!profile) return { error: 'Not authenticated' }
 
@@ -118,6 +125,8 @@ export async function updateTaskStatus(formData: FormData) {
 }
 
 export async function reassignTask(formData: FormData) {
+  const moduleAccess = await moduleActionGuard('tasks')
+  if (!moduleAccess.ok) return { error: moduleAccess.error }
   const profile = await getProfile()
   if (!profile) return { error: 'Not authenticated' }
   if (profile.role !== 'admin' && profile.role !== 'management' && profile.role !== 'operations') {

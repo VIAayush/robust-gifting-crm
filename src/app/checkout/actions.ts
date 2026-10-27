@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isClientPortalUser } from '@/lib/auth/client-guard'
 import { b2bOnlyProductIds } from '@/lib/catalogue/channel'
+import { isValidCustomizationPath } from '@/lib/site/upload-rules'
 import { isUuid } from '@/lib/utils'
 import type { CartItem } from '@/lib/site/cart'
 import { validateCheckoutCustomer, type CheckoutCustomer, type CheckoutFieldErrors } from '@/lib/checkout/validation'
@@ -94,7 +95,8 @@ export async function createCheckout(
             .map(([key, value]) => [key, String(value).trim().slice(0, 500)] as const)
         : []
     const customization = cleanedEntries.length > 0 ? Object.fromEntries(cleanedEntries) : null
-    const customizationFilePath = product.customization_enabled ? item.customizationFilePath || null : null
+    // Only a path our own upload action could have produced for THIS product is accepted; anything else is dropped.
+    const customizationFilePath = product.customization_enabled && isValidCustomizationPath(item.customizationFilePath, item.id) ? item.customizationFilePath! : null
 
     resolvedItems.push({
       product_id: product.id,

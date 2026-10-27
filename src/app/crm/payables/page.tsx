@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { formatCurrency, formatDate, oneRelation } from '@/lib/utils'
 import { requireStaff } from '@/lib/auth'
+import { NewPayableForm, PayPayableForm } from './payables-tools'
 
 export default async function PayablesPage() {
-  await requireStaff(['admin', 'accounts', 'management'])
+  const profile = await requireStaff(['admin', 'accounts', 'management'])
+  const canEdit = profile.role === 'admin' || profile.role === 'accounts'
   const supabase = await createClient()
 
   const { data: payables } = await supabase.from('payables').select('*, orders(order_number)').order('due_date', { ascending: true })
@@ -11,6 +13,7 @@ export default async function PayablesPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-[var(--color-primary)] mb-6">Accounts Payable</h1>
+      {canEdit ? <NewPayableForm /> : null}
       
       <div className="bg-[var(--color-surface)] rounded-lg border border-[var(--color-border)] overflow-x-auto">
         <table className="w-full min-w-[820px] text-left border-collapse">
@@ -24,6 +27,7 @@ export default async function PayablesPage() {
               <th className="p-3 font-medium text-sm text-[var(--color-text-secondary)]">Outstanding</th>
               <th className="p-3 font-medium text-sm text-[var(--color-text-secondary)]">Due Date</th>
               <th className="p-3 font-medium text-sm text-[var(--color-text-secondary)]">Status</th>
+              {canEdit ? <th className="p-3 font-medium text-sm text-[var(--color-text-secondary)]">Record payment</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -46,18 +50,19 @@ export default async function PayablesPage() {
                   <td className="p-3 text-sm">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${
                       payable.status === 'paid' ? 'bg-green-100 text-green-800' :
-                      payable.status === 'partially_paid' ? 'bg-blue-100 text-blue-800' :
+                      (payable.status === 'partial' || payable.status === 'partially_paid') ? 'bg-blue-100 text-blue-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
                       {String(payable.status || '').replace(/_/g, ' ')}
                     </span>
                   </td>
+                  {canEdit ? <td className="p-3"><PayPayableForm id={payable.id} outstanding={outstanding} /></td> : null}
                 </tr>
               )
             })}
             {(!payables || payables.length === 0) && (
               <tr>
-                <td colSpan={8} className="p-4 text-center text-[var(--color-text-secondary)]">No payables found.</td>
+                <td colSpan={canEdit ? 9 : 8} className="p-4 text-center text-[var(--color-text-secondary)]">No payables found.</td>
               </tr>
             )}
           </tbody>

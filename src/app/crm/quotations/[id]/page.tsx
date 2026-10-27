@@ -6,11 +6,13 @@ import { formatCurrency, formatDate, isUuid, oneRelation } from '@/lib/utils'
 import { requireStaff } from '@/lib/auth'
 import { updateQuotationStatus, convertToOrder, duplicateQuotation } from '../actions'
 import { FileText, CheckCircle2, XCircle, Copy, ArrowRight } from 'lucide-react'
+import { QuotationEditor, type EditorItem } from './quotation-editor'
+import { canEditQuotation } from '@/lib/quotations/line-rules'
 
 export default async function QuotationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   if (!isUuid(id)) notFound()
-  await requireStaff()
+  const profile = await requireStaff()
   const supabase = await createClient()
 
   const { data: quote } = await supabase
@@ -136,6 +138,17 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
         </div>
       </div>
 
+      {canEditQuotation(quote.status) && ['admin', 'sales'].includes(profile.role) ? (
+        <QuotationEditor
+          quotationId={quote.id}
+          header={{ tax_percent: Number(quote.tax_percent) || 0, discount_percent: Number(quote.discount_percent) || 0, valid_until: quote.valid_until || '', notes: quote.notes || '' }}
+          items={((items || []) as unknown as (EditorItem & { product?: { name?: string; sku?: string } | { name?: string; sku?: string }[] | null; discount_percent: number })[]).map((item) => {
+            const product = oneRelation(item.product)
+            return { id: item.id, name: product?.name || 'Item', sku: product?.sku || null, quantity: Number(item.quantity), unit_price: Number(item.unit_price), discount_percent: Number(item.discount_percent) || 0, tax_percent: Number(item.tax_percent) || 0 }
+          })}
+        />
+      ) : null}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
         <div className="bg-white p-5 rounded-xl border border-gray-200 text-xs space-y-2.5">
           <h3 className="font-bold text-gray-900 pb-2 border-b">Client Details</h3>
@@ -168,12 +181,12 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {items?.map((item: { id: string; quantity: number; unit_price: number; line_total: number; product?: { name?: string; sku?: string } | { name?: string; sku?: string }[] | null }) => {
+            {items?.map((item: { id: string; quantity: number; unit_price: number; line_total: number; client_decision?: string | null; product?: { name?: string; sku?: string } | { name?: string; sku?: string }[] | null }) => {
               const product = oneRelation(item.product)
               return (
               <tr key={item.id} className="hover:bg-gray-50/50">
                 <td className="p-3.5">
-                  <div className="font-bold text-gray-900">{product?.name || 'Item'}</div>
+                  <div className="font-bold text-gray-900">{product?.name || 'Item'}{item.client_decision === 'accepted' || item.client_decision === 'rejected' ? <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${item.client_decision === 'accepted' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>Client {item.client_decision}</span> : null}</div>
                   <div className="text-gray-400 font-mono text-[10px]">{product?.sku}</div>
                 </td>
                 <td className="p-3.5 text-right font-medium">{item.quantity}</td>

@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { validateEnquiry } from '@/lib/site/upload-rules'
 import { getProfile } from '@/lib/auth'
 import { isUuid } from '@/lib/utils'
 
@@ -23,10 +24,8 @@ export async function submitPublicQuote(formData: FormData): Promise<{ error?: s
   const productName = clean(formData.get('product_name'))
   const variantColour = clean(formData.get('variant_colour'))
 
-  if (!fullName) return { error: 'Please share your name.' }
-  if (!email || !email.includes('@')) return { error: 'Please share a valid work email.' }
-  if (!companyName) return { error: 'Please share your company name.' }
-  if (!message) return { error: 'Please tell us a little about the gifting need.' }
+  const invalid = validateEnquiry({ fullName, email, companyName, phone, quantity, message })
+  if (invalid) return { error: invalid }
 
   const admin = createAdminClient()
   if (!admin) return { error: 'Unable to send this enquiry just now. Please try again shortly.' }

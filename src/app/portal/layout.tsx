@@ -48,7 +48,7 @@ export default async function PortalLayoutWrapper({ children }: { children: Reac
   const displayName = profile.full_name || user.email?.split('@')[0] || 'User'
 
   return (
-    <PortalLayout user={{ name: displayName, company_name: companyName }}>
+    <PortalLayout user={{ name: displayName, company_name: companyName, is_company_admin: profile.role === 'client_admin' }}>
       {children}
     </PortalLayout>
   )

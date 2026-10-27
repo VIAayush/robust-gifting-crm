@@ -33,3 +33,10 @@ const noColumn = await b2bOnlyProductIds(stub(null, { code: '42703' }) as never,
 assert.equal(noColumn.size, 0, 'missing column blocks nothing')
 assert.equal((await b2bOnlyProductIds(stub([]) as never, [])).size, 0)
 console.log('sales channel tests: all assertions passed')
+
+// MRP never reaches corporate (B2B) pages, but stays for the personalised store
+const withMrp = [{ id: 'a', salesChannel: 'both' as const, mrp: 999 }]
+assert.equal(filterProductsForMode(withMrp, 'corporate')[0].mrp, null)
+assert.equal(filterProductsForMode(withMrp, 'personalized')[0].mrp, 999)
+assert.equal(withMrp[0].mrp, 999, 'the source list is not mutated')
+console.log('mrp isolation tests: all assertions passed')

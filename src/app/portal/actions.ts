@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { notifyRequirementEvent } from '@/lib/notifications'
+import { overallOutcome, validateDecisions, type ItemDecision } from '@/lib/quotations/decisions'
 import { OTHER_PURPOSE, PURPOSE_OPTIONS, MAX_CUSTOM_PURPOSE_LENGTH } from '@/lib/requirements/purpose'
 
 export type PortalRequirementInput = {
@@ -313,6 +314,53 @@ export async function respondToQuotation(quotationId: string, status: 'accepted'
   }
   if (quotation.requirement_id) {
     await notifyRequirementEvent(quotation.requirement_id as string, status === 'accepted' ? 'quotation_accepted' : 'quotation_rejected', comment?.trim().slice(0, 1000) || null)
+  }
+  revalidatePath(`/portal/quotations/${quotationId}`)
+  revalidatePath('/portal/quotations')
+  return { success: true }
+}
+
+/**
+ * Item-by-item response (SOW 3.5): every quotation line is accepted or rejected. The quotation becomes
+ * "accepted" when at least one line is accepted, and only accepted lines become the order.
+ * If the item-level database function is not installed yet, an all-accept or all-reject answer still works
+ * through the original whole-quotation function; a mixed answer is refused rather than silently flattened.
+ */
+export async function respondToQuotationItems(quotationId: string, decisions: ItemDecision[], comment?: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { data: companyId } = await supabase.rpc('client_company_id')
+  const { data: quotation } = await supabase.from('quotations').select('company_id, status, requirement_id').eq('id', quotationId).single()
+  if (!quotation || quotation.company_id !== companyId) return { error: 'Quotation not found.' }
+  if (quotation.status !== 'sent' && quotation.status !== 'viewed') return { error: 'This quotation can no longer be answered.' }
+
+  const { data: items } = await supabase.from('quotation_items').select('id').eq('quotation_id', quotationId)
+  const checked = validateDecisions((items || []).map((i) => i.id as string), decisions)
+  if (!checked.ok) return { error: checked.error }
+
+  const text = comment?.trim().slice(0, 1000) || null
+  const { error } = await supabase.rpc('client_respond_quotation_items', {
+    p_quotation_id: quotationId,
+    p_decisions: decisions.map((d) => ({ item_id: d.itemId, accept: d.accept })),
+    p_comment: text,
+  })
+
+  if (error) {
+    const missingFunction = error.code === 'PGRST202' || error.code === '42883' || /could not find the function/i.test(error.message)
+    const outcome = overallOutcome(decisions)
+    if (missingFunction && outcome !== 'partial') {
+      return respondToQuotation(quotationId, outcome === 'accepted' ? 'accepted' : 'rejected', text || undefined)
+    }
+    if (missingFunction) return { error: 'Item-by-item responses are not available yet. Please accept or reject the whole quotation.' }
+    console.error('[portal] respond to quotation items failed', error.message)
+    if (/every item|does not belong|no longer be answered|not found|no items/i.test(error.message)) return { error: error.message }
+    return { error: 'We could not record your decision. Please try again.' }
+  }
+
+  if (quotation.requirement_id) {
+    await notifyRequirementEvent(quotation.requirement_id as string, overallOutcome(decisions) === 'rejected' ? 'quotation_rejected' : 'quotation_accepted', text)
   }
   revalidatePath(`/portal/quotations/${quotationId}`)
   revalidatePath('/portal/quotations')
