@@ -7,8 +7,8 @@ export async function updateOrgSettings(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
-  const { data: me } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
-  if (me?.role !== 'admin') return { error: 'Admin only' }
+  const { data: me } = await supabase.from('profiles').select('role, is_active').eq('id', user.id).maybeSingle()
+  if (me?.role !== 'admin' || me.is_active === false) return { error: 'Admin only' }
 
   const amount = (key: string) => {
     const raw = String(formData.get(key) || '').trim()

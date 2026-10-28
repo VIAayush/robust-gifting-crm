@@ -13,8 +13,8 @@ export async function updateTeamMember(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
-  const { data: me } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
-  if (me?.role !== 'admin') return { error: 'Admin only' }
+  const { data: me } = await supabase.from('profiles').select('role, is_active').eq('id', user.id).maybeSingle()
+  if (me?.role !== 'admin' || me.is_active === false) return { error: 'Admin only' }
 
   const id = String(formData.get('id') || '')
   const role = String(formData.get('role') || '')
@@ -32,8 +32,18 @@ export async function updateTeamMember(formData: FormData) {
     update.phone = phone || null
   }
 
+  const { data: before } = await supabase.from('profiles').select('role, is_active, department_id').eq('id', id).maybeSingle()
   const { error } = await supabase.from('profiles').update(update).eq('id', id)
   if (error) return { error: error.message }
+  // Role and activation changes are privilege changes: record who made them (no cost data is involved).
+  await writeAudit(supabase, {
+    action: before && before.role !== role ? 'role_change' : before && before.is_active !== isActive ? (isActive ? 'reactivate' : 'deactivate') : 'update',
+    entity: 'profiles',
+    entityId: id,
+    userId: user.id,
+    previous: before ?? null,
+    next: { role, is_active: isActive, department_id: departmentId },
+  })
   revalidatePath('/crm/team')
   return { success: true }
 }

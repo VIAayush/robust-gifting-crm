@@ -177,7 +177,9 @@ $fn$;
 
 -- ---------------------------------------------------------------------------
 -- Order creation: only accepted lines, and the order value / cost come from those lines only.
--- Same guards, idempotency and side effects as 20260909_convert_order_active_catalogue_only.sql.
+-- Same guards, idempotency and side effects as 20260909_convert_order_active_catalogue_only.sql, EXCEPT that the old
+-- "unknown supplier cost = 62% of price" assumption is removed (approved decision D1, option B): an order with any
+-- accepted line lacking a verified supplier cost is created with costs 0 ("costs not entered"), never an invented margin.
 -- ---------------------------------------------------------------------------
 create or replace function public.convert_quotation_to_order(p_quotation_id uuid)
 returns uuid
@@ -191,6 +193,7 @@ declare
   v_ops uuid;
   v_cost numeric := 0;
   v_item_count integer := 0;
+  v_unknown_cost_lines integer := 0;
   v_value numeric := 0;
 begin
   if not public.has_any_role(array['admin','sales','operations']::public.app_role[]) then
@@ -213,10 +216,19 @@ begin
   end if;
 
   select id into v_ops from public.departments where slug = 'operations';
-  select coalesce(sum(coalesce(p.supplier_cost, p.price * 0.62) * qi.quantity), 0) into v_cost
+  -- Cost is only ever calculated from verified supplier costs (products.supplier_cost > 0). If ANY accepted line has
+  -- none, the order cost is left at the existing "costs not entered" value (0) instead of inventing a margin; staff
+  -- enter the real costs on the order's Financials tab, and the page shows "costs not entered" until they do.
+  select count(*) filter (where p.supplier_cost is null or p.supplier_cost <= 0),
+         coalesce(sum(p.supplier_cost * qi.quantity) filter (where p.supplier_cost > 0), 0)
+    into v_unknown_cost_lines, v_cost
   from public.quotation_accepted_items(q.id) qi
   join public.products p on p.id = qi.product_id
   where p.status = 'active' and coalesce(p.catalogue_access, 'all') <> 'none';
+  if v_unknown_cost_lines > 0 then v_cost := 0; end if;
+  -- gross_profit is stored as 0 here whatever v_cost is: the conversion fills only the product cost, so printing,
+  -- courier and other cost are not entered yet and no profit is verified. recalc_order_cost (migration 39) stores
+  -- profit once staff have entered every cost component.
 
   v_value := public.quotation_accepted_total(q.id);
 
@@ -227,7 +239,7 @@ begin
   ) values (
     public.next_order_number(), q.company_id, q.contact_id, q.id, q.requirement_id, q.owner_id,
     v_value, current_date + 21, 'created', v_ops, 'Confirm PO and assign operations',
-    v_cost, v_cost, v_value - v_cost, q.campaign_id
+    v_cost, v_cost, 0, q.campaign_id
   ) returning id into v_order_id;
 
   insert into public.order_items (order_id, product_id, description, quantity, unit_price, line_total)

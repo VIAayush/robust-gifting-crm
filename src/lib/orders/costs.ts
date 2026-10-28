@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { grossProfitSummary, type GrossProfitSummary } from '@/lib/orders/costing'
 
 /**
  * Order cost data is not readable through the normal table API any more (migration 20261035 withdraws
@@ -81,10 +82,14 @@ export async function loadItemSupplierCosts(supabase: SupabaseClient, orderId: s
   return result
 }
 
-/** Sum of gross profit for the given orders (finance dashboards). */
-export async function totalGrossProfit(supabase: SupabaseClient, orderIds: string[]): Promise<number> {
-  const costs = await loadOrderCosts(supabase, orderIds)
-  let paise = 0
-  for (const row of costs.values()) paise += Math.round(Number(row.gross_profit || 0) * 100)
-  return paise / 100
+/**
+ * Gross profit for finance dashboards, summed over FULLY COSTED orders only (see costing.ts): an order whose costs are not
+ * entered, partially entered or only provisional never contributes profit. Also reports how many orders fall in each state.
+ */
+export async function grossProfitFor(
+  supabase: SupabaseClient,
+  orders: { id: string; order_value?: number | string | null }[],
+): Promise<GrossProfitSummary> {
+  const costs = await loadOrderCosts(supabase, orders.map((o) => o.id))
+  return grossProfitSummary(orders, costs)
 }

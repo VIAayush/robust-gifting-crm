@@ -20,8 +20,20 @@ export function revalidatePath(path: string) {
   ;(g.__rgRevalidated ||= []).push(path)
 }
 export function revalidateTag() {}
-export function unstable_cache<T extends (...args: never[]) => unknown>(fn: T) {
-  return fn
+// Pass-through by default. A test that sets globalThis.__stubCache = true gets Next's rule: a resolved result is cached
+// (per key parts + arguments, for the life of the process here; Next uses the revalidate window) and a thrown error is NOT.
+const stubCacheStore = new Map<string, unknown>()
+export function unstable_cache<T extends (...args: never[]) => unknown>(fn: T, keyParts: string[] = []) {
+  const run = fn as unknown as (...args: unknown[]) => unknown
+  return ((...args: unknown[]) => {
+    if (!(globalThis as { __stubCache?: boolean }).__stubCache) return run(...args)
+    const key = keyParts.join('|') + JSON.stringify(args)
+    if (stubCacheStore.has(key)) return Promise.resolve(stubCacheStore.get(key))
+    return Promise.resolve(run(...args)).then((value) => {
+      stubCacheStore.set(key, value)
+      return value
+    })
+  }) as unknown as T
 }
 export function redirect(destination: string): never {
   throw new RedirectSignal(destination)

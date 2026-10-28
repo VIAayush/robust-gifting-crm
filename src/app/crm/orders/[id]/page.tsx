@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { ORDER_COLUMNS, loadItemSupplierCosts, loadOrderCosts } from '@/lib/orders/costs'
+import { costingStatus } from '@/lib/orders/costing'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { BackButton } from '@/components/ui/back-button'
@@ -111,6 +112,8 @@ export default async function OrderDetailPage({
     total_cost: costRow?.total_cost ?? null,
     gross_profit: costRow?.gross_profit ?? null,
   }
+  // Profit is shown only when costing is entered (lib/orders/costing.ts); unknown or partial costs never become profit.
+  const costing = costingStatus(order)
   const itemSupplierCosts = await loadItemSupplierCosts(supabase, id)
   const isDelivered = order.status === 'delivered' || order.status === 'cancelled'
   const health = orderHealth(order.status, order.expected_delivery_date, order.stage_due_at)
@@ -499,23 +502,41 @@ export default async function OrderDetailPage({
                     <div className="bg-white p-6 rounded-2xl border text-xs space-y-3">
                       <h3 className="font-bold text-sm">Internal profitability</h3>
                       <div className="flex justify-between"><span>Revenue</span><span>{formatCurrency(order.order_value)}</span></div>
-                      <div className="flex justify-between text-gray-500"><span>Product cost</span><span>{formatCurrency(order.product_cost)}</span></div>
-                      <div className="flex justify-between text-gray-500"><span>Printing cost</span><span>{formatCurrency(order.printing_cost)}</span></div>
-                      <div className="flex justify-between text-gray-500"><span>Courier cost</span><span>{formatCurrency(order.courier_cost)}</span></div>
-                      <div className="flex justify-between text-gray-500"><span>Other cost</span><span>{formatCurrency(order.other_cost)}</span></div>
-                      <div className="flex justify-between pt-2 border-t"><span>Total cost</span><span>{formatCurrency(order.total_cost)}</span></div>
-                      {Number(order.total_cost || 0) > 0 ? (
+                      {(
+                        [
+                          ['Product cost', order.product_cost],
+                          ['Printing cost', order.printing_cost],
+                          ['Courier cost', order.courier_cost],
+                          ['Other cost', order.other_cost],
+                        ] as const
+                      ).map(([label, amount]) => (
+                        <div key={label} className="flex justify-between text-gray-500">
+                          <span>{label}</span>
+                          <span>{Number(amount || 0) > 0 ? formatCurrency(amount) : 'Not entered'}</span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between pt-2 border-t"><span>Total cost</span><span>{costing.totalCost > 0 ? formatCurrency(costing.totalCost) : 'Costs not entered'}</span></div>
+                      {costing.showProfit ? (
                         <>
-                          <div className="flex justify-between font-semibold text-[#9C7A33]"><span>Gross profit</span><span>{formatCurrency(order.gross_profit)}</span></div>
+                          <div className="flex justify-between font-semibold text-[#9C7A33]"><span>Gross profit</span><span>{formatCurrency(costing.grossProfit)}</span></div>
                           <div className="flex justify-between font-semibold">
                             <span>Margin</span>
-                            <span>{Number(order.order_value) > 0 ? `${((Number(order.gross_profit || 0) / Number(order.order_value)) * 100).toFixed(1)}%` : '—'}</span>
+                            <span>{costing.marginPercent === null ? '—' : `${costing.marginPercent.toFixed(1)}%`}</span>
                           </div>
+                        </>
+                      ) : costing.showProvisional ? (
+                        <>
+                          <div className="flex justify-between font-semibold text-amber-700"><span>Provisional profit</span><span>{formatCurrency(costing.provisionalProfit)}</span></div>
+                          <div className="flex justify-between font-semibold text-amber-700">
+                            <span>Provisional margin</span>
+                            <span>{costing.provisionalMarginPercent === null ? '—' : `${costing.provisionalMarginPercent.toFixed(1)}%`}</span>
+                          </div>
+                          <p className="text-[10px] text-amber-700">{costing.message}</p>
                         </>
                       ) : (
                         <div className="flex justify-between font-semibold text-gray-500">
                           <span>Gross profit / margin</span>
-                          <span>Cost not set</span>
+                          <span>{costing.message}</span>
                         </div>
                       )}
                       <p className="text-[10px] text-gray-400 pt-2 border-t">

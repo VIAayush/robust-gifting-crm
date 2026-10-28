@@ -229,6 +229,28 @@ Still open after the follow-up: R8 to R11 in the self-audit report (catalogue mu
 4. Rate limits are per client connection (IP); users behind one shared IP share the allowance.
 5. **Decision needed:** sample purchase cost (`sample_stock.unit_cost`, `sample_movements.cost`) is readable by internal roles that handle samples (admin, sales, operations) and the page shows it to finance roles only. It was deliberately left unchanged because sales and operations enter it; tell me if it should be restricted like the other costs.
 
+## Database status (28 October 2026)
+
+**Update after applying migrations 26 to 39 (28 October 2026).** The migrations are applied and verified (`docs/verification/batch-a.sql` 24/24, `batch-bc.sql` 36/36, 30/30 function bodies identical to the files) and about 225 real-database checks passed (see `docs/DATABASE_MIGRATION_RUNBOOK.md` section 0 and `docs/SELF_AUDIT_TEST_REPORT.md`). That moves the database-level items below to PASS **at the database layer**. It does **not** make any SOW section "PASS end to end": the application has not been exercised against the database because the Supabase data API is currently restricted (HTTP 402, `exceed_egress_quota`, Free plan), and PayU / e-mail / WhatsApp are not connected. Application-level statuses elsewhere in this matrix therefore remain BUILT / NOT VERIFIED.
+
+| SOW section | Finding | Status |
+|---|---|---|
+| 4 User roles and access | Sign-up cannot assign a role from metadata (L1); missing-profile and deactivated users are refused; cross-company reads return nothing | **PASS at the database layer (real DB)**; UI/route behaviour NOT VERIFIED (API 402) |
+| 6 Client portal vs internal CRM (costs, supplier data never shown) | 11 cost columns unreadable by anon/clients/unauthorised staff, checked functions only for permitted roles, audit rows redacted | **PASS at the database layer (real DB)**; client-facing pages and exports NOT VERIFIED (API 402) |
+| 3.10 Notifications | `notify_users` limited to the service role; per-stage notifications created with correct links and company scoping | **PASS (database)**; e-mail/WhatsApp delivery BLOCKED (credentials) |
+| 3.5 Quotations / item-level acceptance / orders | Expiry, partial acceptance, accepted-lines-only order, no duplicate order or invoice, cross-company hiding | **PASS at the database layer (real DB)**; portal screens NOT VERIFIED |
+| 3.6 Orders and tracking (eight stages, history, hand-offs) | one history row per change with assignee/department/due date, tasks, client notifications | **PASS at the database layer (real DB)**; public tracking page NOT VERIFIED |
+| 3.8 Samples | atomic movements incl. `team`, insufficient-stock refusal | **PASS at the database layer (real DB, sequential)**; concurrent run NOT VERIFIED |
+| 3.9 Finance (invoices, payments) | overpayment refused, exact settle → paid | **PASS at the database layer (real DB, sequential)**; concurrent run NOT VERIFIED |
+| Platform availability | Supabase data API restricted (402 `exceed_egress_quota`): site, portal and CRM cannot reach the database. Rechecked twice on 28 Oct, unchanged | **FAIL (blocker)**: upgrade the plan or wait for the quota reset |
+| 3.1 Public website under a database outage | Pages render, protected routes redirect to login, nothing crashes; a caching defect that kept an outage visible for 60 s was fixed | **PASS (browser, localhost, API down)**; shop content itself NOT VERIFIED; empty-state wording during an outage is misleading (not changed) |
+| Real-database test suite | `scripts/db-tests/` 223 of 223 | **PASS** (database layer only; concurrency and HTTP layer not covered) |
+| 3.4 Products (524 client products) | Count, SKUs, images and fingerprint recorded, unchanged | PASS (read-only baseline) |
+| 3.6 / 3.9 Order costing and margin (no invented cost or profit) | Option B approved: unknown cost = "costs not entered"; one shared four-state rule: profit is **verified** only when product, printing, courier and other cost are all entered (a stored 0 cannot be told from "not entered", so partial or zero-component orders show only a labelled **provisional** figure that is never summed); dashboard sums verified orders only; vendor report already excludes unknown costs. Schema change to confirm a real zero is proposed, not made | PASS (unit tests, build) and **PASS in the real database** (converter: all costed 230, any NULL/0 line 0; `recalc_order_cost` stores profit only with all four components); the screens that show it NOT VERIFIED (API 402) |
+| 4 Roles: deactivated staff | Application actions now refuse inactive profiles (`getProfile`, team and settings actions) | PASS (fake-DB action test); database helpers **PASS (real DB, migration 39)** |
+
+Details and the apply procedure: `docs/DATABASE_MIGRATION_RUNBOOK.md`.
+
 ## Tests to run when Supabase returns
 
 **Scenario A, corporate client:** login, company-specific catalogue, shortlist with notes, sample request, requirement, admin approval, client confirmation, product selection within budget, admin approval, quotation draft edited and sent, client accepts some items and rejects others, order contains only accepted items and the accepted total, eight stages with assignee/due date/comment and one history row each, courier and tracking recorded, invoice created from the delivered order, partial then full payment.

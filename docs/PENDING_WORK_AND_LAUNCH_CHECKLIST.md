@@ -1,6 +1,17 @@
 # Robust Gifting CRM: pending work, RG status and launch checklist
 
-Written while the Supabase project was unavailable. Nothing marked BLOCKED or NOT VERIFIED has been run against a database. Unit tests (`scripts/test-*.mts`, run with `node --import ./scripts/register-alias.mjs scripts/<file>`) use no network and no database.
+**STATUS 28 October 2026 (read this first).** Migrations 20261026 to 20261039 are **applied and verified** in Supabase project `zrfetfibatcuvwogyvjn`; about 225 real-database checks passed (details: `docs/DATABASE_MIGRATION_RUNBOOK.md` section 0). The 524 products are unchanged (fingerprint identical). **Critical blocker found: Supabase has restricted the project's data API (HTTP 402 `exceed_egress_quota`, Free plan): the B2C store, client portal, CRM and sign-in cannot reach the database for anyone.** Fix: upgrade the plan (or remove the spend cap) or wait for the quota to reset, then re-test. Until then every application-level test is BLOCKED. The rest of this file was written earlier and its migration table is kept as the record of what each migration is; where it says "apply" the work is done.
+
+**Rechecked later on 28 October:** the data API is still HTTP 402. The external backup export and all application-level tests remain BLOCKED; the real-database tests are now saved in `scripts/db-tests/` and passed 223 of 223. A public-catalogue caching defect (an outage was cached for 60 s) was found and fixed (`scripts/test-catalogue-cache.mts`). While the API is down `/catalogue` shows "0 products / No gifts match" (safe but misleading).
+
+**Open items, in order:**
+1. Restore the data API (plan upgrade / quota reset), then run the CSV/JSON backup export (`C:\VI\Robust Gifting\db-backup-2026-10-28\export_backup.mjs`) and decide whether to drop the in-database snapshot `backup_20261028` (needs your approval; it is private and harmless).
+2. Test the application against the live database: login for each role, portal and CRM pages, B2C checkout in demo mode, order tracking, reconciliation and notification endpoints, 375px layouts. Use `docs/MANUAL_TESTING_GUIDE.md`.
+3. Concurrency checks (two simultaneous payments / sample moves) were not possible with the available tools.
+4. Business decisions still open: which roles may see costs/margins; whether to approve the proposed `docs/proposed/20261040_order_costs_confirmed.sql`; company auto-linking by e-mail domain; real delivery charge and free-delivery threshold (currently 0 / empty).
+5. Client inputs and credentials: real PayU keys, WhatsApp provider and approved templates, sender domain for e-mail, MRP list and supplier costs (no product has a cost yet), cron schedule and `CRON_SECRET`.
+
+Earlier text: Written while the Supabase project was unavailable. Nothing marked BLOCKED or NOT VERIFIED had been run against a database. Unit tests (`scripts/test-*.mts`, run with `node --import ./scripts/register-alias.mjs scripts/<file>`) use no network and no database.
 
 ## 1. Migrations (apply manually in the Supabase SQL Editor, in this order)
 
@@ -19,6 +30,10 @@ Written while the Supabase project was unavailable. Nothing marked BLOCKED or NO
 | 12 | `20261037_product_cost_protection.sql` | product and supplier costs readable only through permission-checked functions | direct API reads of product costs (including with the anon key) stay open |
 | 13 | `20261038_security_hardening.sql` | sign-up can no longer grant a role/company, direct writes to requirement workflow fields refused, accepted-line helpers respect access, no overpayment, notification policies, task status `blocked` | a visitor could request the admin role at sign-up; workflow and payments rely on the application only |
 | 9 | `20261034_order_history_handoff_and_sample_team.sql` | assignee/due date in order history, no duplicate history rows, sample moves to/from the team location | history without assignee/due; team moves fail |
+
+| 14 | `20261039_function_execute_hardening.sql` | **new**: removes anonymous access to privileged database functions (`notify_users`, `assign_order`, record/recalc helpers), fixes the NULL-role bypass in `assign_order`, deactivated users lose database privileges, correct notification links | anyone with the public API key can create notifications and reassign orders |
+
+**Apply by numeric order, except that the file numbers above list 34 last; run 34 right after 33.** Required ordering: 31 before 37; 33 and 38 in the same sitting. Status on 28 October 2026 (updated): **all of 26 to 39 are applied and verified** (they were absent in three earlier read-only checks that day). Batch A = files 26 to 32 (run first, then `docs/verification/batch-a.sql`); Batch B+C = files 33 to 39 in one maintenance session (no application use until 38 and 39 are verified, then `docs/verification/batch-bc.sql`). Order costing: option B decided and implemented (migration 33, `recalc_order_cost` in 39, shared four-state rule in `src/lib/orders/costing.ts`: profit is verified only when all four cost components are entered; otherwise provisional or hidden). **Your decision pending:** do you want the proposed `docs/proposed/20261040_order_costs_confirmed.sql` (lets staff confirm a genuinely zero component)? It is not part of the 14 migrations and nothing depends on it. Free plan, no automatic backups: export the tables listed in `docs/DATABASE_MIGRATION_RUNBOOK.md` section 3 first, and run the batch verification queries in section 5 after each batch.
 
 All are additive and idempotent. Verification queries are at the bottom of each file. Migration 2 is the only one the shipped code depends on (the full scope-of-work audit is in `docs/SOW_COMPLIANCE_MATRIX.md`); apply 1 and 2 first.
 

@@ -21,6 +21,9 @@ export async function getProfile(): Promise<ProfileSession | null> {
     .select("id, full_name, email, role, department_id, company_id, is_active")
     .eq("id", user.id)
     .maybeSingle()
+  // A deactivated account has no powers anywhere: server actions call getProfile() directly (the layouts are not
+  // involved), so an inactive profile is treated exactly like "not signed in".
+  if (data && (data as ProfileSession).is_active === false) return null
   return data as ProfileSession | null
 }
 

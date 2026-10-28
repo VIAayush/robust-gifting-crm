@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { totalGrossProfit } from '@/lib/orders/costs'
+import { grossProfitFor } from '@/lib/orders/costs'
 import { requireStaff, canSeeFinance, applyOrderScope, applyOwnerScope, applyCompanyScope, seesAllSalesRecords } from '@/lib/auth'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { ORDER_LIFECYCLE, ORDER_STATUS_LABELS, orderHealth } from '@/lib/order-workflow'
@@ -8,11 +8,12 @@ import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { MobileDateRangeFilter } from '@/components/ui/mobile-filter-sheet'
 
-function Card({ label, value, href, warn }: { label: string; value: string | number; href?: string; warn?: boolean }) {
+function Card({ label, value, href, warn, note }: { label: string; value: string | number; href?: string; warn?: boolean; note?: string }) {
   const inner = (
     <div className={`rounded-xl border p-3 sm:p-4 ${warn ? 'bg-red-50 border-red-100' : 'bg-white border-[#E2E8F0]'}`}>
       <span className="text-[10px] font-semibold tracking-wider text-[#4A5568] uppercase">{label}</span>
       <p className="font-serif text-lg text-[#0D1B2A] mt-1.5 sm:mt-2 sm:text-xl break-words">{value}</p>
+      {note && <p className="text-[10px] text-[#4A5568] mt-1">{note}</p>}
     </div>
   )
   return href ? <Link href={href} className="block hover:border-[#9C7A33]">{inner}</Link> : inner
@@ -186,7 +187,10 @@ export default async function DashboardPage({
   const liveOrders = orderRows.filter((o) => o.status !== 'cancelled')
   const totalOrderValue = liveOrders.reduce((s, o) => s + Number(o.order_value || 0), 0)
   // Margin comes through a permission-checked database function, only for roles that may see finance figures.
-  const margin = canSeeFinance(profile.role) ? await totalGrossProfit(supabase, liveOrders.map((o) => o.id)) : 0
+  // Only FULLY costed orders contribute (see lib/orders/costing.ts); provisional and uncosted orders are counted, never summed.
+  const margin = canSeeFinance(profile.role)
+    ? await grossProfitFor(supabase, liveOrders.map((o) => ({ id: o.id, order_value: o.order_value })))
+    : { amount: 0, verifiedOrders: 0, provisionalOrders: 0, notCostedOrders: 0, totalOrders: 0 }
   const inProgress = orderRows.filter((o) => !['delivered', 'cancelled'].includes(o.status))
   const delayed = inProgress.filter((o) => orderHealth(o.status, o.expected_delivery_date, o.stage_due_at) === 'delayed')
   const atRisk = inProgress.filter((o) => orderHealth(o.status, o.expected_delivery_date, o.stage_due_at) === 'at_risk')
@@ -374,7 +378,13 @@ export default async function DashboardPage({
               {canSeeFinance(profile.role) && <Card label="Collected (paid invoices)" value={formatCurrency(paid)} href="/crm/payments" />}
               {canSeeFinance(profile.role) && <Card label="Outstanding" value={formatCurrency(outstanding)} href="/crm/receivables" />}
               {canSeeFinance(profile.role) && <Card label="Payables" value={formatCurrency(payableTotal)} href="/crm/payables" />}
-              {canSeeFinance(profile.role) && <Card label="Gross margin" value={formatCurrency(margin)} />}
+              {canSeeFinance(profile.role) && (
+                <Card
+                  label="Gross margin (fully costed orders)"
+                  value={margin.verifiedOrders > 0 ? formatCurrency(margin.amount) : 'No order fully costed'}
+                  note={`${margin.verifiedOrders} fully costed, ${margin.provisionalOrders} provisional (not counted), ${margin.notCostedOrders} not costed, of ${margin.totalOrders} orders`}
+                />
+              )}
               <Card label="Clients" value={companies.count || 0} href="/crm/companies" />
               <Card label="Catalogues" value={campaigns.count || 0} href="/crm/products/catalogues" />
               <Card label="Delayed" value={delayed.length} href="/crm/order-management?health=delayed" warn={delayed.length > 0} />

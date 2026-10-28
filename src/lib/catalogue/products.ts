@@ -34,6 +34,25 @@ async function withChannelFallback<T>(
   return first
 }
 
+/**
+ * A database/API failure must never be cached: unstable_cache keeps whatever the function returns for the whole window,
+ * so returning [] / null on an error left the shop empty (and product pages "not found") for up to a minute after the
+ * database came back. The fetchers below THROW on a query error (Next does not cache a thrown result) and this wrapper
+ * turns the throw into the same empty fallback the pages already handle, for that request only.
+ */
+class CatalogueUnavailable extends Error {}
+
+function failSafe<A extends unknown[], R>(cached: (...args: A) => Promise<R>, fallback: R): (...args: A) => Promise<R> {
+  return async (...args: A) => {
+    try {
+      return await cached(...args)
+    } catch (error) {
+      console.error('[catalogue] unavailable (not cached):', error instanceof Error ? error.message : error)
+      return fallback
+    }
+  }
+}
+
 export type PublicProduct = {
   id: string
   name: string
@@ -165,19 +184,20 @@ async function fetchPublicCatalogueProducts(): Promise<PublicProduct[]> {
   const { data, error } = await withChannelFallback((select) =>
     client.from('products').select(select).eq('status', 'active').eq('catalogue_access', 'all').order('name'),
   ).then((r) => ({ data: r.data as unknown as ProductRow[] | null, error: r.error }))
-  if (error || !data) {
-    console.error('[catalogue] public products fetch failed:', error?.message || 'no data')
-    return []
-  }
+  if (error) throw new CatalogueUnavailable(`public products fetch failed: ${error.message}`)
+  if (!data) return []
   const ready = data.filter(isCatalogueReady)
   const coloursByProduct = await loadVariantColoursByProduct(client, ready.map((p) => p.id))
   return ready.map((row) => toPublicProduct(row, coloursByProduct.get(row.id) || []))
 }
 
-export const getPublicCatalogueProducts = unstable_cache(fetchPublicCatalogueProducts, ['public-catalogue-products'], {
-  revalidate: CATALOGUE_REVALIDATE_SECONDS,
-  tags: ['catalogue'],
-})
+export const getPublicCatalogueProducts = failSafe(
+  unstable_cache(fetchPublicCatalogueProducts, ['public-catalogue-products'], {
+    revalidate: CATALOGUE_REVALIDATE_SECONDS,
+    tags: ['catalogue'],
+  }),
+  [] as PublicProduct[],
+)
 
 async function fetchPublicProduct(id: string): Promise<PublicProduct | null> {
   const client = await publicDbClient()
@@ -185,15 +205,19 @@ async function fetchPublicProduct(id: string): Promise<PublicProduct | null> {
   const { data, error } = await withChannelFallback((select) =>
     client.from('products').select(select).eq('id', id).eq('status', 'active').eq('catalogue_access', 'all').maybeSingle(),
   ).then((r) => ({ data: r.data as unknown as ProductRow | null, error: r.error }))
-  if (error || !data || !isCatalogueReady(data)) return null
+  if (error) throw new CatalogueUnavailable(`public product fetch failed: ${error.message}`)
+  if (!data || !isCatalogueReady(data)) return null
   const coloursByProduct = await loadVariantColoursByProduct(client, [data.id])
   return toPublicProduct(data, coloursByProduct.get(data.id) || [])
 }
 
-export const getPublicProduct = unstable_cache(fetchPublicProduct, ['public-product'], {
-  revalidate: CATALOGUE_REVALIDATE_SECONDS,
-  tags: ['catalogue'],
-})
+export const getPublicProduct = failSafe(
+  unstable_cache(fetchPublicProduct, ['public-product'], {
+    revalidate: CATALOGUE_REVALIDATE_SECONDS,
+    tags: ['catalogue'],
+  }),
+  null as PublicProduct | null,
+)
 
 /** Full detail-page fetch: the product plus its colour variants and every photo, grouped by colour. */
 async function fetchPublicProductWithVariants(id: string): Promise<PublicProductDetail | null> {
@@ -202,7 +226,8 @@ async function fetchPublicProductWithVariants(id: string): Promise<PublicProduct
   const { data, error } = await withChannelFallback((select) =>
     client.from('products').select(select).eq('id', id).eq('status', 'active').eq('catalogue_access', 'all').maybeSingle(),
   ).then((r) => ({ data: r.data as unknown as ProductRow | null, error: r.error }))
-  if (error || !data || !isCatalogueReady(data)) return null
+  if (error) throw new CatalogueUnavailable(`public product detail fetch failed: ${error.message}`)
+  if (!data || !isCatalogueReady(data)) return null
 
   const [{ data: variantRows }, { data: imageRows }] = await Promise.all([
     client.from('product_variants').select('id, colour, display_name').eq('product_id', id).eq('status', 'active').order('sort_order'),
@@ -241,26 +266,30 @@ async function fetchPublicProductWithVariants(id: string): Promise<PublicProduct
   return { ...product, sharedImages, variants }
 }
 
-export const getPublicProductWithVariants = unstable_cache(fetchPublicProductWithVariants, ['public-product-variants'], {
-  revalidate: CATALOGUE_REVALIDATE_SECONDS,
-  tags: ['catalogue'],
-})
+export const getPublicProductWithVariants = failSafe(
+  unstable_cache(fetchPublicProductWithVariants, ['public-product-variants'], {
+    revalidate: CATALOGUE_REVALIDATE_SECONDS,
+    tags: ['catalogue'],
+  }),
+  null as PublicProductDetail | null,
+)
 
 async function fetchPublicCategories() {
   const client = await publicDbClient()
   if (!client) return []
   const { data, error } = await client.from('categories').select('id, name')
-  if (error || !data) {
-    console.error('[catalogue] public categories fetch failed:', error?.message || 'no data')
-    return []
-  }
+  if (error) throw new CatalogueUnavailable(`public categories fetch failed: ${error.message}`)
+  if (!data) return []
   return sortProductCategories(data as Named[])
 }
 
-export const getPublicCategories = unstable_cache(fetchPublicCategories, ['public-categories'], {
-  revalidate: CATALOGUE_REVALIDATE_SECONDS,
-  tags: ['catalogue'],
-})
+export const getPublicCategories = failSafe(
+  unstable_cache(fetchPublicCategories, ['public-categories'], {
+    revalidate: CATALOGUE_REVALIDATE_SECONDS,
+    tags: ['catalogue'],
+  }),
+  [] as Awaited<ReturnType<typeof fetchPublicCategories>>,
+)
 
 export function sanitiseCatalogueSearch(value: string) {
   return value.replace(/[,()*]/g, ' ').trim().slice(0, 80)

@@ -1,7 +1,7 @@
 # Self-audit test report
 
 Date: 27 October 2026. Scope: the Robust Gifting CRM against `Robust Gifting CRM - Scope of Work-final.pdf`.
-Local URL: http://localhost:3000. Supabase project `zrfetfibatcuvwogyvjn` was **not contacted**; no migration was applied; nothing was committed, pushed or deployed; no business data (the 524 products, companies, contacts, orders, invoices) was read or changed.
+Local URL: http://localhost:3000. **Update, 28 October 2026:** migrations 20261026 to 20261039 have since been applied and verified against Supabase project `zrfetfibatcuvwogyvjn` (see "Real-database results" below). The first part of this report (27 October) was written before the database was available and is kept as written; where it says "not contacted" or "not applied" it is superseded by the update. Nothing is committed, pushed or deployed; no existing business row was changed (the 524 products fingerprint is identical before and after).
 
 ## How to read the evidence
 
@@ -20,10 +20,10 @@ Statuses: PASS, FAIL, BLOCKED (needs Supabase, credentials or client data), NOT 
 
 | Command | Result |
 |---|---|
-| `npm test` (runs every `scripts/test-*.mts`, requires exit 0 and an "assertions passed" line, then the SQL syntax check) | 33 test files, 33 passed, 0 failed; migration syntax PASS (all 13 pending migrations parse) |
-| `npx tsc --noEmit` | 0 errors |
+| `npm test` (runs every `scripts/test-*.mts`, requires exit 0 and an "assertions passed" line, then the SQL syntax check) | **28 Oct 2026 final run: 38 test files, 38 passed, 0 failed**; migration syntax PASS (all 14 migrations, 26 to 39, parse). These are unit and fake-database action tests. The separate real-database tests (223 checks, saved in `scripts/db-tests/`) were run directly against the live database and are listed in the sections "Real-database results" and "Follow-up session" below; they are not part of `npm test`. No browser-authenticated or external-provider test has run |
+| `npx tsc --noEmit` | 0 errors (28 Oct, after fixing a typing error in the new test file that had broken the build) |
 | `npx eslint .` | 81 problems (60 errors, 21 warnings) = the original baseline of 81. None are in files added by this audit; the touched-file findings are pre-existing (dashboard `react-hooks` rules, unused icons in `invoices/[id]`, `checkout/page.tsx`) |
-| `npm run build` | Compiled successfully, 90/90 pages |
+| `npm run build` | Compiled successfully, 90/90 pages (28 Oct, exit code 0). Note: the first 28 Oct build **failed** on a TypeScript error in `scripts/test-actions-deactivated.mts` (Next type-checks `scripts/`); fixed and re-run |
 | Browser, 375px: `/`, `/cart`, `/request-quote`, `/track-order`, `/login`, `/signup` | No horizontal overflow (scrollWidth 375). Only console errors were the dev HMR websocket. `/products` redirects to login (requires sign-in) |
 
 Authenticated CRM and portal pages could not be browsed (no database, no sign-in), so no browser result exists for them.
@@ -153,13 +153,96 @@ Safe validation once a database exists: do not run the migrations on production 
 | R10 | Lint baseline (81) | Pre-existing, no defect found |
 | R11 | `x-real-ip` trust and per-address limits | Deployment-dependent, see R5 |
 
+## Real-database results after applying migrations 26 to 39 (28 October 2026)
+
+Full log, backup details and test breakdown: `docs/DATABASE_MIGRATION_RUNBOOK.md` section 0. Summary:
+
+| Check | Status | Evidence |
+|---|---|---|
+| Migrations 26 to 39 applied | **PASS** | applied in file order; 39 failed once (42P13, parameter defaults) and rolled back completely, was corrected and applied; `batch-a.sql` 24/24 and query 2, `batch-bc.sql` 36/36 and query 2 |
+| Function bodies equal the repository files | **PASS** | md5 of all 30 created/replaced functions identical to the files |
+| Pre-migration backup | **PASS (in-database snapshot) / FAIL (file export)** | Free plan, no automatic backups; the data API returned HTTP 402 so CSV/JSON export was impossible; verified snapshot of the 11 tables + 72 definitions in private schema `backup_20261028` (hashes equal). File export script ready for when the API returns |
+| 524 products unchanged | **PASS** | fingerprint `60e683d350cd7e55a474b2b86ec87aab` before and after; 524 active, 474 `HGS-`, 524 SKUs, 524 images, `client_products` 524, `sales_channel` both=524 |
+| L1 sign-up cannot assign roles from metadata | **PASS (real DB)** | `role=admin`+company in user metadata → `client_user`/no company; invalid role → `client_user`; admin-API `app_metadata` role still honoured |
+| L2/L3/L4 anonymous and unauthorised function calls | **PASS (real DB)** | 18 privileged functions refused to `anon` (42501); `notify_users` refused to every non-service role; profile-less signed-in user refused by `assign_order` (the NULL-role bypass is closed) |
+| L5 deactivated staff | **PASS (real DB)** | deactivated admin: `is_admin()` false, `current_role()` NULL, privileged functions refused, org settings and role permissions unchanged |
+| Cost protection (columns, functions, audit) | **PASS (real DB)** | 6 order + 3 product + 2 supplier cost columns unreadable by anon, clients, sales, operations and even admin directly; checked functions return them only to the permitted roles; new audit rows hold only column names, never values |
+| Cross-company isolation | **PASS (real DB)** | company B sees none of company A's requirements, events, selections, quotations, quotation lines (including through `quotation_accepted_items()`), orders or notifications |
+| Requirement workflow guards | **PASS (real DB)** | direct stage/company writes refused for admin and sales; client cannot update; invalid transitions refused; budget frozen after approval |
+| Quotation expiry and item decisions | **PASS (real DB)** | expired quotation refused whole and per item; partial acceptance → accepted total 236.00; second answer refused; foreign/incomplete decisions refused |
+| Option B costing | **PASS (real DB)** | all costed → 230; any line with cost NULL/0 → order cost 0; profit stored 0; profit stored only after all four components (552.00) |
+| Overpayment, duplicates | **PASS (real DB, sequential)** / **NOT VERIFIED (concurrent)** | overpay, zero, negative, edit-past-total refused; exact settle → paid; second invoice per order and second order per quotation refused. Two simultaneous sessions could not be run with the tools available |
+| Eight fulfilment stages | **PASS (real DB)** | one history row per change with assignee/department/due date, tasks, per-stage client notifications, `/crm` and `/portal` links |
+| Sample stock | **PASS (real DB, sequential)** / **NOT VERIFIED (concurrent)** | atomic (failed ledger row rolled the stock back), `team` location works, no negatives. Concurrent moves not run |
+| Rate limiter | **PASS (real DB)** | 3rd call refused; keys/buckets independent; signed-in users cannot read counters; service role may call. Persistence across a server restart is by design (it is a table); not separately restarted |
+| Notification dedupe | **PASS (schema)** / **NOT VERIFIED (application ledger)** | unique index on `notification_outbox.dedupe_key` exists; the application's email ledger retry/dedupe was tested only with the fake database |
+| **Data API / site availability** | **FAIL (blocker)** | **Supabase returns HTTP 402 `exceed_egress_quota` for REST, Auth and Storage (Free plan). The B2C store, client portal and CRM cannot reach the database for anyone until the plan is upgraded or the quota resets** |
+| Next.js application against the live database (login, portal, CRM pages, server actions, B2C checkout, PayU demo, reconciliation endpoints, e-mail) | **BLOCKED** | needs the data API (402); not run |
+| Real PayU / Resend / WhatsApp | **BLOCKED** | no credentials / approvals |
+
+Defects found while doing this, with fixes: **migration 39 parameter defaults (42P13)**, fixed in the file and pinned by `scripts/test-migration-signatures.mts`; a few mistakes in my own test scripts (listed in the runbook) were corrected and did not affect the database. Informational: order stages are free-form (operations/admin can move an order backwards); recorded, not changed.
+
+## Follow-up session: API recheck, saved database tests, outage behaviour (28 October 2026)
+
+| Item | Status | Evidence |
+|---|---|---|
+| Supabase data API (REST, Auth, Storage) | **FAIL (still blocked)** | rechecked at the start and again at the end: HTTP 402 `exceed_egress_quota` on all three, even anonymously. Not bypassed |
+| External backup export (`export_backup.mjs`) | **BLOCKED** | needs the data API. The verified in-database snapshot `backup_20261028` is retained; it was **not** compared to an external export because none could be made. Do not drop it |
+| Real-database test scripts saved and rerun | **PASS** | `scripts/db-tests/01-security.sql` **89/89**, `02-requirements-quotations-samples.sql` **83/83**, `03-orders-costing-finance.sql` **51/51**: **223 of 223**, `failed: []` each; nothing persisted (re-verified: no leftover rows, 524-product fingerprint identical). Harness defects fixed along the way (column-name clash in the summary, volatile function in a `WHERE`, NULL results silently ignored, two wrong expectations); no database defect was found by the corrected suite |
+| Next.js app against the live database (login, staff roles, company isolation, B2B/B2C flows, finance, tracking) | **BLOCKED** | login and every data read need Auth/REST (402). The same rules were verified at the database layer above, which is **not** a substitute for testing the screens |
+| App behaviour while the API is down (browser, localhost) | **PASS with one defect fixed** | `/login`, `/home` render; `/portal/*` and `/crm/*` redirect to `/login`; nothing crashes. **Defect D36 found and fixed**: the cached public catalogue loaders returned `[]` / `null` on a query error and `unstable_cache` kept that for 60 s, so an outage left the shop empty (and product pages "not found") for up to a minute after recovery. Loaders now throw on a query error (not cached) and a wrapper returns the same empty fallback for that request only. Regression test `scripts/test-catalogue-cache.mts` (fails on the old code at "the list recovers immediately", verified) |
+| Still misleading while the API is down | **NOT FIXED (cosmetic)** | `/catalogue` shows "0 products / No gifts match these filters" instead of "temporarily unavailable". Safe (nothing breaks, nothing leaks) but confusing to a visitor; a distinct outage message would need page changes beyond the agreed scope |
+| `npm test` / `tsc` / SQL syntax / build / lint | **PASS / PASS / PASS / PASS / baseline** | 38 of 38 test files; `tsc` 0 errors; all 14 migrations parse; build 90/90 pages exit 0; eslint 81 problems = baseline, none new |
+| Responsive (375px), form validation on authenticated pages, access-denied screens, payment failure/retry, reconciliation endpoints, Option B on order page and dashboard screens | **BLOCKED** | need sign-in / data (API 402). Option B is verified in the database (converter and `recalc_order_cost`) and in unit tests; the screens are not |
+
+## Earlier read-only inspection (28 October 2026, before applying; superseded by the section above)
+
+The database was reachable again. Only `select` queries and the Supabase security advisor were used; nothing was written, no migration was applied, and no test account or record was created. Full detail and the apply procedure are in `docs/DATABASE_MIGRATION_RUNBOOK.md`.
+
+| Check | Result |
+|---|---|
+| Migrations 20261026 to 20261038 applied | **No** (every object they create is absent; re-checked at the start of the next session, still unapplied) |
+| Isolated target for a dry run | **None** (no Supabase branch; Free plan, no automatic backups) |
+| 524 products | **PASS (read-only)**: 524 total / 524 active / 474 `HGS-` / 524 distinct SKUs / 524 with image; fingerprint `60e683d350cd7e55a474b2b86ec87aab` recorded as the baseline to compare after migrating |
+| Migration dependencies vs live schema | **PASS**: every table, column, function, enum and policy the 14 files rely on exists with the expected shape (`client_products` column list identical, `advance_order_stage` signature identical, `invoices.amount`, `sample_stock.with_team`, unique indexes on `orders.quotation_id`, `invoices.order_id`, `orders.storefront_checkout_id`) |
+| Cost values currently stored | None: 0 products with supplier cost, margin or notes; 0 audit rows holding a non-zero cost value. The exposure was structural; the optional audit scrub is not needed today |
+
+New defects found in the live database (static evidence from the function source and ACLs; **not exploited**):
+
+| ID | Severity | Defect | Status |
+|---|---|---|---|
+| L1 | Critical | `handle_new_user` trusts `raw_user_meta_data.role` and defaults to `sales` (this is D21, now confirmed on the live function) | Fixed in migration 38; **open until applied** |
+| L2 | High | `notify_users` is executable by `anon` with no caller check | Fixed in new migration 39; open until applied |
+| L3 | High | `assign_order` role test is NULL for a caller without a profile, so it never raises; executable by `anon`; app never calls it | Fixed in migration 39; open until applied |
+| L4 | Medium | `record_campaign_event`, `recalc_order_cost`, `recalc_quotation_totals`, `refresh_invoice_status` unprotected for `anon` (37 anon-executable definer functions in total, matches advisor lint 0028) | Fixed in migration 39; open until applied |
+| L5 | Medium | `has_any_role`, `is_admin`, `current_role` ignore `profiles.is_active`: a deactivated staff user keeps database privileges | Fixed in migration 39; open until applied |
+| L10 | Low | `client_mark_quotation_viewed` and `assign_order` still write links to non-existent `/quotations/..`, `/orders/..` | Fixed in migration 39 (existing rows by 38 §6) |
+| L13 | Business decision | `convert_quotation_to_order` assumes cost = 62% of price when a product has no `supplier_cost` | **Decided (option B, 28 Oct): unknown cost stays "costs not entered", never invented.** Implemented in migration 33; open until applied |
+
+### Defects found and fixed in the 28 October code review (application code, in the working tree, not committed)
+
+| ID | Severity | Defect | Fix | Regression test | Status |
+|---|---|---|---|---|---|
+| D32 | Medium | Dashboard "Gross margin" summed stored `gross_profit` over all orders. Orders with no costs, or only printing/courier/other cost, contributed up to their whole value as "margin". | `src/lib/orders/costing.ts`: four states. A stored 0 cannot be told from "not entered" (stated on screen), so **verified** profit needs product, printing, courier and other cost all > 0; product cost > 0 with a zero component is **provisional** (amber, labelled, never summed); costs without a product cost are **incomplete** (nothing shown); none is **not entered**. Product-cost completeness and whole-order completeness are separate flags. Dashboard card "Gross margin (fully costed orders)" sums verified orders only and lists provisional / not-costed counts. Stored `gross_profit` = verified profit only (0 otherwise), by `recalc_order_cost` (migration 39); conversion stores 0 | `scripts/test-order-costing.mts` (all lines costed, one missing, NULL/zero/negative, quantity, partial entry after creation, legitimately zero components, fully costed, loss-making, dashboard aggregation incl. provisional orders, SQL text of `recalc_order_cost`) | **PASS (unit)**. Database side (`recalc_order_cost`, converter) is in migrations 33/39: NOT VERIFIED until applied. Schema change to record a *confirmed* zero is proposed, not made: `docs/proposed/20261040_order_costs_confirmed.sql` |
+| D33 | Medium | A deactivated admin with a live session could still call server actions that check only the role: order costing, team role changes, settings and every action using `getProfile()`. | `getProfile()` returns null for an inactive profile; `updateTeamMember` and `updateOrgSettings` check `is_active`; role/activation changes are now audited | `scripts/test-actions-deactivated.mts` (fails without the fix: confirmed by reverting it) | **PASS (fake-DB action test)**; database helpers: migration 39, NOT VERIFIED |
+| D34 | Medium | `recalc_order_cost` had no caller check and stored `value − partial costs` as profit | Migration 39 section 6 | `scripts/test-order-costing.mts` pins the SQL text; behaviour against the database NOT VERIFIED | open until applied |
+| D35 | Decision | Quotation conversion invented a cost (62% of price) when none existed | Option B in migration 33 | `scripts/test-order-cost-rule.mts` (text) + `convertedOrderCost` reference in `test-order-costing.mts`; real-DB behaviour NOT VERIFIED | open until applied |
+
+Verified, no change needed: every in-app user-creation path (company client login, team invite, portal invite, public sign-up) sets role and company explicitly afterwards, so migration 38 (which ignores sign-up metadata) does not break them; all other staff server actions that use the service-role client begin with a role guard.
+
+Not re-audited in this session (relied on the 27 October audit, D1 to D31, and its tests): B2C checkout and reconciliation, requirement/quotation action authorisation, notification ledger, rate limits. They still await real-database confirmation.
+
+These items are **FAIL on the live database today** and become PASS only after the migrations are applied and the post-apply checks below are run. Static review and the offline parser are not proof.
+
+Real-database security tests (items 1 to 17 above plus L1 to L5) are **BLOCKED on the migrations being applied**; none has been run.
+
 ## Security findings
 
 Critical D21 (privilege escalation at sign-up) and the High items D2, D3, D5, D6, D11, D13, D17, D22, D23, D26 (costs in the audit log) and D29 (supplier permission bypass) were closed in code or in migration 38. The database items protect nothing until migration 38 is applied. The cost protection from migrations 35 and 37 and every RLS policy remain unverified until a database exists. No credential, key or token appears in any file written.
 
 ## Database-dependent checks to repeat when Supabase returns
 
-1. Apply migrations 26 to 38 in order; run each file's verification queries (migration 38's are at the bottom of the file).
+1. Apply migrations 26 to 39 in order (31 before 37; 33 and 38 in the same sitting); run each file's verification queries and the batch queries in `docs/DATABASE_MIGRATION_RUNBOOK.md` section 5.
 2. Anon-key and client-role queries for `products.supplier_cost`, `orders.product_cost`, `select=*` (must be refused) and `select=id,name,price` (must work).
 3. Two companies: each sees only their own requirements, quotations, orders, team, documents, notifications.
 4. A visitor calling Supabase Auth sign-up with `role: admin` in user metadata gets `client_user` with no company (D21).
@@ -180,5 +263,6 @@ Critical D21 (privilege escalation at sign-up) and the High items D2, D3, D5, D6
 ## Decisions kept at the secure default (not guessed)
 
 - Company auto-linking by email domain: not implemented; admin or the client's administrator creates the link.
-- Which internal roles may see costs and margins: order and product costs admin, accounts, management; supplier mapping cost needs the `suppliers.cost_view` permission.
+- Which internal roles may see costs and margins: order and product costs admin, accounts, management; supplier mapping cost needs the `suppliers.cost_view` permission. **Still open for your decision.**
+- Unknown supplier cost on quotation conversion: **decided, option B** (28 Oct 2026): never invent a cost or margin.
 - Requirement scope after approval: budget and quantity are frozen for client-workflow requirements once approved (application and migration 38). Tell me if staff should be able to change them.
