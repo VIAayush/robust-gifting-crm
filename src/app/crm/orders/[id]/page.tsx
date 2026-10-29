@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { itemNote } from '@/lib/orders/item-notes'
 import { ORDER_COLUMNS, loadItemSupplierCosts, loadOrderCosts } from '@/lib/orders/costs'
 import { costingStatus } from '@/lib/orders/costing'
 import { redirect, notFound } from 'next/navigation'
@@ -140,7 +141,7 @@ export default async function OrderDetailPage({
     const itemSupplier = oneRelation(item.item_supplier)
     return {
       id: item.id,
-      productName: product?.name || item.description || 'Product',
+      productName: [product?.name || item.description || 'Product', itemNote(item.description, product?.name) ? `(${itemNote(item.description, product?.name)})` : ''].filter(Boolean).join(' '),
       supplierId: item.supplier_id || null,
       supplierName: itemSupplier?.name || null,
       supplierCostSnapshot: itemSupplierCosts.get(item.id) ?? null,
@@ -366,6 +367,7 @@ export default async function OrderDetailPage({
                                   <span className="font-semibold text-gray-900">{name}</span>
                                 )}
                                 {product?.sku ? <div className="font-mono text-[10px] text-gray-400">{product.sku}</div> : null}
+                                {itemNote(item.description, product?.name) ? <div className="mt-1 text-[11px] italic text-gray-700">Client note: {itemNote(item.description, product?.name)}</div> : null}
                               </div>
                             </div>
                           </td>

@@ -20,7 +20,7 @@ export type PortalRequirementInput = {
   delivery_city: string
   /** Stable per wizard session so a retry or double-click cannot create a second requirement. */
   submission_key?: string
-  items: { product_id: string; variant_id: string | null; quantity: number | string }[]
+  items: { product_id: string; variant_id: string | null; quantity: number | string; notes?: string }[]
 }
 
 export type PortalRequirementResult =
@@ -121,6 +121,7 @@ export async function createPortalRequirement(input: PortalRequirementInput): Pr
     product_id: String(item?.product_id || ''),
     variant_id: item?.variant_id ? String(item.variant_id) : null,
     quantity: Number(item?.quantity),
+    notes: String(item?.notes ?? '').replace(/\s+/g, ' ').trim().slice(0, 500),
   }))
   if (items.some((i) => !Number.isInteger(i.quantity) || i.quantity < 1 || i.quantity > MAX_QTY)) {
     fieldErrors.items = 'Each product quantity must be a whole number of at least 1.'
@@ -237,12 +238,13 @@ export async function createPortalRequirement(input: PortalRequirementInput): Pr
 
   // One row per product (unique per requirement); colour variants of the same
   // product merge into one line with their quantities summed and colours noted.
-  const merged = new Map<string, { quantity: number; colours: string[] }>()
+  const merged = new Map<string, { quantity: number; colours: string[]; notes: string[] }>()
   for (const item of items) {
-    const entry = merged.get(item.product_id) || { quantity: 0, colours: [] }
+    const entry = merged.get(item.product_id) || { quantity: 0, colours: [], notes: [] }
     entry.quantity += item.quantity
     const colour = item.variant_id ? colourByVariant.get(item.variant_id) : null
     if (colour) entry.colours.push(`${colour} × ${item.quantity}`)
+    if (item.notes && !entry.notes.includes(item.notes)) entry.notes.push(item.notes)
     merged.set(item.product_id, entry)
   }
 
@@ -253,7 +255,7 @@ export async function createPortalRequirement(input: PortalRequirementInput): Pr
         product_id: productId,
         quantity: Math.min(entry.quantity, MAX_QTY),
         notes:
-          [entry.colours.length ? `Colours: ${entry.colours.join(', ')}` : '', catalogueNote.get(productId) || '']
+          [entry.notes.length ? `Client note: ${entry.notes.join(' / ')}` : '', entry.colours.length ? `Colours: ${entry.colours.join(', ')}` : '', catalogueNote.get(productId) || '']
             .filter(Boolean)
             .join(' · ') || null,
       })),

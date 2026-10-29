@@ -7,6 +7,7 @@ import { writeAudit } from '@/lib/audit'
 import { notifyRequirementEvent } from '@/lib/notifications'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { staffCanCreateQuotation } from '@/lib/requirements/workflow'
+import { clientLineNote, composeItemDescription } from '@/lib/orders/item-notes'
 import { companyHasClientUsers, shareRequirementWithClient as shareRecord } from '@/lib/requirements/share'
 
 export async function createRequirement(formData: FormData) {
@@ -154,7 +155,7 @@ export async function createQuotationFromRequirement(formData: FormData) {
 
   const { data: reqProducts } = await supabase
     .from('requirement_products')
-    .select('product_id, quantity, unit_price_snapshot, product:products(id, name, price)')
+    .select('product_id, quantity, unit_price_snapshot, notes, product:products(id, name, price)')
     .eq('requirement_id', req.id)
 
   if (reqProducts && reqProducts.length > 0) {
@@ -165,7 +166,7 @@ export async function createQuotationFromRequirement(formData: FormData) {
       return {
         quotation_id: quote.id,
         product_id: row.product_id,
-        description: product?.name || null,
+        description: composeItemDescription(product?.name, clientLineNote(row.notes)) || product?.name || null,
         quantity: qty,
         unit_price: unit,
         line_total: qty * unit,

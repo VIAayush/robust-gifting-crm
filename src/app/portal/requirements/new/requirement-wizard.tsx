@@ -15,6 +15,7 @@ export type WizardItem = {
   sku: string
   colour: string | null
   quantity: number
+  notes?: string
 }
 
 type Fields = Omit<PortalRequirementInput, 'items'>
@@ -86,10 +87,10 @@ const inputClass = (hasError: boolean) =>
     hasError ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-[#E2E8F0] focus:border-[#9C7A33] focus:ring-[#9C7A33]'
   }`
 
-export function RequirementWizard({ shortlist, initialName }: { shortlist: WizardItem[]; initialName?: string }) {
+export function RequirementWizard({ shortlist, initialName, initialQuantity }: { shortlist: WizardItem[]; initialName?: string; initialQuantity?: string }) {
   const router = useRouter()
   const [step, setStep] = useState(1)
-  const [fields, setFields] = useState<Fields>(() => (initialName ? { ...EMPTY, name: initialName } : EMPTY))
+  const [fields, setFields] = useState<Fields>(() => (initialName ? { ...EMPTY, name: initialName, quantity: initialQuantity || '' } : EMPTY))
   const [errors, setErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -103,6 +104,9 @@ export function RequirementWizard({ shortlist, initialName }: { shortlist: Wizar
   )
   const [quantities, setQuantities] = useState<Record<string, string>>(() =>
     Object.fromEntries(shortlist.map((item) => [item.key, String(item.quantity || 1)])),
+  )
+  const [itemNotes, setItemNotes] = useState<Record<string, string>>(() =>
+    Object.fromEntries(shortlist.map((item) => [item.key, item.notes || ''])),
   )
 
   // Keep what the client typed if they refresh mid-way.
@@ -161,7 +165,7 @@ export function RequirementWizard({ shortlist, initialName }: { shortlist: Wizar
     }
     const items = shortlist
       .filter((item) => included[item.key])
-      .map((item) => ({ product_id: item.product_id, variant_id: item.variant_id, quantity: Number(quantities[item.key]) }))
+      .map((item) => ({ product_id: item.product_id, variant_id: item.variant_id, quantity: Number(quantities[item.key]), notes: itemNotes[item.key] || '' }))
     if (items.some((i) => !Number.isInteger(i.quantity) || i.quantity < 1)) {
       setErrors({ items: 'Each product quantity must be a whole number of at least 1.' })
       setFormError('Please fix the highlighted fields.')
@@ -430,6 +434,18 @@ export function RequirementWizard({ shortlist, initialName }: { shortlist: Wizar
                               setErrors((prev) => ({ ...prev, items: undefined }))
                             }}
                             className="min-h-9 w-24 rounded-md border border-[#E2E8F0] bg-white px-2 text-sm outline-none focus:border-[#9C7A33] disabled:bg-gray-100"
+                          />
+                        </label>
+                        <label className="block w-full text-xs text-gray-600">
+                          Note for this gift (logo, branding, colour…)
+                          <input
+                            type="text"
+                            maxLength={500}
+                            disabled={!included[item.key]}
+                            value={itemNotes[item.key] ?? ''}
+                            onChange={(e) => setItemNotes((prev) => ({ ...prev, [item.key]: e.target.value }))}
+                            placeholder="Optional"
+                            className="mt-1 min-h-9 w-full rounded-md border border-[#E2E8F0] bg-white px-2 text-sm outline-none focus:border-[#9C7A33] disabled:bg-gray-100"
                           />
                         </label>
                       </li>

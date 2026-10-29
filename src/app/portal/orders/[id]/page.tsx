@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
+import { itemNote } from '@/lib/orders/item-notes'
 import { BackButton } from '@/components/ui/back-button'
 import { formatCurrency, formatDate, isUuid, oneRelation } from '@/lib/utils'
 import { CLIENT_STATUS_LABELS } from '@/lib/order-workflow'
@@ -124,6 +125,7 @@ export default async function PortalOrderDetailPage({ params }: { params: Promis
                             <p>{name}</p>
                           )}
                           {item.product?.sku ? <p className="font-mono text-[10px] text-gray-400">{item.product.sku}</p> : null}
+                          {itemNote(item.description, item.product?.name) ? <p className="mt-1 text-[11px] italic text-gray-600">Your note: {itemNote(item.description, item.product?.name)}</p> : null}
                         </div>
                       </div>
                     </td>

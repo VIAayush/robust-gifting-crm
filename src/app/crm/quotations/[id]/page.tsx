@@ -1,16 +1,18 @@
 import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { BackButton } from '@/components/ui/back-button'
 import { formatCurrency, formatDate, isUuid, oneRelation } from '@/lib/utils'
+import { itemNote } from '@/lib/orders/item-notes'
 import { requireStaff } from '@/lib/auth'
 import { updateQuotationStatus, convertToOrder, duplicateQuotation } from '../actions'
 import { FileText, CheckCircle2, XCircle, Copy, ArrowRight } from 'lucide-react'
 import { QuotationEditor, type EditorItem } from './quotation-editor'
 import { canEditQuotation } from '@/lib/quotations/line-rules'
 
-export default async function QuotationDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function QuotationDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }> }) {
   const { id } = await params
+  const { error: actionError } = await searchParams
   if (!isUuid(id)) notFound()
   const profile = await requireStaff()
   const supabase = await createClient()
@@ -39,24 +41,32 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
 
   const isExpired = quote.valid_until && new Date(quote.valid_until) < new Date() && quote.status === 'sent'
 
+  // A refused action (for example "add at least one item before sending") used to do nothing and say nothing; now the
+  // reason is shown at the top of this page.
+  const fail = (message: string): never => redirect(`/crm/quotations/${quote.id}?error=${encodeURIComponent(message)}`)
+
   const markSentAction = async () => {
     'use server'
-    await updateQuotationStatus(quote.id, 'sent')
+    const result = await updateQuotationStatus(quote.id, 'sent')
+    if (result && 'error' in result && result.error) fail(result.error)
   }
 
   const markAcceptedAction = async () => {
     'use server'
-    await updateQuotationStatus(quote.id, 'accepted')
+    const result = await updateQuotationStatus(quote.id, 'accepted')
+    if (result && 'error' in result && result.error) fail(result.error)
   }
 
   const markRejectedAction = async () => {
     'use server'
-    await updateQuotationStatus(quote.id, 'rejected')
+    const result = await updateQuotationStatus(quote.id, 'rejected')
+    if (result && 'error' in result && result.error) fail(result.error)
   }
 
   const convertAction = async () => {
     'use server'
-    await convertToOrder(quote.id)
+    const result = await convertToOrder(quote.id)
+    if (result && 'error' in result && result.error) fail(result.error)
   }
 
   const duplicateAction = async () => {
@@ -67,6 +77,11 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <BackButton href="/crm/quotations" label="Back to Quotations" />
+      {actionError ? (
+        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+          {actionError.slice(0, 300)}
+        </div>
+      ) : null}
 
       <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -97,7 +112,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
           {quote.status === 'draft' && (
             <form action={markSentAction}>
               <button type="submit" className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors">
-                Mark as Sent
+                Send to client
               </button>
             </form>
           )}
@@ -144,7 +159,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
           header={{ tax_percent: Number(quote.tax_percent) || 0, discount_percent: Number(quote.discount_percent) || 0, valid_until: quote.valid_until || '', notes: quote.notes || '' }}
           items={((items || []) as unknown as (EditorItem & { product?: { name?: string; sku?: string } | { name?: string; sku?: string }[] | null; discount_percent: number })[]).map((item) => {
             const product = oneRelation(item.product)
-            return { id: item.id, name: product?.name || 'Item', sku: product?.sku || null, quantity: Number(item.quantity), unit_price: Number(item.unit_price), discount_percent: Number(item.discount_percent) || 0, tax_percent: Number(item.tax_percent) || 0 }
+            return { id: item.id, name: product?.name || 'Item', note: itemNote((item as { description?: string | null }).description, product?.name), sku: product?.sku || null, quantity: Number(item.quantity), unit_price: Number(item.unit_price), discount_percent: Number(item.discount_percent) || 0, tax_percent: Number(item.tax_percent) || 0 }
           })}
         />
       ) : null}
@@ -181,13 +196,14 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {items?.map((item: { id: string; quantity: number; unit_price: number; line_total: number; client_decision?: string | null; product?: { name?: string; sku?: string } | { name?: string; sku?: string }[] | null }) => {
+            {items?.map((item: { id: string; description?: string | null; quantity: number; unit_price: number; line_total: number; client_decision?: string | null; product?: { name?: string; sku?: string } | { name?: string; sku?: string }[] | null }) => {
               const product = oneRelation(item.product)
               return (
               <tr key={item.id} className="hover:bg-gray-50/50">
                 <td className="p-3.5">
                   <div className="font-bold text-gray-900">{product?.name || 'Item'}{item.client_decision === 'accepted' || item.client_decision === 'rejected' ? <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${item.client_decision === 'accepted' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>Client {item.client_decision}</span> : null}</div>
                   <div className="text-gray-400 font-mono text-[10px]">{product?.sku}</div>
+                  {itemNote(item.description, product?.name) ? <div className="mt-1 text-[11px] italic text-gray-600">Note: {itemNote(item.description, product?.name)}</div> : null}
                 </td>
                 <td className="p-3.5 text-right font-medium">{item.quantity}</td>
                 <td className="p-3.5 text-right">{formatCurrency(item.unit_price)}</td>

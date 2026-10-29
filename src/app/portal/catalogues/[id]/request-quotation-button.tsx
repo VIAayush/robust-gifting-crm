@@ -3,7 +3,9 @@
 import { useState, useTransition } from 'react'
 import { requestCatalogueQuotation } from '../actions'
 
-export function RequestQuotationButton({ campaignId, offeringIds = [] }: { campaignId: string; offeringIds?: string[] }) {
+export type SelectionLine = { offering_id: string; quantity: string | number; notes: string }
+
+export function RequestQuotationButton({ campaignId, lines = [] }: { campaignId: string; lines?: SelectionLine[] }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
@@ -16,7 +18,7 @@ export function RequestQuotationButton({ campaignId, offeringIds = [] }: { campa
           setError(null)
           const formData = new FormData()
           formData.set('campaign_id', campaignId)
-          formData.set('offering_ids', JSON.stringify(offeringIds))
+          formData.set('selection', JSON.stringify(lines))
           startTransition(async () => {
             try {
               const res = await requestCatalogueQuotation(formData)
@@ -29,7 +31,7 @@ export function RequestQuotationButton({ campaignId, offeringIds = [] }: { campa
         }}
         className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#9C7A33] px-5 text-sm font-semibold text-white hover:bg-[#7C6224] disabled:opacity-60"
       >
-        {pending ? 'Preparing…' : offeringIds.length > 0 ? `Request quotation for ${offeringIds.length} selected` : 'Request quotation (all gifts)'}
+        {pending ? 'Preparing…' : lines.length > 0 ? `Request quotation for ${lines.length} selected` : 'Request quotation (all gifts)'}
       </button>
       {error ? (
         <p role="alert" className="text-xs text-red-700">

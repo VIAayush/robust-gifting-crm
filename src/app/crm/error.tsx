@@ -38,6 +38,13 @@ export default function CrmError({
               >
                 Try again
               </button>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="px-3 py-1.5 rounded-md text-sm font-medium border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-subtle)]"
+              >
+                Reload page
+              </button>
               <Link
                 href="/crm/dashboard"
                 className="px-3 py-1.5 rounded-md text-sm font-medium border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-subtle)]"

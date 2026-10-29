@@ -31,6 +31,13 @@ export default function PortalError({
             >
               Try again
             </button>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="px-3 py-1.5 rounded-md text-sm font-medium border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-subtle)]"
+            >
+              Reload page
+            </button>
             <Link
               href="/portal"
               className="px-3 py-1.5 rounded-md text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50"

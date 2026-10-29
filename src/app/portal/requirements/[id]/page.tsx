@@ -5,6 +5,8 @@ import { BackButton } from '@/components/ui/back-button'
 import { formatCurrency } from '@/lib/utils'
 import { purposeLabel } from '@/lib/requirements/purpose'
 import { STAGES, TONE_CLASSES, clientStageText, isWorkflowStage, originFromCreationEvent, totalBudget } from '@/lib/requirements/workflow'
+import { clientLineNote } from '@/lib/orders/item-notes'
+import { RequirementNotes, type NoteSource } from '@/components/requirements/requirement-notes'
 import { RequirementActions } from './requirement-actions'
 import { SelectionPanel, type SelectionLineProp, type CatalogueResult } from './selection-panel'
 
@@ -83,6 +85,14 @@ export default async function PortalRequirementDetailPage({
     ]
   })
 
+  // The latest note from each side (events are newest first); older ones stay in History.
+  const latestNote = (kind: 'client' | 'staff') => (events || []).find((event) => event.actor_kind === kind && String(event.note || '').trim())
+  const noteSources: NoteSource[] = []
+  const clientEvent = latestNote('client')
+  const staffEvent = latestNote('staff')
+  if (clientEvent) noteSources.push({ by: 'Your note', text: String(clientEvent.note), when: format(new Date(clientEvent.created_at as string), 'dd MMM yyyy, HH:mm') })
+  if (staffEvent) noteSources.push({ by: 'Message from Robust Gifting', text: String(staffEvent.note), when: format(new Date(staffEvent.created_at as string), 'dd MMM yyyy, HH:mm') })
+
   // Product search for the selection panel; only products visible to this company.
   const canSelect = stageKey === 'client_confirmed' || stageKey === 'selection_changes_requested'
   let results: CatalogueResult[] = []
@@ -134,6 +144,11 @@ export default async function PortalRequirementDetailPage({
           <p className="mt-1 whitespace-pre-line">{requirement.decision_note}</p>
         </div>
       ) : null}
+
+      <RequirementNotes
+        notes={noteSources}
+        productNotes={selection.flatMap((line) => (clientLineNote(line.notes) ? [{ name: line.name, note: clientLineNote(line.notes) as string }] : []))}
+      />
 
       <dl className="grid grid-cols-2 gap-3 rounded-xl border border-[#E2E8F0] bg-white p-4 text-sm sm:grid-cols-4">
         <div>

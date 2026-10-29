@@ -10,6 +10,8 @@ import { requireStaff } from '@/lib/auth'
 import { updateRequirementForm, removeRequirement, createQuotationFromRequirement } from '../actions'
 import { WorkflowPanel } from './workflow-panel'
 import { ShareWithClientPanel } from './share-panel'
+import { clientLineNote } from '@/lib/orders/item-notes'
+import { RequirementNotes, type NoteSource } from '@/components/requirements/requirement-notes'
 import { STAGES, TONE_CLASSES, type WorkflowStage, budgetStatus, isWorkflowStage, originFromCreationEvent, selectionTotals, staffCanCreateQuotation, staffCanShareWithClient, staffStageLabel, totalBudget, waitingOn } from '@/lib/requirements/workflow'
 import { ConfirmAction } from '@/components/ui/confirm-action'
 import { asFormAction } from '@/lib/form-action'
@@ -70,6 +72,13 @@ export default async function RequirementDetailPage({
   const creationEvent = ((events || []) as unknown as EventRow[]).find((event) => event.from_stage === null)
   const origin = originFromCreationEvent(creationEvent?.actor_kind)
   const waiting = waitingOn(stageKey)
+  // Latest note from the client and from our team (events are newest first); the full list stays in the history below.
+  const eventList = (events || []) as unknown as EventRow[]
+  const crmNotes: NoteSource[] = []
+  const clientNoteEvent = eventList.find((event) => event.actor_kind === 'client' && String(event.note || '').trim())
+  const staffNoteEvent = eventList.find((event) => event.actor_kind === 'staff' && event.visible_to_client && String(event.note || '').trim())
+  if (clientNoteEvent) crmNotes.push({ by: 'From the client', text: String(clientNoteEvent.note), when: formatDate(clientNoteEvent.created_at) })
+  if (staffNoteEvent) crmNotes.push({ by: 'Our note to the client', text: String(staffNoteEvent.note), when: formatDate(staffNoteEvent.created_at) })
   const budgetAll = totalBudget(req.budget, req.quantity)
   const selection = selectionTotals(
     ((products || []) as unknown as SelectionRow[]).map((item) => {
@@ -132,6 +141,13 @@ export default async function RequirementDetailPage({
           Delete
         </ConfirmAction>
       </div>
+
+      <RequirementNotes
+        title="Client notes and instructions"
+        notes={crmNotes}
+        productNotes={((products || []) as unknown as { notes?: string | null; product?: { name?: string } | { name?: string }[] | null }[])
+          .flatMap((line) => (clientLineNote(line.notes) ? [{ name: (Array.isArray(line.product) ? line.product[0] : line.product)?.name || 'Product', note: clientLineNote(line.notes) as string }] : []))}
+      />
 
       {!stageKey && staffCanShareWithClient(req.workflow_stage, req.status) && ['admin', 'sales'].includes(String(viewerRole)) ? (
         <ShareWithClientPanel requirementId={req.id} />

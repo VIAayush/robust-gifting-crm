@@ -35,6 +35,13 @@ export default function AppError({
           >
             Try again
           </button>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded-md text-sm font-medium border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-subtle)]"
+          >
+            Reload page
+          </button>
           <Link
             href="/crm/dashboard"
             className="px-4 py-2 rounded-md text-sm font-medium border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-subtle)]"

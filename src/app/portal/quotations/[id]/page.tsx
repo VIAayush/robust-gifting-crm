@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
+import { itemNote } from '@/lib/orders/item-notes'
 import { BackButton } from '@/components/ui/back-button'
 import { formatCurrency, formatDate, formatUnits, isUuid, oneRelation } from '@/lib/utils'
 import { QuotationItemDecisions } from './quotation-item-decisions'
@@ -8,6 +9,7 @@ import { FileText, Calendar, CheckCircle2 } from 'lucide-react'
 
 type ItemRow = {
   id: string
+  description?: string | null
   quantity: number
   unit_price: number
   line_total: number
@@ -45,7 +47,7 @@ export default async function PortalQuotationDetailPage({ params }: { params: Pr
   }
 
   // client_decision exists after migration 20261033; before it, fall back to the plain item list.
-  const itemSelect = 'id, quantity, unit_price, line_total, product:products(name, sku, image_url)'
+  const itemSelect = 'id, description, quantity, unit_price, line_total, product:products(name, sku, image_url)'
   const withDecision = await supabase.from('quotation_items').select(`${itemSelect}, client_decision`).eq('quotation_id', id)
   const plain = withDecision.error ? await supabase.from('quotation_items').select(itemSelect).eq('quotation_id', id) : null
   const rawItems = ((withDecision.error ? plain?.data : withDecision.data) || []) as unknown as ItemRow[]
@@ -94,6 +96,7 @@ export default async function PortalQuotationDetailPage({ params }: { params: Pr
                   <article key={item.id} className="rounded-xl border border-[#E2E8F0] bg-[#F5F7FA] p-4">
                     <p className="text-sm font-semibold text-gray-900">{product?.name}<DecisionBadge decision={item.client_decision} /></p>
                     <p className="mt-0.5 font-mono text-[10px] text-gray-400">{product?.sku}</p>
+                    {itemNote(item.description, product?.name) ? <p className="mt-1 text-[11px] italic text-gray-600">Your note: {itemNote(item.description, product?.name)}</p> : null}
                     <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
                       <div>
                         <p className="text-[10px] uppercase text-gray-400">Qty</p>
@@ -131,6 +134,7 @@ export default async function PortalQuotationDetailPage({ params }: { params: Pr
                       <td className="px-4 py-3">
                         <div className="font-bold text-gray-900">{product?.name}<DecisionBadge decision={item.client_decision} /></div>
                         <div className="font-mono text-[10px] text-gray-400">{product?.sku}</div>
+                        {itemNote(item.description, product?.name) ? <div className="mt-1 text-[11px] italic text-gray-600">Your note: {itemNote(item.description, product?.name)}</div> : null}
                       </td>
                       <td className="px-4 py-3 text-center font-semibold text-gray-800">{formatUnits(item.quantity)}</td>
                       <td className="px-4 py-3 text-right text-gray-600">{formatCurrency(item.unit_price)}</td>

@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { removeQuotationItem, saveQuotationHeader, saveQuotationItem } from '../actions'
 
-export type EditorItem = { id: string; name: string; sku: string | null; quantity: number; unit_price: number; discount_percent: number; tax_percent: number }
+export type EditorItem = { id: string; name: string; note?: string | null; sku: string | null; quantity: number; unit_price: number; discount_percent: number; tax_percent: number }
 
 const input = 'w-full rounded-md border px-2 py-1.5 text-xs'
 
@@ -60,7 +60,7 @@ export function QuotationEditor({
               const set = (key: keyof typeof row) => (e: React.ChangeEvent<HTMLInputElement>) => setRows((r) => ({ ...r, [item.id]: { ...r[item.id], [key]: e.target.value } }))
               return (
                 <tr key={item.id} className="border-t border-gray-100 align-top">
-                  <td className="py-2 pr-2"><span className="font-semibold text-gray-900">{item.name}</span>{item.sku ? <span className="ml-1 font-mono text-gray-400">{item.sku}</span> : null}</td>
+                  <td className="py-2 pr-2"><span className="font-semibold text-gray-900">{item.name}</span>{item.sku ? <span className="ml-1 font-mono text-gray-400">{item.sku}</span> : null}{item.note ? <div className="mt-1 text-[11px] italic text-gray-600">Note: {item.note}</div> : null}</td>
                   <td className="pr-2"><input aria-label={`Quantity for ${item.name}`} className={input} inputMode="numeric" value={row.quantity} onChange={set('quantity')} /></td>
                   <td className="pr-2"><input aria-label={`Unit price for ${item.name}`} className={input} inputMode="decimal" value={row.unit_price} onChange={set('unit_price')} /></td>
                   <td className="pr-2"><input aria-label={`Discount for ${item.name}`} className={input} inputMode="decimal" value={row.discount_percent} onChange={set('discount_percent')} /></td>

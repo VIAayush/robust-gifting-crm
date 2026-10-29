@@ -5,8 +5,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ProductImage } from '@/components/ui/product-image'
 import { formatCurrency, formatUnits } from '@/lib/utils'
-import { submitCatalogueResponse } from '../actions'
-import { RequestQuotationButton } from './request-quotation-button'
+import { requestCatalogueSamples, submitCatalogueResponse } from '../actions'
+import { RequestQuotationButton, type SelectionLine } from './request-quotation-button'
 
 export type OfferingCard = {
   id: string
@@ -58,8 +58,12 @@ export function CatalogueSelection({
   })
   const [comment, setComment] = useState(existing?.comment || '')
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null)
+  const [sampleNote, setSampleNote] = useState('')
+  const [sampleFeedback, setSampleFeedback] = useState<{ ok: boolean; text: string } | null>(null)
+  const [samplePending, startSampleTransition] = useTransition()
 
   const selectedIds = useMemo(() => offerings.filter((o) => lines[o.id]).map((o) => o.id), [offerings, lines])
+  const selectionLines: SelectionLine[] = selectedIds.map((id) => ({ offering_id: id, quantity: lines[id].quantity, notes: lines[id].notes }))
   const processed = existing?.status === 'processed'
 
   function toggle(offering: OfferingCard) {
@@ -105,6 +109,20 @@ export function CatalogueSelection({
         }
       } catch {
         setFeedback({ ok: false, text: 'Something went wrong. Please check your connection and try again.' })
+      }
+    })
+  }
+
+  function sendSamples() {
+    if (samplePending) return
+    setSampleFeedback(null)
+    startSampleTransition(async () => {
+      try {
+        const result = await requestCatalogueSamples(campaignId, selectedIds, sampleNote)
+        if ('error' in result) setSampleFeedback({ ok: false, text: result.error })
+        else setSampleFeedback({ ok: true, text: result.message })
+      } catch {
+        setSampleFeedback({ ok: false, text: 'Something went wrong. Please check your connection and try again.' })
       }
     })
   }
@@ -266,11 +284,35 @@ export function CatalogueSelection({
         )}
 
         <div className="space-y-2 rounded-lg border border-[#E2E8F0] p-4">
-          <h3 className="text-sm font-semibold text-gray-900">{responsesAvailable ? '2. ' : ''}Start a requirement for a quotation</h3>
+          <h3 className="text-sm font-semibold text-gray-900">2. Request samples of the gifts you liked</h3>
           <p className="text-xs text-gray-600">
-            Adds {selectedIds.length > 0 ? 'the selected gifts' : 'all gifts in this catalogue'} to your shortlist and opens the requirement form. This is a formal request for a quotation.
+            Asks your account manager to send you a sample of {selectedIds.length > 0 ? `the ${selectedIds.length} selected gift${selectedIds.length === 1 ? '' : 's'}` : 'each gift you tick'}. One sample of each; nothing is quoted or ordered.
           </p>
-          <RequestQuotationButton campaignId={campaignId} offeringIds={selectedIds} />
+          <label className="block text-sm font-medium text-gray-700">
+            Note for the samples (optional)
+            <input className={`${inputClass} mt-1`} maxLength={500} value={sampleNote} onChange={(e) => { setSampleFeedback(null); setSampleNote(e.target.value) }} placeholder="Delivery address, colours you would like to see" />
+          </label>
+          <button
+            type="button"
+            onClick={sendSamples}
+            disabled={samplePending || selectedIds.length === 0}
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-[#9C7A33] px-5 text-sm font-semibold text-[#9C7A33] hover:bg-[#FBF8F2] disabled:opacity-60 sm:w-auto"
+          >
+            {samplePending ? 'Sending…' : selectedIds.length > 0 ? `Request samples for ${selectedIds.length} selected` : 'Tick gifts to request samples'}
+          </button>
+          {sampleFeedback ? (
+            <p role={sampleFeedback.ok ? 'status' : 'alert'} className={`text-sm ${sampleFeedback.ok ? 'text-green-700' : 'text-red-700'}`}>
+              {sampleFeedback.text}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="space-y-2 rounded-lg border border-[#E2E8F0] p-4">
+          <h3 className="text-sm font-semibold text-gray-900">3. Create a requirement and get a quotation</h3>
+          <p className="text-xs text-gray-600">
+            Opens the requirement form with {selectedIds.length > 0 ? 'the selected gifts and the quantities you chose' : 'all gifts in this catalogue'} already filled in. This is a formal request for a quotation.
+          </p>
+          <RequestQuotationButton campaignId={campaignId} lines={selectionLines} />
         </div>
       </section>
     </div>
