@@ -73,14 +73,7 @@ export default async function PersonalizedProductPage({ params }: Props) {
                 </div>
               )}
 
-              <dl className="mt-10 space-y-3 text-sm">
-                <div className="flex justify-between border-b border-[#E2E8F0] py-2">
-                  <dt className="text-[#5C6570]">Availability</dt>
-                  <dd className="capitalize">{product.status === 'active' ? 'In stock' : product.status}</dd>
-                </div>
-              </dl>
-
-              <div className="mt-8 sm:mt-10">
+              <div className="mt-10">
                 <PersonalizedPurchaseActions
                   product={{
                     id: product.id,

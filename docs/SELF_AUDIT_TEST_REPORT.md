@@ -266,3 +266,55 @@ Critical D21 (privilege escalation at sign-up) and the High items D2, D3, D5, D6
 - Which internal roles may see costs and margins: order and product costs admin, accounts, management; supplier mapping cost needs the `suppliers.cost_view` permission. **Still open for your decision.**
 - Unknown supplier cost on quotation conversion: **decided, option B** (28 Oct 2026): never invent a cost or margin.
 - Requirement scope after approval: budget and quantity are frozen for client-workflow requirements once approved (application and migration 38). Tell me if staff should be able to change them.
+
+## Live-environment pass (29 Oct 2026)
+
+The Supabase data API is answering again (it was HTTP 402 `exceed_egress_quota` earlier). This pass ran against the live project; nothing here is simulated unless it says so.
+
+| Area | Result | Status |
+|---|---|---|
+| External backup | JSON export of 11 tables stored outside the repository (contains personal data, keep it out of git); in-database snapshot schema `backup_20261028` kept | PASS |
+| Anonymous access through the data API | anon key cannot read costs, profiles, orders, invoices, payments or audit rows; privileged functions refused | PASS (live HTTP) |
+| Product baseline | 524 active products, fingerprint `60e683d350cd7e55a474b2b86ec87aab`, unchanged after all tests | PASS |
+| Public site on live data | catalogue, product pages, quotation and tracking validation, generic tracking errors, 375px layouts | PASS (browser) |
+| 404 page | public 404 pointed signed-out visitors at the CRM dashboard; now says "Page not found" with a link to the home page (`src/app/not-found.tsx`) | FIXED, uncommitted |
+| Concurrent payments | 8 and then 6 simultaneous inserts on a 1,000 invoice: 3 of 8 and 1 of 6 accepted, rest refused, total paid never above 1,000 | PASS (parallel HTTP, service role) |
+| Concurrent sample movements | needs two signed-in staff sessions; the tool calls available here run one after another | NOT VERIFIED |
+| Signed-in role, company-isolation, B2B portal, B2C checkout and finance screens | need a signed-in session; I do not type passwords or create accounts | NOT VERIFIED (database-level isolation PASS in `scripts/db-tests`) |
+| PayU | not configured, stays in demo mode | NOT VERIFIED live |
+| E-mail | a Resend key is configured, so app e-mails could be real; no checkout or e-mail was triggered | NOT VERIFIED |
+| WhatsApp | outbox only | NOT VERIFIED live |
+| Quality gates | `npm test` 38/38, `tsc --noEmit` clean, `npm run build` passes, SQL syntax passes, eslint 81 problems (same as baseline), `git diff --check` clean | PASS |
+
+Test data: the concurrency test created one order, one invoice, four payments and sample stock rows. All were deleted and counts verified back to baseline (orders 2, invoices 0, payments 0, sample stock 0, movements 0, tasks 0, notifications 2). The triggers left 24 audit rows, which are kept because audit rows are not deleted.
+
+Data-quality findings for the client: 472 products are named by their code, 474 have no description, the catalogue shows an "In Stock" label although there is no stock model, and delivery charge is 0.
+
+## Follow-up pass (29 Oct 2026): authenticated testing
+
+Neither in-app browser tab held a signed-in session (`/crm/dashboard` and `/portal` redirect to `/login`). No password was requested or typed and no account was created.
+
+| Workflow | Status |
+|---|---|
+| Admin and accounts CRM access, role permissions | BLOCKED: needs a signed-in session |
+| Two client companies, cross-company isolation through the app | BLOCKED (database-level isolation PASS in `scripts/db-tests`) |
+| B2B catalogue, requirements, samples, quotations, item decisions, order conversion, fulfilment | BLOCKED |
+| Finance, costing, invoices, payments, reports screens | BLOCKED (payment overpayment guard PASS, live parallel HTTP) |
+| B2C checkout, payment states, tracking of a real order | NOT VERIFIED: checkout would create real records and may send real e-mail (Resend key present) |
+| Concurrent sample movements | BLOCKED: `move_sample` needs authenticated staff; the available tools run one call at a time |
+| Public 404 page | PASS (live, `/no-such-page-xyz` shows "Page not found" and a link home) |
+| PayU | NOT VERIFIED live: not configured, demo mode |
+| Resend | NOT VERIFIED: no safe test recipient or sandbox supplied; nothing sent |
+| WhatsApp | NOT VERIFIED: outbox only |
+
+### Catalogue findings (read-only, nothing changed)
+
+| Finding | Type | Detail |
+|---|---|---|
+| Product names are codes, no description | Business decision | 524 active products; every name contains digits and 474 are a single token; 474 have no description. Client must supply names and descriptions. Earlier count of 472 was not reproduced exactly. |
+| "In stock" label | Presentation | Shown whenever `status = 'active'` (`src/app/personalized/product/[id]/page.tsx:79`); there is no stock model. Suggest "Available" or hide. Needs your approval to change. |
+| Delivery charge 0 and no free-delivery threshold | Business decision | `org_settings.delivery_charge = 0.00`, `free_delivery_above` null. Client must set real values. |
+
+### Update: "In stock" label removed (29 Oct 2026)
+
+The Availability row on the public product page (`src/app/personalized/product/[id]/page.tsx`) is removed because the application has no inventory model. No product, price or quantity record was touched. Checked in the live browser: the page renders, the label is gone, and the purchase buttons are still present. `npm test` 38/38, `tsc --noEmit` clean, `npm run build` compiles, `git diff --check` clean. Authenticated workflows and concurrent sample movement remain BLOCKED: no signed-in session was available on the second check either.

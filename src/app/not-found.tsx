@@ -8,15 +8,15 @@ export default function NotFound() {
         <div className="mx-auto w-10 h-10 rounded-full bg-[var(--color-muted)] text-[var(--color-muted-fg)] flex items-center justify-center mb-4">
           <FileQuestion size={18} />
         </div>
-        <h1 className="text-base font-semibold text-[var(--color-text)]">Not found</h1>
+        <h1 className="text-base font-semibold text-[var(--color-text)]">Page not found</h1>
         <p className="text-sm text-[var(--color-text-secondary)] mt-2">
-          This record does not exist, or you do not have access to it.
+          This page does not exist or is no longer available.
         </p>
         <Link
-          href="/crm/dashboard"
+          href="/home"
           className="inline-block mt-5 px-4 py-2 rounded-md text-sm font-medium bg-[var(--color-primary)] text-[var(--color-primary-fg)] hover:opacity-90"
         >
-          Go to dashboard
+          Back to home
         </Link>
       </div>
     </div>

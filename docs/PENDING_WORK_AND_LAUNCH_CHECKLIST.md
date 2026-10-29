@@ -149,3 +149,13 @@ Roles: admin, order processing, sales, accounts, manager. For each: direct URL a
 Catalogue: set a product to B2B only (absent from the B2C store, cart and checkout rejects it), to B2C only (absent from the portal), and back to both. Banners: create, schedule, expire, hide; confirm portal-only and public-only audiences. Pricing: bulk update, history, rollback, rollback after a later manual edit (must skip that product). Suppliers: bulk assignment dry run then apply (add and replace), supplier filter and counts, vendor report totals against a manual count, `Not set` where cost is empty.
 
 Notifications: product visible only to one company notifies only that company's users; each event in section 4 produces one outbox row (or `skipped` with a reason) and one email; repeating an action creates no duplicates.
+
+## Client demonstration checklist (29 Oct 2026)
+
+Safe to show (verified on the live database): public catalogue and product pages with the 524 products, mobile layout, quotation form validation, order tracking with generic errors, the 404 page, and the rule that payments can never exceed an invoice.
+
+Show only after a signed-in walkthrough by you (not yet exercised live): CRM dashboard and finance figures, B2B portal for two companies, order stages, sample stock, team and roles.
+
+Do not demonstrate as working: real PayU payment (demo mode only), real e-mail (Resend key present, nothing sent), real WhatsApp (outbox only), cost and profit as final (Option B shows provisional or not entered when costs are missing).
+
+Before the demo: sign in as admin, accounts, sales and a client from two companies and run section 3 of `MANUAL_TESTING_GUIDE.md`; decide whether Resend may send real mail; give the products real names and descriptions.
