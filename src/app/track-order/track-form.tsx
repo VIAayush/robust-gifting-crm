@@ -8,8 +8,8 @@ import { trackOrder, type TrackedOrder } from './actions'
 const field = 'mt-2 w-full border-b border-[#E2E8F0] bg-transparent py-2 text-sm outline-none focus:border-[#9C7A33]'
 const label = 'text-[10px] font-medium uppercase tracking-[0.16em] text-[#5C6570]'
 
-export function TrackForm() {
-  const [orderNumber, setOrderNumber] = useState('')
+export function TrackForm({ initialOrderNumber = '' }: { initialOrderNumber?: string }) {
+  const [orderNumber, setOrderNumber] = useState(initialOrderNumber)
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [order, setOrder] = useState<TrackedOrder | null>(null)

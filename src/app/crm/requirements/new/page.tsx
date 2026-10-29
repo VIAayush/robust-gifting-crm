@@ -118,6 +118,23 @@ export default async function NewRequirementPage({
           <textarea name="description" rows={3} placeholder="Any specific themes, colours, or preferences?" className="w-full rounded-lg border px-3 py-2" />
         </div>
 
+        <fieldset className="space-y-3 rounded-lg border border-[#E2E8F0] bg-[#F5F7FA] p-4">
+          <legend className="px-1 text-xs font-semibold text-gray-700">Client response</legend>
+          <label className="flex items-start gap-2 text-sm text-gray-700">
+            <input type="checkbox" name="share_with_client" defaultChecked className="mt-1 h-4 w-4 accent-[#9C7A33]" />
+            <span>
+              <span className="font-semibold">Share with the client now</span>
+              <span className="mt-0.5 block text-xs text-gray-500">
+                The company&apos;s portal users are notified and asked to confirm the requirement or request changes. Untick to keep it internal and share it later.
+              </span>
+            </span>
+          </label>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-700" htmlFor="client_note">Message to the client (optional)</label>
+            <textarea id="client_note" name="client_note" rows={2} maxLength={1000} placeholder="Shown to the client together with the requirement" className="w-full rounded-lg border px-3 py-2" />
+          </div>
+        </fieldset>
+
         <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#9C7A33] px-4 text-sm font-semibold text-white hover:bg-[#7C6224]">
           Create Requirement
         </button>

@@ -3,14 +3,23 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isClientPortalUser } from '@/lib/auth/client-guard'
 import { b2bOnlyProductIds } from '@/lib/catalogue/channel'
-import { isValidCustomizationPath } from '@/lib/site/upload-rules'
-import { validateCustomization } from '@/lib/products/customization'
 import { isUuid } from '@/lib/utils'
 import type { CartItem } from '@/lib/site/cart'
 import { RATE_LIMIT_MESSAGE } from '@/lib/security/rate-limit'
 import { RATE_RULES, isRateLimited } from '@/lib/security/rate-limit-server'
 import { deliveryChargeFor } from '@/lib/checkout/delivery'
 import { validateCheckoutCustomer, type CheckoutCustomer, type CheckoutFieldErrors } from '@/lib/checkout/validation'
+
+const CUSTOMIZATION_UNSUPPORTED_MESSAGE =
+  'Personalisation is not available on individual orders. Please remove it from your cart and try again.'
+
+function hasCustomizationPayload(item: unknown): boolean {
+  if (!item || typeof item !== 'object') return false
+  const { customization, customizationFilePath } = item as { customization?: unknown; customizationFilePath?: unknown }
+  if (typeof customizationFilePath === 'string' ? customizationFilePath.trim() !== '' : Boolean(customizationFilePath)) return true
+  if (customization && typeof customization === 'object') return Object.keys(customization).length > 0
+  return Boolean(customization)
+}
 
 /**
  * Creates a real checkout from the cart — this is the "real order, not just
@@ -37,6 +46,9 @@ export async function createCheckout(
 
   if (!Array.isArray(cartItems) || cartItems.length === 0) return { error: 'Your cart is empty.' }
 
+  // Individual orders do not support personalisation. Refuse (rather than silently drop) before any database access.
+  if (cartItems.some(hasCustomizationPayload)) return { error: CUSTOMIZATION_UNSUPPORTED_MESSAGE }
+
   const admin = createAdminClient()
   if (!admin) return { error: 'Unable to start checkout just now. Please try again shortly.' }
 
@@ -44,7 +56,7 @@ export async function createCheckout(
   if (productIds.length === 0) return { error: 'Your cart items could not be resolved. Please re-add them.' }
 
   const [{ data: products, error: productsError }, { data: variants, error: variantsError }, { data: settings, error: settingsError }] = await Promise.all([
-    admin.from('products').select('id, name, price, mrp, status, customization_enabled, customization_fields').in('id', productIds),
+    admin.from('products').select('id, name, price, mrp, status').in('id', productIds),
     admin.from('product_variants').select('id, product_id, colour, extra_price, status').in('product_id', productIds),
     admin.from('org_settings').select('delivery_charge, free_delivery_above').limit(1).maybeSingle(),
   ])
@@ -66,8 +78,6 @@ export async function createCheckout(
     unit_price: number
     mrp_snapshot: number | null
     line_total: number
-    customization: Record<string, string> | null
-    customization_file_path: string | null
   }[] = []
 
   for (const item of cartItems) {
@@ -92,19 +102,6 @@ export async function createCheckout(
     if (unitPrice <= 0) return { error: `"${item.name}" is not available for online purchase right now.` }
     const mrpSnapshot = product.mrp != null ? Number(product.mrp) + extra : null
 
-    // Customization is only accepted for a product that has it enabled, and only
-    // for the fields that product actually offers - anything else the browser
-    // sends is dropped, and every value is length-capped.
-    // Only a path our own upload action could have produced for THIS product is accepted; anything else is dropped.
-    const customizationFilePath = product.customization_enabled && isValidCustomizationPath(item.customizationFilePath, item.id) ? item.customizationFilePath! : null
-    let customization: Record<string, string> | null = null
-    if (product.customization_enabled) {
-      // Required fields, lengths and formats are enforced here, whatever the browser did.
-      const checked = validateCustomization(product.customization_fields || [], item.customization as Record<string, unknown> | null, Boolean(customizationFilePath))
-      if (!checked.ok) return { error: `Personalisation for "${item.name}": ${checked.error}` }
-      customization = Object.keys(checked.cleaned).length > 0 ? checked.cleaned : null
-    }
-
     resolvedItems.push({
       product_id: product.id,
       variant_id: variantId,
@@ -112,8 +109,6 @@ export async function createCheckout(
       unit_price: unitPrice,
       mrp_snapshot: mrpSnapshot,
       line_total: Math.round(unitPrice * quantity * 100) / 100,
-      customization,
-      customization_file_path: customizationFilePath,
     })
   }
 

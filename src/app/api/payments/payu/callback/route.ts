@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PayuPaymentProvider } from '@/lib/payments'
-import { createOrderFromCheckout } from '@/app/checkout/order'
-import { notifyPaymentResult } from '@/lib/notifications'
-import { markCheckoutFailedIfUnpaid } from '@/lib/payments/checkout-state'
+import { settleVerifiedPayment } from '@/lib/payments/settle'
 
 /**
  * PayU's surl AND furl both point here (same fields either way,
@@ -31,6 +29,9 @@ export async function POST(request: Request) {
   const { data: payment } = await admin.from('storefront_payments').select('*').eq('provider_txn_id', txnId).maybeSingle()
   if (!payment) return NextResponse.redirect(new URL('/cart', request.url), 303)
 
+  // Only PayU payments are resolved here; a demo payment's transaction id must never be settled through PayU.
+  if (payment.provider !== 'payu') return NextResponse.redirect(new URL('/cart', request.url), 303)
+
   const checkoutUrl = new URL(`/checkout/${payment.checkout_id}/confirmation`, request.url)
 
   // Already resolved (a duplicate callback delivery) — don't reprocess.
@@ -51,48 +52,9 @@ export async function POST(request: Request) {
 
   const verification = await provider.verifyTransaction(txnId, Number(payment.amount))
 
-  if (!verification.ok) {
-    // Could not reach PayU / ambiguous response — leave status as 'processing' rather than guessing paid or failed.
-    await admin.from('storefront_payments').update({ status: 'processing', raw_response: fields }).eq('id', payment.id).in('status', ['pending', 'processing'])
-    return NextResponse.redirect(checkoutUrl, 303)
-  }
-
-  // Atomic claim: only the caller whose conditional update actually flips the
-  // row out of pending/processing proceeds. Two concurrent duplicate
-  // callbacks can both pass the status check above, but only one wins here.
-  if (verification.status === 'paid') {
-    const { data: claimed } = await admin
-      .from('storefront_payments')
-      .update({
-        status: 'paid',
-        provider_reference: verification.providerReference,
-        raw_response: verification.raw as object,
-        verified_at: new Date().toISOString(),
-      })
-      .eq('id', payment.id)
-      .in('status', ['pending', 'processing'])
-      .select('id')
-      .maybeSingle()
-    if (!claimed) return NextResponse.redirect(checkoutUrl, 303)
-
-    const orderResult = await createOrderFromCheckout(payment.checkout_id, { reference: verification.providerReference })
-    if ('error' in orderResult) {
-      // Payment is genuinely verified paid even if order creation hit a snag — don't lose that fact.
-      await admin.from('storefront_payments').update({ failure_reason: `Paid but order creation failed: ${orderResult.error}` }).eq('id', payment.id)
-    }
-    await notifyPaymentResult(payment.id)
-  } else {
-    const { data: claimed } = await admin
-      .from('storefront_payments')
-      .update({ status: 'failed', failure_reason: verification.failureReason, raw_response: verification.raw as object })
-      .eq('id', payment.id)
-      .in('status', ['pending', 'processing'])
-      .select('id')
-      .maybeSingle()
-    if (!claimed) return NextResponse.redirect(checkoutUrl, 303)
-    await markCheckoutFailedIfUnpaid(admin, payment.checkout_id)
-    await notifyPaymentResult(payment.id)
-  }
+  // Only PayU's own Verify Payment answer (amount-checked) decides paid/failed; an unreachable or ambiguous answer
+  // leaves the payment 'processing'. The conditional claims inside make a duplicate delivery a no-op.
+  await settleVerifiedPayment(admin, payment, verification, fields)
 
   return NextResponse.redirect(checkoutUrl, 303)
 }

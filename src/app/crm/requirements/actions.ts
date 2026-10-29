@@ -5,7 +5,9 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { writeAudit } from '@/lib/audit'
 import { notifyRequirementEvent } from '@/lib/notifications'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { staffCanCreateQuotation } from '@/lib/requirements/workflow'
+import { companyHasClientUsers, shareRequirementWithClient as shareRecord } from '@/lib/requirements/share'
 
 export async function createRequirement(formData: FormData) {
   const supabase = await createClient()
@@ -18,6 +20,15 @@ export async function createRequirement(formData: FormData) {
 
   const quantity = Number(formData.get('quantity') || 1)
   const budget = formData.get('budget') ? Number(formData.get('budget')) : null
+  // "Share with the client" puts the new requirement in front of the company's portal users for a response.
+  const shareWithClient = ['on', '1', 'true'].includes(String(formData.get('share_with_client') || ''))
+  if (shareWithClient) {
+    const admin = createAdminClient()
+    if (!admin) return { error: 'Sharing with the client is unavailable right now. Untick it or try again shortly.' }
+    if (!(await companyHasClientUsers(admin, companyId))) {
+      return { error: 'This company has no active client users yet, so nobody could respond. Invite a client user first, or untick “Share with the client”.' }
+    }
+  }
   const payload = {
     name,
     company_id: companyId,
@@ -45,8 +56,46 @@ export async function createRequirement(formData: FormData) {
     next: payload,
     userId: user.id,
   })
+  if (shareWithClient) {
+    const shared = await shareToClient(data.id, user.id, String(formData.get('client_note') || ''))
+    if ('error' in shared) {
+      revalidatePath('/crm/requirements')
+      redirect(`/crm/requirements/${data.id}?share_error=${encodeURIComponent(shared.error)}`)
+    }
+  }
   revalidatePath('/crm/requirements')
   redirect(`/crm/requirements/${data.id}`)
+}
+
+/** Shared by "create and share" and the "Send to client" button; the caller has already authorised the user. */
+async function shareToClient(requirementId: string, actorId: string, note: string): Promise<{ success: true } | { error: string }> {
+  const admin = createAdminClient()
+  if (!admin) return { error: 'Sharing with the client is unavailable right now.' }
+  const result = await shareRecord(admin, { requirementId, actorId, note })
+  if (!result.ok) return { error: result.error }
+  if (!result.alreadyShared) {
+    await writeAudit(admin, { action: 'update', entity: 'requirement', entityId: requirementId, next: { workflow_stage: 'admin_approved', shared_with_client: true }, userId: actorId })
+    await notifyRequirementEvent(requirementId, 'admin_approved', note.trim() || null)
+  }
+  revalidatePath('/crm/requirements')
+  revalidatePath(`/crm/requirements/${requirementId}`)
+  revalidatePath('/portal/requirements')
+  return { success: true }
+}
+
+/** "Send to client": a staff-created requirement enters the approval flow and the client is asked to respond. */
+export async function shareRequirementWithClient(requirementId: string, note: string): Promise<{ success: true } | { error: string }> {
+  if (!/^[0-9a-f-]{36}$/i.test(String(requirementId))) return { error: 'Requirement not found.' }
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Your session has expired. Please sign in again.' }
+  const { data: me } = await supabase.from('profiles').select('role, is_active').eq('id', user.id).maybeSingle()
+  if (!me || !me.is_active || !['admin', 'sales'].includes(String(me.role))) return { error: 'Only admin and sales can share a requirement with a client.' }
+  // Row-level security limits this read to requirements the user may see (a salesperson sees only their own).
+  const { data: requirement } = await supabase.from('requirements').select('id, owner_id').eq('id', requirementId).maybeSingle()
+  if (!requirement) return { error: 'Requirement not found.' }
+  if (me.role !== 'admin' && requirement.owner_id !== user.id) return { error: 'Requirement not found.' }
+  return shareToClient(requirementId, user.id, note)
 }
 
 export async function createRequirementFromLead(formData: FormData) {

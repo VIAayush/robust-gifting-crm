@@ -2158,7 +2158,38 @@ create or replace view public.portal_orders with (security_invoker=false) as
    FROM orders
   WHERE company_id = client_company_id() OR is_internal();
 
+-- Client responses to catalogues (migration 20261041). Written only by the application's server code (service role).
+create table if not exists public.catalogue_responses (
+  id uuid primary key default gen_random_uuid(),
+  campaign_id uuid not null references public.campaigns(id) on delete cascade,
+  company_id uuid not null references public.companies(id) on delete cascade,
+  submitted_by uuid references public.profiles(id) on delete set null,
+  status text not null default 'submitted' check (status in ('submitted', 'processed')),
+  comment text check (comment is null or char_length(comment) <= 2000),
+  items jsonb not null default '[]'::jsonb check (jsonb_typeof(items) = 'array'),
+  revision integer not null default 1 check (revision >= 1),
+  submitted_at timestamptz not null default now(),
+  processed_at timestamptz,
+  processed_by uuid references public.profiles(id) on delete set null,
+  requirement_id uuid references public.requirements(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index if not exists catalogue_responses_one_open on public.catalogue_responses (campaign_id, company_id) where status = 'submitted';
+create index if not exists catalogue_responses_company_idx on public.catalogue_responses (company_id, status);
+create index if not exists catalogue_responses_campaign_idx on public.catalogue_responses (campaign_id, status);
+create unique index if not exists catalogue_responses_one_per_requirement on public.catalogue_responses (requirement_id) where requirement_id is not null;
+alter table public.catalogue_responses enable row level security;
+drop policy if exists catalogue_responses_select_internal on public.catalogue_responses;
+create policy catalogue_responses_select_internal on public.catalogue_responses for select using (can_crm() or can_ops() or can_finance() or can_management_read());
+drop policy if exists catalogue_responses_select_client on public.catalogue_responses;
+create policy catalogue_responses_select_client on public.catalogue_responses for select using (is_client() and company_id = client_company_id());
+drop trigger if exists set_updated_at_catalogue_responses on public.catalogue_responses;
+create trigger set_updated_at_catalogue_responses before update on public.catalogue_responses for each row execute function public.set_updated_at();
+
 grant all on all tables in schema public to anon, authenticated, service_role;
+revoke all on table public.catalogue_responses from anon;
+revoke insert, update, delete, truncate on table public.catalogue_responses from authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Organisation settings row

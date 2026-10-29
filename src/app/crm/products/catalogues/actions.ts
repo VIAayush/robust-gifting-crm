@@ -237,17 +237,20 @@ async function insertOfferings(ctx: { supabase: SupabaseClient; profile: { id: s
   const already = new Set((existing || []).map((r) => r.product_id as string))
   let order = Math.max(0, ...(existing || []).map((r) => Number(r.display_order) || 0))
   const ids = productIds.filter((id) => !already.has(id))
-  if (ids.length === 0) return { added: 0 }
+  if (ids.length === 0) return { added: 0, skipped: 0 }
 
   let added = 0
+  let skipped = 0
   for (let i = 0; i < ids.length; i += 200) {
     const chunk = ids.slice(i, i + 200)
     const { data: products, error } = await ctx.supabase
       .from('products')
       .select('id, name, description, image_url, price, moq')
       .eq('status', 'active')
+      .gt('price', 0)
       .in('id', chunk)
     if (error) return { error: 'Could not read the selected products.' }
+    skipped += chunk.length - (products || []).length
     const now = new Date().toISOString()
     const rows = (products || []).map((p) => ({
       campaign_id: campaignId,
@@ -269,7 +272,12 @@ async function insertOfferings(ctx: { supabase: SupabaseClient; profile: { id: s
       added += rows.length
     }
   }
-  return { added }
+  return { added, skipped }
+}
+
+function addedMessage(added: number, skipped: number, none: string) {
+  const base = added ? `Added ${added} product${added === 1 ? '' : 's'}.` : none
+  return skipped ? `${base} ${skipped} skipped (no price or not active).` : base
 }
 
 export async function addCatalogueProducts(campaignId: string, productIds: string[]): Promise<Result> {
@@ -281,14 +289,14 @@ export async function addCatalogueProducts(campaignId: string, productIds: strin
   if ('error' in res) return { error: res.error }
   await writeAudit(ctx.supabase, { action: 'add_catalogue_products', entity: 'campaigns', entityId: campaignId, next: { count: res.added }, userId: ctx.profile.id })
   revalidateCatalogue(campaignId)
-  return { success: true, added: res.added, message: res.added ? `Added ${res.added} product${res.added === 1 ? '' : 's'}.` : 'Those products are already in this catalogue.' }
+  return { success: true, added: res.added, message: addedMessage(res.added, res.skipped ?? 0, 'Those products are already in this catalogue.') }
 }
 
 /** "Select all N matching": the same filter the screen used, resolved again on the server. */
 export async function addCatalogueProductsByFilter(campaignId: string, filter: CandidateFilter): Promise<Result> {
   const ctx = await editor()
   if ('error' in ctx) return { error: ctx.error }
-  const ids = await findCatalogueCandidateIds(ctx.supabase, filter, MAX_ADD + 1)
+  const ids = await findCatalogueCandidateIds(ctx.supabase, filter, MAX_ADD + 1, { pricedOnly: true })
   if (ids.length > MAX_ADD) return { error: `That filter matches more than ${MAX_ADD} products. Narrow it down and try again.` }
   if (ids.length === 0) return { error: 'No products match this filter.' }
   const res = await insertOfferings(ctx, campaignId, ids)
@@ -301,7 +309,7 @@ export async function addCatalogueProductsByFilter(campaignId: string, filter: C
     userId: ctx.profile.id,
   })
   revalidateCatalogue(campaignId)
-  return { success: true, added: res.added, message: res.added ? `Added ${res.added} product${res.added === 1 ? '' : 's'}.` : 'All matching products are already in this catalogue.' }
+  return { success: true, added: res.added, message: addedMessage(res.added, res.skipped ?? 0, 'All matching products are already in this catalogue.') }
 }
 
 export async function updateCatalogueItem(formData: FormData): Promise<Result> {
@@ -333,4 +341,27 @@ export async function removeCatalogueItems(campaignId: string, offeringIds: stri
   await writeAudit(ctx.supabase, { action: 'remove_catalogue_products', entity: 'campaigns', entityId: campaignId, next: { count: ids.length }, userId: ctx.profile.id })
   revalidateCatalogue(campaignId)
   return { success: true, message: `Removed ${ids.length} product${ids.length === 1 ? '' : 's'} from the catalogue.` }
+}
+
+/**
+ * "Select all N matching": every eligible id for the filter across all pages. Eligible means active, priced (> 0)
+ * and not already in the catalogue. Read-only; the ids still go through addCatalogueProducts to be added.
+ */
+export async function selectCatalogueCandidateIds(campaignId: string, filter: CandidateFilter): Promise<{ error?: string; ids?: string[] }> {
+  const ctx = await editor()
+  if ('error' in ctx) return { error: ctx.error }
+  if (!/^[0-9a-f-]{36}$/i.test(campaignId)) return { error: 'Catalogue not found.' }
+  const safe: CandidateFilter = { ...filter, mode: filter?.mode === 'supplier' ? 'supplier' : 'search' }
+  const { data: existing, error: existingError } = await ctx.supabase.from('campaign_products').select('product_id').eq('campaign_id', campaignId)
+  if (existingError) return { error: 'Could not read this catalogue.' }
+  const already = new Set((existing || []).map((r) => r.product_id as string))
+  let found: string[]
+  try {
+    found = await findCatalogueCandidateIds(ctx.supabase, safe, MAX_ADD + already.size + 1, { pricedOnly: true })
+  } catch {
+    return { error: 'Could not load the matching products. Please try again.' }
+  }
+  const ids = found.filter((id) => !already.has(id))
+  if (ids.length > MAX_ADD) return { error: `That filter matches more than ${MAX_ADD} products. Narrow it down and try again.` }
+  return { ids }
 }

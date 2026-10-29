@@ -7,7 +7,6 @@ import { formatCurrency } from '@/lib/utils'
 import { ProductImage } from '@/components/ui/product-image'
 import { type CartItem, readCart, writeCart, updateCartQuantity, removeFromCart, cartSubtotal, CART_EVENT } from '@/lib/site/cart'
 import { refreshCartPrices, type CartPriceCheck } from '@/app/cart/actions'
-import { formatCustomization } from '@/lib/products/customization'
 
 const MAX_QTY = 999
 
@@ -132,11 +131,6 @@ export function CartPageContent() {
                 </p>
               )}
               {item.variantColour ? <p className="mt-0.5 text-xs text-[#5C6570]">Colour: {item.variantColour}</p> : null}
-              {item.customization && Object.keys(item.customization).length > 0 ? (
-                <p className="mt-0.5 text-xs text-[#5C6570]">
-                  {formatCustomization(item.customization)}
-                </p>
-              ) : null}
               <div className="mt-auto flex items-center justify-between pt-2">
                 <div className="inline-flex items-center rounded-lg border border-[#E2E8F0]">
                   <button

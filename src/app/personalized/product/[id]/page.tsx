@@ -83,8 +83,6 @@ export default async function PersonalizedProductPage({ params }: Props) {
                     image_url: product.image_url,
                     category_name: product.category_name,
                   }}
-                  customizationEnabled={product.customizationEnabled}
-                  customizationFields={product.customizationFields}
                 />
               </div>
             </div>

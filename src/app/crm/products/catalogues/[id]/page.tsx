@@ -9,7 +9,7 @@ import { CompanyAssigner } from '@/components/catalogues/company-assigner'
 import { CatalogueItems, type CatalogueItem } from '@/components/catalogues/catalogue-items'
 import { ProductAdder } from '@/components/catalogues/product-adder'
 import { excludeIndividualCompanies } from '@/lib/companies/individual'
-import { searchCatalogueCandidates, type CandidateFilter } from '@/lib/catalogues/candidates'
+import { getCandidatePriceBounds, searchCatalogueCandidates, type CandidateFilter } from '@/lib/catalogues/candidates'
 import { catalogueVisibilityIssues } from '@/lib/catalogues/visibility'
 import { sortProductCategories } from '@/lib/products/categories'
 import { deleteCatalogue, duplicateCatalogue, setCataloguePublished, updateCatalogueDetails } from '../actions'
@@ -54,7 +54,7 @@ export default async function CatalogueDetailPage({ params, searchParams }: { pa
   }
   const page = Math.max(1, Number.parseInt(sp.page || '1', 10) || 1)
 
-  const [assignedRes, companiesRes, offeringsRes, categoriesRes, suppliersRes, eventsRes, candidates] = await Promise.all([
+  const [assignedRes, companiesRes, offeringsRes, categoriesRes, suppliersRes, eventsRes, candidates, priceBounds] = await Promise.all([
     supabase.from('campaign_companies').select('company_id, company:companies(id, name)').eq('campaign_id', id),
     excludeIndividualCompanies(supabase.from('companies').select('id, name, company_type').eq('status', 'active')).order('name'),
     supabase
@@ -66,6 +66,9 @@ export default async function CatalogueDetailPage({ params, searchParams }: { pa
     supabase.from('suppliers').select('id, name').order('name'),
     supabase.from('campaign_events').select('id, event_type, created_at, actor:profiles(full_name)').eq('campaign_id', id).order('created_at', { ascending: false }).limit(20),
     searchCatalogueCandidates(supabase, filter, page, PAGE_SIZE).catch((e: Error) => ({ rows: [], total: 0, error: e.message })),
+    canEdit && (filter.mode === 'search' || filter.supplierId)
+      ? getCandidatePriceBounds(supabase, filter).catch(() => null)
+      : Promise.resolve(null),
   ])
 
   const needsMigration = Boolean(assignedRes.error)
@@ -208,6 +211,7 @@ export default async function CatalogueDetailPage({ params, searchParams }: { pa
             total={candidates.total}
             page={page}
             pageSize={PAGE_SIZE}
+            priceBounds={priceBounds}
             inCatalogue={productIds}
             categories={sortProductCategories(categoriesRes.data || []).map((c) => ({ id: c.id as string, name: c.name as string }))}
             suppliers={(suppliersRes.data || []).map((s) => ({ id: s.id as string, name: s.name as string }))}

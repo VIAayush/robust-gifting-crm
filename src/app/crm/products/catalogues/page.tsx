@@ -3,6 +3,7 @@ import { FolderGit2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { requireStaff } from '@/lib/auth'
 import { formatDate } from '@/lib/utils'
+import { isMissingTable } from '@/lib/catalogues/responses'
 import { ActionButton, CatalogueDetailsForm } from '@/components/catalogues/catalogue-controls'
 import { createCatalogue, deleteCatalogue, duplicateCatalogue, setCataloguePublished } from './actions'
 
@@ -13,7 +14,7 @@ type Row = {
   published_to_client_at: string | null
   created_at: string
   owner: { full_name: string | null } | { full_name: string | null }[] | null
-  companies: { company: { name: string } | { name: string }[] | null }[] | null
+  companies: { company_id: string; company: { name: string } | { name: string }[] | null }[] | null
   products: { count: number }[] | null
 }
 
@@ -32,10 +33,24 @@ export default async function CataloguesPage({ searchParams }: { searchParams: P
   const { data, error } = await supabase
     .from('campaigns')
     .select(
-      'id, name, occasion, published_to_client_at, created_at, owner:profiles!campaigns_owner_id_fkey(full_name), companies:campaign_companies(company:companies(name)), products:campaign_products(count)',
+      'id, name, occasion, published_to_client_at, created_at, owner:profiles!campaigns_owner_id_fkey(full_name), companies:campaign_companies(company_id, company:companies(name)), products:campaign_products(count)',
     )
     .order('created_at', { ascending: false })
   const rows = (data || []) as unknown as Row[]
+
+  // Client responses per catalogue, so staff can see at a glance who has answered. A missing table (migration not
+  // applied yet) simply hides the column.
+  const { data: responseRows, error: responseError } = await supabase.from('catalogue_responses').select('campaign_id, company_id, status').limit(5000)
+  const responsesAvailable = !responseError || !isMissingTable(responseError)
+  const responseStats = new Map<string, { awaiting: number; processed: number; responded: Set<string> }>()
+  for (const response of responseRows || []) {
+    const stat = responseStats.get(response.campaign_id as string) || { awaiting: 0, processed: 0, responded: new Set<string>() }
+    if (response.status === 'submitted') stat.awaiting++
+    else stat.processed++
+    stat.responded.add(response.company_id as string)
+    responseStats.set(response.campaign_id as string, stat)
+  }
+  const awaitingTotal = Array.from(responseStats.values()).reduce((sum, s) => sum + s.awaiting, 0)
   const needsMigration = Boolean(error && /campaign_companies|relationship|does not exist|schema cache/i.test(error.message))
 
   return (
@@ -47,6 +62,15 @@ export default async function CataloguesPage({ searchParams }: { searchParams: P
             Curated product lists you can assign to one or more companies. Published catalogues appear in those clients&apos; portals.
           </p>
         </div>
+        {responsesAvailable ? (
+          <Link
+            href="/crm/products/catalogues/responses"
+            className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#E2E8F0] bg-white px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            Client responses
+            {awaitingTotal > 0 ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">{awaitingTotal} awaiting</span> : null}
+          </Link>
+        ) : null}
       </div>
 
       {deleted ? (
@@ -91,6 +115,7 @@ export default async function CataloguesPage({ searchParams }: { searchParams: P
                   <th className="p-3">Status</th>
                   <th className="p-3">Assigned to</th>
                   <th className="p-3 text-right">Products</th>
+                  {responsesAvailable ? <th className="p-3">Client response</th> : null}
                   <th className="p-3">Created by</th>
                   <th className="p-3">Created</th>
                   <th className="p-3" />
@@ -127,6 +152,24 @@ export default async function CataloguesPage({ searchParams }: { searchParams: P
                         )}
                       </td>
                       <td className="p-3 text-right">{count}</td>
+                      {responsesAvailable ? (
+                        <td className="p-3 text-xs">
+                          {(() => {
+                            const assignedIds = (row.companies || []).map((c) => c.company_id)
+                            const stat = responseStats.get(row.id)
+                            if (!published) return <span className="text-gray-400">Not sent yet</span>
+                            if (assignedIds.length === 0) return <span className="text-gray-400">No companies</span>
+                            const silent = assignedIds.filter((id) => !stat?.responded.has(id)).length
+                            return (
+                              <span className="flex flex-col gap-0.5">
+                                {stat?.awaiting ? <Link href="/crm/products/catalogues/responses" className="font-semibold text-amber-700 hover:underline">{stat.awaiting} awaiting review</Link> : null}
+                                {stat?.processed ? <span className="text-green-700">{stat.processed} processed</span> : null}
+                                {silent > 0 ? <span className="text-gray-500">{silent} awaiting client</span> : null}
+                              </span>
+                            )
+                          })()}
+                        </td>
+                      ) : null}
                       <td className="p-3 text-xs">{one(row.owner)?.full_name || '—'}</td>
                       <td className="p-3 text-xs">{formatDate(row.created_at)}</td>
                       <td className="p-3">

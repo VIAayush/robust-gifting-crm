@@ -4,10 +4,8 @@
  * storefront_checkouts/_items row and, once payment is verified, a real
  * orders/order_items row — see src/app/checkout/actions.ts.
  */
-export type CustomizationData = Record<string, string>
-
 export type CartItem = {
-  /** Unique per cart line (not the product id) — two lines can share a product+variant with different customization. */
+  /** Unique per cart line (not the product id). */
   lineId: string
   id: string
   sku: string
@@ -17,8 +15,6 @@ export type CartItem = {
   category_name?: string | null
   variantId?: string | null
   variantColour?: string | null
-  customization?: CustomizationData | null
-  customizationFilePath?: string | null
   quantity: number
 }
 
@@ -47,11 +43,6 @@ export function readCart(): CartItem[] {
         category_name: item.category_name ? String(item.category_name) : null,
         variantId: item.variantId ? String(item.variantId) : null,
         variantColour: item.variantColour ? String(item.variantColour) : null,
-        customization:
-          item.customization && typeof item.customization === 'object' && !Array.isArray(item.customization)
-            ? (item.customization as CustomizationData)
-            : null,
-        customizationFilePath: item.customizationFilePath ? String(item.customizationFilePath) : null,
         quantity: Math.max(1, Math.round(Number(item.quantity) || 1)),
       }))
   } catch {
@@ -72,26 +63,21 @@ export function cartSubtotal() {
   return readCart().reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0)
 }
 
-function hasCustomization(item: { customization?: CustomizationData | null; customizationFilePath?: string | null }) {
-  return Boolean(item.customizationFilePath) || Boolean(item.customization && Object.keys(item.customization).length > 0)
-}
-
 /**
- * Adds `quantity` more of this item. Merges into an existing line only when
- * product + variant match AND neither line carries customization — two
- * customized adds (even of the identical product/variant) always stay as
- * separate lines, since their customization may differ.
+ * Adds `quantity` more of this item, merging into the existing line when
+ * product + variant match. Individual (B2C) orders carry no customisation, so
+ * any customisation fields a caller (or an old cart) supplies are ignored.
  */
 export function addToCart(item: Omit<CartItem, 'quantity' | 'lineId'>, quantity = 1) {
   const current = readCart()
   const qty = Math.max(1, Math.round(quantity) || 1)
-  const incomingCustomized = hasCustomization(item)
-  const existing = !incomingCustomized
-    ? current.find((row) => (row.id === item.id || row.sku === item.sku) && (row.variantId || null) === (item.variantId || null) && !hasCustomization(row))
-    : undefined
+  const clean: Omit<CartItem, 'quantity' | 'lineId'> = { ...item }
+  delete (clean as Record<string, unknown>).customization
+  delete (clean as Record<string, unknown>).customizationFilePath
+  const existing = current.find((row) => (row.id === clean.id || row.sku === clean.sku) && (row.variantId || null) === (clean.variantId || null))
   const next = existing
     ? current.map((row) => (row === existing ? { ...row, quantity: row.quantity + qty } : row))
-    : [...current, { ...item, lineId: makeLineId(), quantity: qty }]
+    : [...current, { ...clean, lineId: makeLineId(), quantity: qty }]
   writeCart(next)
 }
 

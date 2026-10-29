@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { confirmRequirement, resubmitRequirement, sendBackRequirement } from '../actions'
-import type { WorkflowStage } from '@/lib/requirements/workflow'
+import type { RequirementOrigin, WorkflowStage } from '@/lib/requirements/workflow'
 
 type Props = {
   requirement: {
@@ -14,6 +14,7 @@ type Props = {
     quantity: string
     deadline: string
     delivery_city: string
+    origin?: RequirementOrigin
   }
 }
 
@@ -54,14 +55,16 @@ export function RequirementActions({ requirement }: Props) {
   if (requirement.stage === 'admin_approved') {
     return (
       <section className="space-y-3 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
-        <h2 className="font-serif text-lg">Confirm this requirement</h2>
+        <h2 className="font-serif text-lg">{requirement.origin === 'staff' ? 'Your response is needed' : 'Confirm this requirement'}</h2>
         <p className="text-sm text-gray-600">
-          Our team approved this requirement. Confirm it to start choosing products, or tell us what needs to change.
+          {requirement.origin === 'staff'
+            ? 'Your account manager prepared this requirement for your company. Accept it to start choosing products, or tell us what needs to change.'
+            : 'Our team approved this requirement. Confirm it to start choosing products, or tell us what needs to change.'}
         </p>
         {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
         <div className="flex flex-col gap-2 sm:flex-row">
           <button type="button" className={primaryButton} disabled={pending} onClick={() => run(() => confirmRequirement(requirement.id))}>
-            {pending ? 'Working…' : 'Confirm requirement'}
+            {pending ? 'Working…' : requirement.origin === 'staff' ? 'Accept requirement' : 'Confirm requirement'}
           </button>
           <button type="button" className={secondaryButton} disabled={pending} onClick={() => setShowSendBack((v) => !v)}>
             Request changes

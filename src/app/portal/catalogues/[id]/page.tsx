@@ -1,11 +1,9 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { formatCurrency, formatUnits, isUuid } from '@/lib/utils'
+import { formatCurrency, isUuid } from '@/lib/utils'
 import { BackButton } from '@/components/ui/back-button'
-import { ProductImage } from '@/components/ui/product-image'
-import { ShortlistButton } from '@/components/portal/shortlist-button'
-import { RequestQuotationButton } from './request-quotation-button'
+import { isMissingTable, type ResponseItem } from '@/lib/catalogues/responses'
+import { CatalogueSelection, type ExistingResponse, type OfferingCard } from './catalogue-selection'
 
 export default async function PortalCatalogueDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -32,16 +30,42 @@ export default async function PortalCatalogueDetailPage({ params }: { params: Pr
   ])
   const items = offerings || []
 
-  const shortlisted = new Set<string>()
-  if (items.length) {
-    const { data: rows } = await supabase
-      .from('company_product_interests')
-      .select('product_id')
-      .eq('company_id', companyId)
-      .is('variant_id', null)
-      .in('product_id', items.map((i) => i.product_id as string))
-    for (const row of rows || []) shortlisted.add(row.product_id as string)
+  // The company's latest response to this catalogue (row-level security: only their own company's rows).
+  let existing: ExistingResponse = null
+  let responsesAvailable = true
+  const { data: responseRows, error: responseError } = await supabase
+    .from('catalogue_responses')
+    .select('status, comment, items, revision, submitted_at, processed_at, requirement_id')
+    .eq('campaign_id', id)
+    .eq('company_id', companyId)
+    .order('submitted_at', { ascending: false })
+    .limit(1)
+  if (responseError) {
+    responsesAvailable = !isMissingTable(responseError)
+    if (!isMissingTable(responseError)) console.error('[portal] catalogue response read failed', responseError.message)
   }
+  const latest = responseRows?.[0]
+  if (latest) {
+    existing = {
+      status: latest.status as 'submitted' | 'processed',
+      comment: (latest.comment as string | null) || '',
+      submittedAt: latest.submitted_at as string,
+      processedAt: (latest.processed_at as string | null) || null,
+      requirementId: (latest.requirement_id as string | null) || null,
+      revision: Number(latest.revision) || 1,
+      items: ((latest.items as ResponseItem[]) || []).map((i) => ({ campaign_product_id: i.campaign_product_id, quantity: i.quantity, notes: i.notes })),
+    }
+  }
+
+  const cards: OfferingCard[] = items.map((item) => ({
+    id: item.id as string,
+    product_id: item.product_id as string,
+    name: (item.display_name as string) || 'Gift',
+    description: (item.client_description as string | null) || null,
+    image_url: (item.client_image_url as string | null) || null,
+    price: Number(item.selling_price),
+    moq: Number(item.moq) || 1,
+  }))
 
   return (
     <div className="space-y-6">
@@ -57,7 +81,6 @@ export default async function PortalCatalogueDetailPage({ params }: { params: Pr
             {Number(catalogue.budget_per_employee) > 0 ? ` · around ${formatCurrency(catalogue.budget_per_employee)} per person` : ''}
           </p>
         </div>
-        {items.length > 0 ? <RequestQuotationButton campaignId={catalogue.id} /> : null}
       </div>
 
       {items.length === 0 ? (
@@ -65,36 +88,13 @@ export default async function PortalCatalogueDetailPage({ params }: { params: Pr
           The gifts in this catalogue aren&apos;t available yet. Please check back soon.
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {items.map((item) => (
-            <article key={item.id} className="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white">
-              <Link href={`/portal/catalogue/product/${item.product_id}`} className="block">
-                <div className="relative aspect-square border-b border-gray-100 bg-[#F5F7FA]">
-                  <ProductImage src={item.client_image_url} alt={item.display_name || 'Gift'} size="md" className="absolute inset-0 h-full w-full" />
-                </div>
-              </Link>
-              <div className="flex flex-1 flex-col justify-between space-y-3 p-4">
-                <div>
-                  <Link href={`/portal/catalogue/product/${item.product_id}`}>
-                    <h2 className="line-clamp-2 text-sm font-semibold text-gray-900 hover:text-[#9C7A33]">{item.display_name}</h2>
-                  </Link>
-                  {item.client_description ? <p className="mt-1 line-clamp-2 text-xs text-gray-500">{item.client_description}</p> : null}
-                </div>
-                <div className="space-y-3 border-t border-gray-100 pt-3">
-                  <div>
-                    <p className="text-base font-semibold text-gray-900">{formatCurrency(item.selling_price)}</p>
-                    <p className="text-[10px] text-gray-400">MOQ: {formatUnits(item.moq ?? 1)}</p>
-                  </div>
-                  <ShortlistButton
-                    productId={item.product_id as string}
-                    shortlisted={shortlisted.has(item.product_id as string)}
-                    sourceOfferingId={item.id as string}
-                  />
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
+        <CatalogueSelection
+          campaignId={catalogue.id as string}
+          catalogueName={catalogue.name as string}
+          offerings={cards}
+          existing={existing}
+          responsesAvailable={responsesAvailable}
+        />
       )}
     </div>
   )

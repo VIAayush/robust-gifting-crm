@@ -38,3 +38,16 @@ history events; several controls write audit rows for the same order). The stric
 
 Concurrent sessions (two simultaneous payments or sample moves), the HTTP layer (PostgREST/Auth), the Next.js
 application, and real PayU / e-mail / WhatsApp. See `docs/MANUAL_TESTING_GUIDE.md`.
+
+## Live scripts that use the API with real sessions (added 29 October 2026)
+
+These are Node scripts, not SQL. They create tagged `ZZ-QA` fixtures (companies and pre-confirmed `zz-qa-*@qa.invalid`
+users), sign in as them through the real API, check the result, and remove everything again in a `finally` block. They
+send no e-mail. Run with `node --env-file=.env scripts/db-tests/<file>.mjs` from the project root.
+
+| File | Covers |
+|---|---|
+| `04-catalogue-picker.mjs` | read-only: supplier price bounds, filtered counts and select-all ids for the "Add products" screen |
+| `05-requirements-queue.mjs` | the staff Requirements queue query (the ambiguous `profiles` embed that returned an empty list), role and company isolation, the client's answer to a requirement shared by staff, no quotation or order created by accepting |
+| `06-catalogue-responses.mjs` | needs migration `20261041_catalogue_responses.sql`: one open response per catalogue and company, row-level security between companies, no API writes. Exits with code 2 and a message if the table does not exist yet |
+| `_sweep.mjs` | removes any `ZZ-QA` fixture left behind (including a B2C test customer created by a demo purchase) |

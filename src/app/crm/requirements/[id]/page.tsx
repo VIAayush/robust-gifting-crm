@@ -9,13 +9,15 @@ import { ClipboardList, Building2, User, Calendar, DollarSign, Package } from 'l
 import { requireStaff } from '@/lib/auth'
 import { updateRequirementForm, removeRequirement, createQuotationFromRequirement } from '../actions'
 import { WorkflowPanel } from './workflow-panel'
-import { STAGES, TONE_CLASSES, type WorkflowStage, budgetStatus, isWorkflowStage, selectionTotals, staffCanCreateQuotation, totalBudget } from '@/lib/requirements/workflow'
+import { ShareWithClientPanel } from './share-panel'
+import { STAGES, TONE_CLASSES, type WorkflowStage, budgetStatus, isWorkflowStage, originFromCreationEvent, selectionTotals, staffCanCreateQuotation, staffCanShareWithClient, staffStageLabel, totalBudget, waitingOn } from '@/lib/requirements/workflow'
 import { ConfirmAction } from '@/components/ui/confirm-action'
 import { asFormAction } from '@/lib/form-action'
 import { MobileSheetSelect, SheetDateField } from '@/components/ui/mobile-filter-sheet'
 
 type EventRow = {
   id: string
+  from_stage: string | null
   actor_kind: string
   to_stage: string | null
   note: string | null
@@ -30,12 +32,13 @@ export default async function RequirementDetailPage({
   searchParams
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ tab?: string; removed?: string }>
+  searchParams: Promise<{ tab?: string; removed?: string; share_error?: string }>
 }) {
   const { id } = await params
   if (!isUuid(id)) notFound()
-  const { tab = 'overview', removed } = await searchParams
-  await requireStaff(['admin', 'sales', 'management'])
+  const { tab = 'overview', removed, share_error: shareError } = await searchParams
+  const viewer = await requireStaff(['admin', 'sales', 'management'])
+  const viewerRole = viewer.role
   const supabase = await createClient()
 
   const [
@@ -64,6 +67,9 @@ export default async function RequirementDetailPage({
   if (!req) notFound()
 
   const stageKey: WorkflowStage | null = isWorkflowStage(req.workflow_stage) ? req.workflow_stage : null
+  const creationEvent = ((events || []) as unknown as EventRow[]).find((event) => event.from_stage === null)
+  const origin = originFromCreationEvent(creationEvent?.actor_kind)
+  const waiting = waitingOn(stageKey)
   const budgetAll = totalBudget(req.budget, req.quantity)
   const selection = selectionTotals(
     ((products || []) as unknown as SelectionRow[]).map((item) => {
@@ -76,6 +82,11 @@ export default async function RequirementDetailPage({
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <BackButton href="/crm/requirements" label="Back to Requirements" />
+      {shareError ? (
+        <div role="alert" className="p-3 bg-amber-50 text-amber-900 text-xs rounded-xl border border-amber-200">
+          The requirement was created, but it could not be shared with the client: {shareError}
+        </div>
+      ) : null}
       {removed === 'archived' && (
         <div className="p-3 bg-amber-50 text-amber-900 text-xs rounded-xl border border-amber-200">
           This requirement cannot be permanently deleted because it has quotations or orders. It was closed instead.
@@ -102,8 +113,9 @@ export default async function RequirementDetailPage({
 
         <div className="flex items-center gap-4 bg-purple-50/50 p-4 rounded-xl border border-purple-100">
           <div>
-            <p className="text-[10px] uppercase font-bold text-gray-400">Total Budget</p>
+            <p className="text-[10px] uppercase font-bold text-gray-400">Budget / unit</p>
             <p className="text-xl font-bold text-[#9C7A33]">{formatCurrency(req.budget)}</p>
+            {budgetAll ? <p className="text-[10px] text-gray-500">Total {formatCurrency(budgetAll)}</p> : null}
           </div>
           <div className="border-l border-purple-200 pl-4">
             <p className="text-[10px] uppercase font-bold text-gray-400">Target Qty</p>
@@ -121,10 +133,16 @@ export default async function RequirementDetailPage({
         </ConfirmAction>
       </div>
 
+      {!stageKey && staffCanShareWithClient(req.workflow_stage, req.status) && ['admin', 'sales'].includes(String(viewerRole)) ? (
+        <ShareWithClientPanel requirementId={req.id} />
+      ) : null}
+
       {stageKey ? (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 text-xs shadow-sm">
-            <span className={`rounded-full px-3 py-1 font-semibold ${TONE_CLASSES[STAGES[stageKey].tone]}`}>{STAGES[stageKey].label}</span>
+            <span className={`rounded-full px-3 py-1 font-semibold ${TONE_CLASSES[STAGES[stageKey].tone]}`}>{staffStageLabel(stageKey, origin)}</span>
+            <span className="text-gray-500">{origin === 'client' ? 'Created by the client' : 'Created by our team'}</span>
+            {waiting ? <span className="font-semibold text-gray-700">Waiting on {waiting === 'client' ? 'the client' : 'our team'}</span> : null}
             {req.decision_note ? <span className="text-gray-600">Last decision note: {req.decision_note}</span> : null}
             {products && products.length > 0 ? (
               <span className="ml-auto text-gray-600">

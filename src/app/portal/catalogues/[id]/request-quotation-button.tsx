@@ -3,12 +3,12 @@
 import { useState, useTransition } from 'react'
 import { requestCatalogueQuotation } from '../actions'
 
-export function RequestQuotationButton({ campaignId }: { campaignId: string }) {
+export function RequestQuotationButton({ campaignId, offeringIds = [] }: { campaignId: string; offeringIds?: string[] }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
   return (
-    <div className="flex flex-col items-stretch gap-1.5 sm:items-end">
+    <div className="flex flex-col items-stretch gap-1.5 sm:items-start">
       <button
         type="button"
         disabled={pending}
@@ -16,6 +16,7 @@ export function RequestQuotationButton({ campaignId }: { campaignId: string }) {
           setError(null)
           const formData = new FormData()
           formData.set('campaign_id', campaignId)
+          formData.set('offering_ids', JSON.stringify(offeringIds))
           startTransition(async () => {
             try {
               const res = await requestCatalogueQuotation(formData)
@@ -28,9 +29,8 @@ export function RequestQuotationButton({ campaignId }: { campaignId: string }) {
         }}
         className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#9C7A33] px-5 text-sm font-semibold text-white hover:bg-[#7C6224] disabled:opacity-60"
       >
-        {pending ? 'Preparing…' : 'Request quotation'}
+        {pending ? 'Preparing…' : offeringIds.length > 0 ? `Request quotation for ${offeringIds.length} selected` : 'Request quotation (all gifts)'}
       </button>
-      <p className="text-[11px] text-gray-500 sm:text-right">Adds these gifts to your shortlist and opens a requirement.</p>
       {error ? (
         <p role="alert" className="text-xs text-red-700">
           {error}

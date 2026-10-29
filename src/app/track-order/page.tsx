@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { SiteShell } from '@/components/site/site-shell'
 import { TrackForm } from './track-form'
+import { parseOrderNumberParam } from '@/lib/orders/tracking-lookup'
 
 export const metadata: Metadata = {
   title: 'Track your order',
@@ -8,7 +9,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-export default function TrackOrderPage() {
+export default async function TrackOrderPage({ searchParams }: { searchParams: Promise<{ order?: string | string[] }> }) {
+  // Only the order number may be pre-filled from the URL (junk is ignored); the email is never read from or put in a URL.
+  const { order } = await searchParams
+  const initialOrderNumber = parseOrderNumberParam(order)
   return (
     <SiteShell>
       <div className="border-b border-[#E2E8F0] bg-[#F1F4F9]">
@@ -18,7 +22,7 @@ export default function TrackOrderPage() {
         </div>
       </div>
       <div className="mx-auto max-w-xl px-4 py-12 sm:px-6">
-        <TrackForm />
+        <TrackForm initialOrderNumber={initialOrderNumber} />
       </div>
     </SiteShell>
   )

@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { BackButton } from '@/components/ui/back-button'
 import { formatCurrency } from '@/lib/utils'
 import { purposeLabel } from '@/lib/requirements/purpose'
-import { STAGES, TONE_CLASSES, isWorkflowStage, totalBudget } from '@/lib/requirements/workflow'
+import { STAGES, TONE_CLASSES, clientStageText, isWorkflowStage, originFromCreationEvent, totalBudget } from '@/lib/requirements/workflow'
 import { RequirementActions } from './requirement-actions'
 import { SelectionPanel, type SelectionLineProp, type CatalogueResult } from './selection-panel'
 
@@ -57,6 +57,9 @@ export default async function PortalRequirementDetailPage({
       .in('status', ['sent', 'viewed', 'accepted', 'rejected'])
       .order('created_at', { ascending: false }),
   ])
+
+  const origin = originFromCreationEvent((events || []).find((event) => event.from_stage === null)?.actor_kind as string | undefined)
+  const stageText = stageKey ? clientStageText(stageKey, origin) : null
 
   const productIds = (lines || []).map((l) => l.product_id as string)
   const { data: lineProducts } = productIds.length
@@ -118,12 +121,12 @@ export default async function PortalRequirementDetailPage({
         </div>
         {stage ? (
           <span className={`inline-flex w-fit shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${TONE_CLASSES[stage.tone]}`}>
-            {stage.clientLabel}
+            {stageText?.label}
           </span>
         ) : null}
       </div>
 
-      {stage ? <p className="rounded-lg bg-[#F5F7FA] p-3 text-sm text-gray-700">{stage.clientHint}</p> : null}
+      {stage ? <p className="rounded-lg bg-[#F5F7FA] p-3 text-sm text-gray-700">{stageText?.hint}</p> : null}
 
       {requirement.decision_note && (stageKey === 'changes_requested' || stageKey === 'admin_rejected' || stageKey === 'selection_changes_requested') ? (
         <div role="note" className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
@@ -167,6 +170,7 @@ export default async function PortalRequirementDetailPage({
             quantity: requirement.quantity === null ? '' : String(requirement.quantity),
             deadline: requirement.deadline || '',
             delivery_city: requirement.delivery_city || '',
+            origin,
           }}
         />
       ) : null}
@@ -203,7 +207,7 @@ export default async function PortalRequirementDetailPage({
         <h2 className="font-serif text-lg">History</h2>
         <ol className="mt-3 space-y-3 text-sm">
           {(events || []).map((event) => {
-            const to = isWorkflowStage(event.to_stage) ? STAGES[event.to_stage].clientLabel : 'Submitted'
+            const to = isWorkflowStage(event.to_stage) ? clientStageText(event.to_stage, origin).label : 'Submitted'
             return (
               <li key={event.id as string} className="border-l-2 border-[#E2E8F0] pl-3">
                 <p className="font-medium text-gray-900">
