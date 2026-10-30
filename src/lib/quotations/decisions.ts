@@ -39,3 +39,24 @@ export function overallOutcome(decisions: ItemDecision[]): 'accepted' | 'partial
   if (accepted === 0) return 'rejected'
   return accepted === decisions.length ? 'accepted' : 'partial'
 }
+
+/**
+ * When the client rejected some lines, the quotation header keeps showing the full quoted total while the order
+ * is only made for the accepted lines. This gives the accepted-only figure to show next to it, or null when
+ * nothing was rejected (so the header total is already the whole story).
+ */
+export function decisionSummary(
+  items: { id: string; quantity: number | string; unit_price: number | string; client_decision?: string | null }[],
+  discountPercent: number | string | null | undefined,
+  taxPercent: number | string | null | undefined,
+): { acceptedCount: number; itemCount: number; acceptedTotal: number } | null {
+  if (!items.some((i) => i.client_decision === 'rejected')) return null
+  const accepted = new Set(items.filter((i) => i.client_decision === 'accepted').map((i) => i.id))
+  const totals = acceptedTotals(
+    items.map((i) => ({ id: i.id, quantity: Number(i.quantity), unitPrice: Number(i.unit_price) })),
+    accepted,
+    Number(discountPercent || 0),
+    Number(taxPercent || 0),
+  )
+  return { acceptedCount: accepted.size, itemCount: items.length, acceptedTotal: totals.total }
+}

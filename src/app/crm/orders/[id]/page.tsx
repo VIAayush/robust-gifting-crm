@@ -38,11 +38,11 @@ export default async function OrderDetailPage({
   searchParams
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ tab?: string }>
+  searchParams: Promise<{ tab?: string; error?: string }>
 }) {
   const { id } = await params
   if (!isUuid(id)) notFound()
-  const { tab = 'details' } = await searchParams
+  const { tab = 'details', error: actionError } = await searchParams
   const profile = await getProfile()
   if (!profile) return redirect('/login')
   if (profile.role === 'client_admin') return redirect('/portal/catalogue')
@@ -175,6 +175,11 @@ export default async function OrderDetailPage({
   return (
     <div className="mx-auto max-w-5xl space-y-6 pb-10">
       <BackButton href="/crm/order-management" label="Back to Order Control" />
+      {actionError ? (
+        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+          {actionError.slice(0, 300)}
+        </div>
+      ) : null}
 
       <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -207,7 +212,7 @@ export default async function OrderDetailPage({
             {' · '}Stage due: <span className="font-medium text-gray-700">{formatDate(order.stage_due_at)}</span>
             {' · '}Delivery: <span className="font-medium text-gray-700">{formatDate(order.expected_delivery_date)}</span>
           </p>
-          {order.next_action && <p className="text-xs mt-2 text-[#9C7A33]">Next: {order.next_action}</p>}
+          {order.next_action && order.status !== 'delivered' && order.status !== 'cancelled' && <p className="text-xs mt-2 text-[#9C7A33]">Next: {order.next_action}</p>}
         </div>
 
         <div className="flex items-center gap-4">

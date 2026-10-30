@@ -6,6 +6,7 @@ import { BackButton } from '@/components/ui/back-button'
 import { formatCurrency, formatDate, formatUnits, isUuid, oneRelation } from '@/lib/utils'
 import { QuotationItemDecisions } from './quotation-item-decisions'
 import { FileText, Calendar, CheckCircle2 } from 'lucide-react'
+import { decisionSummary } from '@/lib/quotations/decisions'
 
 type ItemRow = {
   id: string
@@ -51,6 +52,7 @@ export default async function PortalQuotationDetailPage({ params }: { params: Pr
   const withDecision = await supabase.from('quotation_items').select(`${itemSelect}, client_decision`).eq('quotation_id', id)
   const plain = withDecision.error ? await supabase.from('quotation_items').select(itemSelect).eq('quotation_id', id) : null
   const rawItems = ((withDecision.error ? plain?.data : withDecision.data) || []) as unknown as ItemRow[]
+  const summary = decisionSummary(rawItems.map((i) => ({ id: i.id, quantity: i.quantity, unit_price: i.unit_price, client_decision: i.client_decision })), quote.discount_percent, quote.tax_percent)
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <BackButton href="/portal/quotations" label="Back to Quotations" />
@@ -178,6 +180,12 @@ export default async function PortalQuotationDetailPage({ params }: { params: Pr
                 <span>Total Amount:</span>
                 <span className="text-[#9C7A33]">{formatCurrency(quote.total)}</span>
               </div>
+              {summary ? (
+                <div className="flex justify-between text-xs font-semibold text-green-700 pt-1">
+                  <span>You accepted {summary.acceptedCount} of {summary.itemCount} items:</span>
+                  <span>{formatCurrency(summary.acceptedTotal)}</span>
+                </div>
+              ) : null}
             </div>
           </div>
 

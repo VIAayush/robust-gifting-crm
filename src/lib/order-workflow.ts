@@ -93,3 +93,41 @@ export function lifecycleIndex(status: string): number {
   const i = ORDER_LIFECYCLE.indexOf(status as (typeof ORDER_LIFECYCLE)[number])
   return i < 0 ? 0 : i
 }
+
+export type StageMoveCheck = { ok: true } | { ok: false; error: string }
+
+/**
+ * Which stage moves are allowed. Forward moves go one stage at a time; going back one stage (rework) needs a
+ * reason; delivered and cancelled orders are closed. Admin may skip forward, and may reopen a closed order, but
+ * only with a written reason so the history explains it. The database function advance_order_stage does not check
+ * this itself, so every caller in the app must.
+ */
+export function checkStageMove(current: string, target: string, role: string, comment?: string | null): StageMoveCheck {
+  if (current === target) return { ok: true } // a hand-off inside the same stage
+  const reason = String(comment ?? '').trim()
+  const isAdmin = role === 'admin'
+
+  if (current === 'cancelled') {
+    if (isAdmin && target === 'created' && reason) return { ok: true }
+    return { ok: false, error: 'A cancelled order is closed. An admin can reopen it to "Order Received" with a reason.' }
+  }
+  if (current === 'delivered') {
+    if (target === 'cancelled') return { ok: false, error: 'A delivered order cannot be cancelled.' }
+    if (isAdmin && target === 'dispatched' && reason) return { ok: true }
+    return { ok: false, error: 'A delivered order is complete. An admin can move it back to "In Transit" with a reason.' }
+  }
+  if (target === 'cancelled') return { ok: true }
+
+  const from = lifecycleIndex(current)
+  const to = lifecycleIndex(target)
+  if (to === from || to === from + 1) return { ok: true }
+  if (to > from + 1) {
+    if (isAdmin && reason) return { ok: true }
+    return { ok: false, error: isAdmin ? 'Skipping stages needs a reason in the comment.' : 'Move the order one stage at a time. Only an admin can skip stages, with a reason.' }
+  }
+  if (from - to === 1) {
+    if (reason) return { ok: true }
+    return { ok: false, error: 'Add a reason in the comment to send the order back a stage.' }
+  }
+  return { ok: false, error: 'An order can only go back one stage at a time.' }
+}

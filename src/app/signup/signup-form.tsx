@@ -11,9 +11,11 @@ import { BrandName } from '@/components/brand/brand-name'
 import { PasswordField } from '@/components/auth/password-field'
 import { getTabId } from '@/lib/supabase/client'
 import { TAB_QUERY } from '@/lib/auth/tab'
+import { useHydrated } from '@/lib/use-hydrated'
 
 export function SignupForm() {
   const router = useRouter()
+  const hydrated = useHydrated()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -77,7 +79,7 @@ export function SignupForm() {
       }
       subtitle="Public signup creates a client portal login. Staff roles are assigned by an admin."
     >
-      <form onSubmit={onSubmit} className="space-y-5">
+      <form method="post" onSubmit={onSubmit} className="space-y-5">
         {error && (
           <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200">{error}</div>
         )}
@@ -127,7 +129,7 @@ export function SignupForm() {
         </div>
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !hydrated}
           className="w-full flex justify-center items-center py-3 px-4 rounded-xl text-xs font-semibold text-white bg-[#9C7A33] hover:bg-[#7C6224] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create account'}

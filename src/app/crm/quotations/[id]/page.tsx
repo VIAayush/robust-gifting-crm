@@ -9,6 +9,7 @@ import { updateQuotationStatus, convertToOrder, duplicateQuotation } from '../ac
 import { FileText, CheckCircle2, XCircle, Copy, ArrowRight } from 'lucide-react'
 import { QuotationEditor, type EditorItem } from './quotation-editor'
 import { canEditQuotation } from '@/lib/quotations/line-rules'
+import { decisionSummary } from '@/lib/quotations/decisions'
 
 export default async function QuotationDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }> }) {
   const { id } = await params
@@ -39,39 +40,41 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
     supabase.from('orders').select('id, order_number').eq('quotation_id', quote.id).maybeSingle(),
   ])
 
+  const summary = decisionSummary((items || []).map((i) => ({ id: i.id as string, quantity: i.quantity as number, unit_price: i.unit_price as number, client_decision: (i as { client_decision?: string | null }).client_decision })), quote.discount_percent, quote.tax_percent)
   const isExpired = quote.valid_until && new Date(quote.valid_until) < new Date() && quote.status === 'sent'
 
   // A refused action (for example "add at least one item before sending") used to do nothing and say nothing; now the
   // reason is shown at the top of this page.
-  const fail = (message: string): never => redirect(`/crm/quotations/${quote.id}?error=${encodeURIComponent(message)}`)
+  // Inline redirect (not a shared helper): server actions must not close over functions, or Next cannot serialize them.
+  const quoteId = quote.id
 
   const markSentAction = async () => {
     'use server'
-    const result = await updateQuotationStatus(quote.id, 'sent')
-    if (result && 'error' in result && result.error) fail(result.error)
+    const result = await updateQuotationStatus(quoteId, 'sent')
+    if (result && 'error' in result && result.error) redirect(`/crm/quotations/${quoteId}?error=${encodeURIComponent(result.error)}`)
   }
 
   const markAcceptedAction = async () => {
     'use server'
-    const result = await updateQuotationStatus(quote.id, 'accepted')
-    if (result && 'error' in result && result.error) fail(result.error)
+    const result = await updateQuotationStatus(quoteId, 'accepted')
+    if (result && 'error' in result && result.error) redirect(`/crm/quotations/${quoteId}?error=${encodeURIComponent(result.error)}`)
   }
 
   const markRejectedAction = async () => {
     'use server'
-    const result = await updateQuotationStatus(quote.id, 'rejected')
-    if (result && 'error' in result && result.error) fail(result.error)
+    const result = await updateQuotationStatus(quoteId, 'rejected')
+    if (result && 'error' in result && result.error) redirect(`/crm/quotations/${quoteId}?error=${encodeURIComponent(result.error)}`)
   }
 
   const convertAction = async () => {
     'use server'
-    const result = await convertToOrder(quote.id)
-    if (result && 'error' in result && result.error) fail(result.error)
+    const result = await convertToOrder(quoteId)
+    if (result && 'error' in result && result.error) redirect(`/crm/quotations/${quoteId}?error=${encodeURIComponent(result.error)}`)
   }
 
   const duplicateAction = async () => {
     'use server'
-    await duplicateQuotation(quote.id)
+    await duplicateQuotation(quoteId)
   }
 
   return (
@@ -238,6 +241,12 @@ export default async function QuotationDetailPage({ params, searchParams }: { pa
             <span>Total:</span>
             <span className="text-[#9C7A33]">{formatCurrency(quote.total)}</span>
           </div>
+          {summary ? (
+            <div className="flex justify-between w-60 text-xs font-semibold text-green-700 pt-1">
+              <span>Client accepted {summary.acceptedCount} of {summary.itemCount}:</span>
+              <span>{formatCurrency(summary.acceptedTotal)}</span>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

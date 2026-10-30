@@ -3,13 +3,39 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { getProfile, canChangeOrderStage, canSeeCosts, isOpsStaff } from '@/lib/auth'
-import { nextLifecycleStatus, STAGE_DEPARTMENT, ORDER_STATUS_LABELS } from '@/lib/order-workflow'
+import { nextLifecycleStatus, checkStageMove, STAGE_DEPARTMENT, ORDER_STATUS_LABELS } from '@/lib/order-workflow'
 import { requirePermission } from '@/lib/permissions'
 import { writeAudit } from '@/lib/audit'
 import { notifyOrderStatusChanged } from '@/lib/notifications'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Forms on the order page call these actions directly, and a plain `{ error }` return is dropped by <form action>,
+ * so a refused change used to look like nothing happened. Redirect back with the reason instead; the page shows it.
+ */
+function orderFormError(orderId: string, message: string, tab?: string): never {
+  const query = `${tab ? `tab=${tab}&` : ''}error=${encodeURIComponent(message.slice(0, 300))}`
+  redirect(`/crm/orders/${orderId}?${query}`)
+}
+
+/** After a change succeeds, drop an error banner left on the page by an earlier refused change. */
+async function clearStaleOrderError(): Promise<void> {
+  const referer = (await headers()).get('referer')
+  if (!referer || !/[?&]error=/.test(referer)) return
+  let target: string | null = null
+  try {
+    const url = new URL(referer)
+    url.searchParams.delete('error')
+    target = `${url.pathname}${url.search}`
+  } catch {
+    target = null // a malformed referer: leave the page as it is
+  }
+  if (target) redirect(target)
+}
 
 const PROCUREMENT_STATUSES = [
   'not_assigned', 'supplier_selected', 'po_pending', 'po_raised', 'confirmed',
@@ -186,8 +212,13 @@ export async function handOffOrder(formData: FormData) {
   const nextAction = String(formData.get('next_action') || '') || null
 
   if (!orderId || !status) return { error: 'Stage is required' }
+  if (!UUID.test(orderId)) return { error: 'Order not found' }
 
   const supabase = await createClient()
+  const { data: current } = await supabase.from('orders').select('status').eq('id', orderId).maybeSingle()
+  if (!current) orderFormError(orderId, 'Order not found.')
+  const move = checkStageMove(String(current.status), status, profile.role, comment)
+  if (!move.ok) orderFormError(orderId, move.error)
   const { error } = await supabase.rpc('advance_order_stage', {
     p_order_id: orderId,
     p_status: status,
@@ -197,12 +228,13 @@ export async function handOffOrder(formData: FormData) {
     p_stage_due: stageDue,
     p_next_action: nextAction,
   })
-  if (error) return { error: error.message }
+  if (error) orderFormError(orderId, error.message)
   await notifyOrderStatusChanged(orderId, ORDER_STATUS_LABELS[status] || status)
   revalidatePath(`/crm/orders/${orderId}`)
   revalidatePath('/crm/order-management')
   revalidatePath('/crm/department')
   revalidatePath('/crm/my-work')
+  await clearStaleOrderError()
   return { success: true }
 }
 
@@ -220,6 +252,12 @@ export async function setOrderStage(orderId: string, status: string, comment?: s
   const dueDate = dueRaw || null
 
   const supabase = await createClient()
+  const { data: current } = await supabase.from('orders').select('status').eq('id', orderId).maybeSingle()
+  if (!current) return { error: 'Order not found' }
+  // The reason must be typed by the user: the default text added below does not count as one.
+  const move = checkStageMove(String(current.status), status, profile.role, cleanComment)
+  if (!move.ok) return { error: move.error }
+
   const { data: dept } = await supabase
     .from('departments')
     .select('id, manager_id')
@@ -266,14 +304,16 @@ export async function assignPrintingVendor(formData: FormData) {
 
   const orderId = String(formData.get('order_id') || '')
   if (!orderId) return { error: 'Order is required' }
+  if (!UUID.test(orderId)) return { error: 'Order not found' }
 
   const supabase = await createClient()
   const { error } = await supabase
     .from('orders')
     .update({ printing_vendor_id: String(formData.get('printing_vendor_id') || '') || null })
     .eq('id', orderId)
-  if (error) return { error: error.message }
+  if (error) orderFormError(orderId, error.message, 'vendors')
   revalidatePath(`/crm/orders/${orderId}`)
+  await clearStaleOrderError()
   return { success: true }
 }
 
@@ -299,13 +339,14 @@ export async function recordDelivery(formData: FormData) {
 
   const orderId = String(formData.get('order_id') || '')
   if (!orderId) return { error: 'Order is required' }
+  if (!UUID.test(orderId)) return { error: 'Order not found' }
 
   const dispatchDate = String(formData.get('dispatch_date') || '') || null
   const expected = String(formData.get('expected_delivery_date') || '') || null
   const actual = String(formData.get('actual_delivery_date') || '') || null
 
   if (dispatchDate && actual && actual < dispatchDate) {
-    return { error: 'Actual delivery cannot be earlier than the dispatch date' }
+    orderFormError(orderId, 'Actual delivery cannot be earlier than the dispatch date.', 'vendors')
   }
 
   const supabase = await createClient()
@@ -317,9 +358,10 @@ export async function recordDelivery(formData: FormData) {
       actual_delivery_date: actual,
     })
     .eq('id', orderId)
-  if (error) return { error: error.message }
+  if (error) orderFormError(orderId, error.message, 'vendors')
   revalidatePath(`/crm/orders/${orderId}`)
   revalidatePath('/crm/order-management')
+  await clearStaleOrderError()
   return { success: true }
 }
 
@@ -330,6 +372,7 @@ export async function saveOrderCosting(formData: FormData) {
 
   const orderId = String(formData.get('order_id') || '')
   if (!orderId) return { error: 'Order is required' }
+  if (!UUID.test(orderId)) return { error: 'Order not found' }
 
   const read = (key: string) => {
     const raw = formData.get(key)
@@ -345,19 +388,20 @@ export async function saveOrderCosting(formData: FormData) {
     other_cost: read('other_cost'),
   }
   if (Object.values(costs).some((v) => Number.isNaN(v))) {
-    return { error: 'Costs must be zero or a positive number' }
+    orderFormError(orderId, 'Costs must be zero or a positive number.', 'financials')
   }
 
   const supabase = await createClient()
   const { error } = await supabase.from('orders').update(costs).eq('id', orderId)
-  if (error) return { error: error.message }
+  if (error) orderFormError(orderId, error.message, 'financials')
 
   // total_cost and gross_profit are derived server-side, never sent by the client.
   const { error: recalcError } = await supabase.rpc('recalc_order_cost', { p_order_id: orderId })
-  if (recalcError) return { error: recalcError.message }
+  if (recalcError) orderFormError(orderId, recalcError.message, 'financials')
 
   revalidatePath(`/crm/orders/${orderId}`)
   revalidatePath('/crm/dashboard')
   revalidatePath('/crm/reports')
+  await clearStaleOrderError()
   return { success: true }
 }

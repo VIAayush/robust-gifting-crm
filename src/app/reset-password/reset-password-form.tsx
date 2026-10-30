@@ -9,6 +9,7 @@ import { updatePassword } from '@/app/login/actions'
 import { AuthShell } from '@/components/auth/auth-shell'
 import { PasswordField } from '@/components/auth/password-field'
 import { createRecoveryBrowserClient } from '@/lib/supabase/recovery-client'
+import { useHydrated } from '@/lib/use-hydrated'
 
 const INVALID_LINK = 'Password reset link is invalid or has expired.'
 
@@ -30,6 +31,7 @@ export function ResetPasswordForm({
   markedInvalid: boolean
 }) {
   const router = useRouter()
+  const hydrated = useHydrated()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -126,7 +128,7 @@ export function ResetPasswordForm({
 
   return (
     <AuthShell title="Reset your password">
-      <form onSubmit={onSubmit} className="space-y-5">
+      <form method="post" onSubmit={onSubmit} className="space-y-5">
         {error && <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200">{error}</div>}
         {!ready && (
           <div className="flex items-center justify-center gap-2 text-xs text-[#4A5568]">
@@ -147,7 +149,7 @@ export function ResetPasswordForm({
         )}
         <button
           type="submit"
-          disabled={!canSubmit}
+          disabled={!canSubmit || !hydrated}
           className="w-full flex justify-center items-center py-3 px-4 rounded-xl text-xs font-semibold text-white bg-[#9C7A33] hover:bg-[#7C6224] disabled:opacity-50"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reset password'}

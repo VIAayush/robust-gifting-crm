@@ -6,8 +6,10 @@ import Link from 'next/link'
 import { Mail, Loader2 } from 'lucide-react'
 import { requestPasswordReset } from '@/app/login/actions'
 import { AuthShell } from '@/components/auth/auth-shell'
+import { useHydrated } from '@/lib/use-hydrated'
 
 export function ForgotPasswordForm() {
+  const hydrated = useHydrated()
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -35,7 +37,7 @@ export function ForgotPasswordForm() {
 
   return (
     <AuthShell title="Forgot password" subtitle="Enter your login email. We will send a reset link if an account exists.">
-      <form onSubmit={onSubmit} className="space-y-5">
+      <form method="post" onSubmit={onSubmit} className="space-y-5">
         {error && <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200">{error}</div>}
         {message && <div className="p-3 bg-green-50 text-green-800 text-xs rounded-xl border border-green-200">{message}</div>}
         <div>
@@ -56,7 +58,7 @@ export function ForgotPasswordForm() {
         </div>
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !hydrated}
           className="w-full flex justify-center items-center py-3 px-4 rounded-xl text-xs font-semibold text-white bg-[#9C7A33] hover:bg-[#7C6224] disabled:opacity-50"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send reset link'}

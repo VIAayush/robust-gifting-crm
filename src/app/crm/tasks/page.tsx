@@ -45,7 +45,7 @@ export default async function TasksPage({
       <div>
         <h1 className="text-2xl font-bold text-[var(--color-primary)]">Tasks</h1>
         <p className="text-xs text-gray-500 mt-1">
-          Employees see work assigned to them. Admin and management can view and reassign everything.
+          Employees see work assigned to them. Admin, management and operations can view and reassign everything.
         </p>
       </div>
 

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatCurrency, formatDate, oneRelation } from '@/lib/utils'
 import Link from 'next/link'
 import { requireStaff } from '@/lib/auth'
+import { businessToday, invoiceBalance, paidByInvoice, summarizeReceivables } from '@/lib/finance/receivables'
 import { MobileFilterBar } from '@/components/ui/mobile-filter-sheet'
 import { ReadyToInvoice, type ReadyOrder } from './ready-to-invoice'
 
@@ -34,10 +35,15 @@ export default async function InvoicesPage({
     readyOrders = (delivered || []).filter((o) => !invoiced.has(o.id as string)).slice(0, 20).map((o) => ({ id: o.id as string, number: (o.order_number as string) || '', company: oneRelation(o.company as { name: string } | { name: string }[] | null)?.name || '—', value: formatCurrency(o.order_value) }))
   }
   
+  const today = businessToday()
+  const invoiceIds = (invoices || []).map((i) => i.id as string)
+  const { data: payments } = invoiceIds.length
+    ? await supabase.from('payments').select('invoice_id, amount, payment_date').in('invoice_id', invoiceIds)
+    : { data: [] }
+  const paid = paidByInvoice(payments || [])
   const totalIssued = invoices?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
-  const totalPaid = invoices?.filter(i => i.status === 'paid').reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
-  const outstanding = invoices?.filter(i => i.status !== 'paid').reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
-  const overdue = invoices?.filter(i => new Date(i.due_date) < new Date() && i.status !== 'paid').reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
+  const totalPaid = (payments || []).reduce((acc, curr) => acc + Number(curr.amount), 0)
+  const { outstanding, overdue } = summarizeReceivables(invoices || [], payments || [], today)
 
   return (
     <div className="space-y-6">
@@ -104,8 +110,11 @@ export default async function InvoicesPage({
                 </td>
                 <td className="p-3 text-sm">{company?.name}</td>
                 <td className="p-3 text-sm">{order?.order_number}</td>
-                <td className="p-3 text-sm">{formatCurrency(invoice.amount)}</td>
-                <td className={`p-3 text-sm ${invoice.due_date && new Date(invoice.due_date) < new Date() && invoice.status !== 'paid' ? 'text-red-600 font-medium' : ''}`}>
+                <td className="p-3 text-sm">
+                  {formatCurrency(invoice.amount)}
+                  {paid.get(invoice.id) && invoiceBalance(invoice, paid) > 0 ? <span className="block text-[11px] text-gray-500">balance {formatCurrency(invoiceBalance(invoice, paid))}</span> : null}
+                </td>
+                <td className={`p-3 text-sm ${invoice.due_date && invoice.due_date < today && invoice.status !== 'paid' ? 'text-red-600 font-medium' : ''}`}>
                   {formatDate(invoice.due_date)}
                 </td>
                 <td className="p-3 text-sm">

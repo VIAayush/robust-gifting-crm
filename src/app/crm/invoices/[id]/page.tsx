@@ -1,15 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { formatCurrency, formatDate, isUuid, oneRelation } from '@/lib/utils'
 import { recordPayment } from '../actions'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { BackButton } from '@/components/ui/back-button'
 import { Receipt, Calendar, CreditCard, Building2, CheckCircle2 } from 'lucide-react'
 import { requireStaff } from '@/lib/auth'
 import { MobileSheetSelect, SheetDateField } from '@/components/ui/mobile-filter-sheet'
 
-export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function InvoiceDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }> }) {
   const { id } = await params
+  const { error: actionError } = await searchParams
   if (!isUuid(id)) notFound()
   await requireStaff(['admin', 'accounts', 'management'])
   const supabase = await createClient()
@@ -26,14 +27,22 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   const totalPaid = payments?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
   const balanceDue = Number(invoice.amount) - totalPaid
 
+  // A refused payment (too much, zero, bad date) used to vanish without a word; show the reason on the page instead.
+  const invoiceId = id
   const handleRecordPayment = async (formData: FormData) => {
     'use server'
-    await recordPayment(formData)
+    const result = await recordPayment(formData)
+    if (result && 'error' in result && result.error) redirect(`/crm/invoices/${invoiceId}?error=${encodeURIComponent(String(result.error).slice(0, 300))}`)
   }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <BackButton href="/crm/invoices" label="Back to Invoices" />
+      {actionError ? (
+        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+          {actionError.slice(0, 300)}
+        </div>
+      ) : null}
 
       <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>

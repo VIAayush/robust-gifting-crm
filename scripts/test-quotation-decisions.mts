@@ -38,3 +38,20 @@ assert.equal(overallOutcome([d('a', true), d('b', true)]), 'accepted')
 assert.equal(overallOutcome([d('a', true), d('b', false)]), 'partial')
 assert.equal(overallOutcome([d('a', false)]), 'rejected')
 console.log('quotation decision tests: all assertions passed')
+
+// decisionSummary: the accepted-only figure shown beside the quoted total
+{
+  // @ts-expect-error -- run directly by node (type stripping), which needs the .ts extension
+  const { decisionSummary } = await import('../src/lib/quotations/decisions.ts')
+  const items = [
+    { id: 'a', quantity: 60, unit_price: 100, client_decision: 'accepted' },
+    { id: 'b', quantity: 60, unit_price: 70, client_decision: 'rejected' },
+    { id: 'c', quantity: 60, unit_price: 155, client_decision: 'accepted' },
+  ]
+  assert.deepEqual(decisionSummary(items, 0, 18), { acceptedCount: 2, itemCount: 3, acceptedTotal: 18054 })
+  assert.equal(decisionSummary(items.map((i) => ({ ...i, client_decision: 'accepted' })), 0, 18), null, 'nothing rejected: no summary')
+  assert.equal(decisionSummary(items.map((i) => ({ ...i, client_decision: null })), 0, 18), null, 'undecided: no summary')
+  assert.deepEqual(decisionSummary(items.map((i) => ({ ...i, client_decision: 'rejected' })), '0', '18'), { acceptedCount: 0, itemCount: 3, acceptedTotal: 0 })
+  assert.equal(decisionSummary(items, 10, 18)?.acceptedTotal, 16248.6, 'discount then tax, string-safe')
+  console.log('decision summary tests: all assertions passed')
+}

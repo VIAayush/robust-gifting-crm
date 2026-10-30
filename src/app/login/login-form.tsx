@@ -10,6 +10,7 @@ import { BrandName } from '@/components/brand/brand-name';
 import { rememberThisTab, forgetRememberedTab } from '@/lib/auth/remember-client';
 import { getTabId } from '@/lib/supabase/client';
 import { TAB_QUERY } from '@/lib/auth/tab';
+import { useHydrated } from '@/lib/use-hydrated'
 
 function isNextRedirect(err: unknown) {
   const digest =
@@ -31,6 +32,7 @@ export function LoginForm({
   linkError?: string;
 }) {
   const router = useRouter();
+  const hydrated = useHydrated()
   const [error, setError] = useState<string | null>(linkError || null);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
@@ -107,7 +109,7 @@ export function LoginForm({
           <p className="text-sm text-[#64748B] mb-6 text-center">
             Sign in to <BrandName />
           </p>
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form method="post" onSubmit={handleSubmit} className="space-y-5">
             {next ? <input type="hidden" name="next" value={next} /> : null}
             {resetSuccess && !error && (
               <div className="p-3 bg-green-50 text-green-800 text-xs rounded-xl border border-green-200">
@@ -170,7 +172,7 @@ export function LoginForm({
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !hydrated}
               className="w-full flex justify-center items-center py-3 px-4 rounded-xl text-xs font-semibold text-white bg-[#9C7A33] hover:bg-[#7C6224] hover:text-white focus:outline-none shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign in'}

@@ -2,21 +2,24 @@ import { createClient } from '@/lib/supabase/server'
 import { formatCurrency, formatDate, oneRelation } from '@/lib/utils'
 import Link from 'next/link'
 import { requireStaff } from '@/lib/auth'
+import { businessToday, invoiceBalance, paidByInvoice, summarizeReceivables } from '@/lib/finance/receivables'
 
 export default async function ReceivablesPage() {
   await requireStaff(['admin', 'accounts', 'management'])
   const supabase = await createClient()
 
+  const today = businessToday()
+  const monthStart = `${today.slice(0, 7)}-01`
   const { data: invoices } = await supabase.from('invoices').select('*, companies(name)').in('status', ['unpaid', 'partially_paid', 'overdue']).order('due_date', { ascending: true })
-  const { data: paidThisMonthInvoices } = await supabase.from('invoices').select('amount').eq('status', 'paid').gte('updated_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
-  
-  const outstanding = invoices?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
-  const overdue = invoices?.filter(i => new Date(i.due_date) < new Date()).reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
-  
-  const currentMonthEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
-  const dueThisMonth = invoices?.filter(i => new Date(i.due_date) <= currentMonthEnd && new Date(i.due_date) >= new Date()).reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
-  
-  const paidThisMonth = paidThisMonthInvoices?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0
+  // Partial payments reduce what is still owed, and "paid this month" is cash received this month (not whole paid invoices).
+  const invoiceIds = (invoices || []).map((i) => i.id as string)
+  const [{ data: openPayments }, { data: monthPayments }] = await Promise.all([
+    invoiceIds.length ? supabase.from('payments').select('invoice_id, amount, payment_date').in('invoice_id', invoiceIds) : Promise.resolve({ data: [] }),
+    supabase.from('payments').select('invoice_id, amount, payment_date').gte('payment_date', monthStart),
+  ])
+  const paid = paidByInvoice(openPayments || [])
+  const { outstanding, overdue, dueThisMonth } = summarizeReceivables(invoices || [], openPayments || [], today)
+  const { paidThisMonth } = summarizeReceivables([], monthPayments || [], today)
 
   return (
     <div>
@@ -43,7 +46,7 @@ export default async function ReceivablesPage() {
       <div className="space-y-3 md:hidden">
         {invoices?.map((invoice) => {
           const company = oneRelation(invoice.companies)
-          const overdueRow = invoice.due_date && new Date(invoice.due_date) < new Date()
+          const overdueRow = invoice.due_date && invoice.due_date < today
           return (
             <article key={invoice.id} className="space-y-3 rounded-xl border border-[#E2E8F0] bg-white p-4">
               <div className="flex items-start justify-between gap-3">
@@ -59,7 +62,10 @@ export default async function ReceivablesPage() {
                   {String(invoice.status || '').replace(/_/g, ' ')}
                 </span>
               </div>
-              <p className="text-base font-semibold text-gray-900">{formatCurrency(invoice.amount)}</p>
+              <p className="text-base font-semibold text-gray-900">
+                {formatCurrency(invoiceBalance(invoice, paid))}
+                {paid.get(invoice.id) ? <span className="ml-2 text-xs font-normal text-gray-500">balance of {formatCurrency(invoice.amount)}</span> : null}
+              </p>
               <Link
                 href={`/crm/invoices/${invoice.id}`}
                 className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-[#9C7A33] px-3 text-xs font-semibold text-white hover:bg-[#7C6224]"
@@ -80,7 +86,7 @@ export default async function ReceivablesPage() {
             <tr className="border-b border-[var(--color-border)] bg-gray-50">
               <th className="p-3 text-sm font-medium text-[var(--color-text-secondary)]">Company</th>
               <th className="p-3 text-sm font-medium text-[var(--color-text-secondary)]">Invoice #</th>
-              <th className="p-3 text-sm font-medium text-[var(--color-text-secondary)]">Amount</th>
+              <th className="p-3 text-sm font-medium text-[var(--color-text-secondary)]">Balance due</th>
               <th className="p-3 text-sm font-medium text-[var(--color-text-secondary)]">Due Date</th>
               <th className="p-3 text-sm font-medium text-[var(--color-text-secondary)]">Status</th>
             </tr>
@@ -99,8 +105,11 @@ export default async function ReceivablesPage() {
                     {invoice.invoice_number}
                   </Link>
                 </td>
-                <td className="p-3 text-sm">{formatCurrency(invoice.amount)}</td>
-                <td className={`p-3 text-sm ${invoice.due_date && new Date(invoice.due_date) < new Date() ? 'font-semibold text-red-600' : ''}`}>
+                <td className="p-3 text-sm">
+                  {formatCurrency(invoiceBalance(invoice, paid))}
+                  {paid.get(invoice.id) ? <span className="block text-[11px] text-gray-500">balance of {formatCurrency(invoice.amount)}</span> : null}
+                </td>
+                <td className={`p-3 text-sm ${invoice.due_date && invoice.due_date < today ? 'font-semibold text-red-600' : ''}`}>
                   {formatDate(invoice.due_date)}
                 </td>
                 <td className="p-3 text-sm">
